@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const placeId = Number(searchParams.get("place_id"));
   const date = searchParams.get("date");
   if (!placeId || !date) return jsonError("place_id आणि date आवश्यक", 400);
-  const meeting = getMeeting(placeId, date);
+  const meeting = await getMeeting(placeId, date);
   return NextResponse.json({
     meeting: meeting ?? {
       place_id: placeId,
@@ -41,7 +41,7 @@ export async function PUT(request: Request) {
   if (kind && kind !== "atmaprabha" && kind !== "upadesh") {
     return jsonError("अवैध विषय प्रकार", 400);
   }
-  const meeting = upsertMeeting({
+  const meeting = await upsertMeeting({
     place_id: Number(body.place_id),
     meeting_date: String(body.meeting_date),
     meeting_time: body.meeting_time,

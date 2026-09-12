@@ -15,14 +15,14 @@ function line(text = "") {
   return text;
 }
 
-export function buildWeeklyReport(thursdayYmd: string) {
+export async function buildWeeklyReport(thursdayYmd: string) {
   const week = weekFromThursday(thursdayYmd);
-  const places = listPlaces();
-  const meetings = listMeetingsOnDate(thursdayYmd);
+  const places = await listPlaces();
+  const meetings = await listMeetingsOnDate(thursdayYmd);
   const byPlace = new Map<number, MeetingWithPlace>();
   for (const m of meetings) byPlace.set(m.place_id, m);
 
-  const questions = listQuestions({ from: week.start, to: week.end });
+  const questions = await listQuestions({ from: week.start, to: week.end });
   const unanswered = questions.filter((q) => !q.answer || !q.answer.trim());
   const answered = questions.filter((q) => q.answer && q.answer.trim());
 

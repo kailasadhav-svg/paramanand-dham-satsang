@@ -58,11 +58,11 @@ npm start
 
 ## Data & auth
 
-- SQLite file: `data/satsang.db` (created on first request; gitignored)
-- Engine: `better-sqlite3`
+- Local: SQLite file `data/satsang.db` via `@libsql/client` (created on first request; gitignored)
+- Production (Vercel): **Turso** (libSQL over HTTP). A SQLite file on Vercel serverless is ephemeral and must not be used for attendance / Q&A.
 - Cookie session after PIN; change PIN with env `ADMIN_PIN`
 - Optional `SESSION_SECRET` for cookie HMAC
-- On HTTPS, set `COOKIE_SECURE=true` so the login cookie is marked Secure
+- On Vercel, login cookies are marked `Secure` automatically. Locally, keep `COOKIE_SECURE=false` unless you use HTTPS.
 
 ```
 ADMIN_PIN=1960
@@ -70,11 +70,39 @@ SESSION_SECRET=change-me-in-production
 COOKIE_SECURE=false
 ```
 
+### Vercel production
+
+1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new) (or `npx vercel --prod` while logged in).
+2. Create a Turso database (free):
+
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash
+   turso auth login
+   turso db create paramanand-dham-satsang
+   turso db show paramanand-dham-satsang --url
+   turso db tokens create paramanand-dham-satsang
+   ```
+
+3. In the Vercel project → **Settings → Environment Variables** (Production):
+
+   | Name | Value |
+   | --- | --- |
+   | `ADMIN_PIN` | `1960` |
+   | `SESSION_SECRET` | a long random string |
+   | `COOKIE_SECURE` | `true` |
+   | `TURSO_DATABASE_URL` | `libsql://…` from `turso db show --url` |
+   | `TURSO_AUTH_TOKEN` | token from `turso db tokens create` |
+
+4. Redeploy after saving env vars. Turn **Deployment Protection** off so phones can open the URL without a Vercel login.
+5. Short aliases on the production host: `/a` → attendance, `/t` → topic, `/q` → questions, `/r` → report.
+
+`GET /api/health` returns `{ ok, db: { store: "turso" | "file" } }` when the store is reachable.
+
 ## Stack
 
 - Next.js App Router + TypeScript
 - Tailwind CSS
-- SQLite (`better-sqlite3`)
+- libSQL (`@libsql/client`) — local file or Turso
 
 ## Out of scope (MVP)
 

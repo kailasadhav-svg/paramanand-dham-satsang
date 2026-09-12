@@ -45,6 +45,9 @@ export function sessionCookieOptions() {
     sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    secure: process.env.COOKIE_SECURE === "true",
+    // HTTPS (Vercel) needs Secure cookies; keep false for local http:// unless forced.
+    secure:
+      process.env.COOKIE_SECURE === "true" ||
+      (process.env.COOKIE_SECURE !== "false" && Boolean(process.env.VERCEL)),
   };
 }
