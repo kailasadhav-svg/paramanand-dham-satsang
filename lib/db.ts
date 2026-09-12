@@ -39,6 +39,7 @@ export type Question = {
   question: string;
   answer: string | null;
   answered_by: "atmaprabha" | "madhusudandas" | null;
+  asked_on: string;
   created_at: string;
   updated_at: string;
 };
@@ -77,6 +78,7 @@ function migrate(db: Database.Database) {
       question TEXT NOT NULL,
       answer TEXT,
       answered_by TEXT CHECK (answered_by IN ('atmaprabha', 'madhusudandas') OR answered_by IS NULL),
+      asked_on TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -85,6 +87,13 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_questions_place ON questions(place_id);
     CREATE INDEX IF NOT EXISTS idx_questions_created ON questions(created_at);
   `);
+
+  const cols = db.prepare("PRAGMA table_info(questions)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "asked_on")) {
+    db.exec("ALTER TABLE questions ADD COLUMN asked_on TEXT");
+    db.exec("UPDATE questions SET asked_on = substr(created_at, 1, 10) WHERE asked_on IS NULL");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_questions_asked_on ON questions(asked_on)");
 
   const count = db.prepare("SELECT COUNT(*) AS n FROM places").get() as { n: number };
   if (count.n === 0) {
@@ -218,14 +227,22 @@ export function createQuestion(input: {
   question: string;
   place_id?: number | null;
   meeting_id?: number | null;
+  asked_on: string;
 }): Question {
   const now = nowIso();
   const result = getDb()
     .prepare(
-      `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, created_at, updated_at)
-       VALUES (?, ?, ?, NULL, NULL, ?, ?)`,
+      `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, created_at, updated_at)
+       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`,
     )
-    .run(input.meeting_id ?? null, input.place_id ?? null, input.question.trim(), now, now);
+    .run(
+      input.meeting_id ?? null,
+      input.place_id ?? null,
+      input.question.trim(),
+      input.asked_on,
+      now,
+      now,
+    );
   return getQuestion(Number(result.lastInsertRowid))!;
 }
 
@@ -284,11 +301,11 @@ export function listQuestions(opts: {
     clauses.push("(q.answer IS NULL OR trim(q.answer) = '')");
   }
   if (opts.from) {
-    clauses.push("substr(q.created_at, 1, 10) >= ?");
+    clauses.push("q.asked_on >= ?");
     params.push(opts.from);
   }
   if (opts.to) {
-    clauses.push("substr(q.created_at, 1, 10) <= ?");
+    clauses.push("q.asked_on <= ?");
     params.push(opts.to);
   }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";

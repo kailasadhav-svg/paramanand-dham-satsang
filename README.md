@@ -62,10 +62,12 @@ npm start
 - Engine: `better-sqlite3`
 - Cookie session after PIN; change PIN with env `ADMIN_PIN`
 - Optional `SESSION_SECRET` for cookie HMAC
+- On HTTPS, set `COOKIE_SECURE=true` so the login cookie is marked Secure
 
 ```
 ADMIN_PIN=1960
 SESSION_SECRET=change-me-in-production
+COOKIE_SECURE=false
 ```
 
 ## Stack

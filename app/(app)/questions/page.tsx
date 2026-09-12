@@ -55,7 +55,7 @@ export default function QuestionsPage() {
     try {
       await api("/api/questions", {
         method: "POST",
-        body: JSON.stringify({ question: draft, place_id: placeId }),
+        body: JSON.stringify({ question: draft, place_id: placeId, asked_on: date }),
       });
       setDraft("");
       await load();

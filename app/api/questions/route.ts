@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -29,14 +30,19 @@ export async function POST(request: Request) {
     question?: string;
     place_id?: number | null;
     meeting_id?: number | null;
+    asked_on?: string;
   };
   if (!body.question || !body.question.trim()) {
     return jsonError("प्रश्न लिहा", 400);
   }
+  const askedOn = body.asked_on && /^\d{4}-\d{2}-\d{2}$/.test(body.asked_on)
+    ? body.asked_on
+    : ymdInIndia();
   const question = createQuestion({
     question: body.question,
     place_id: body.place_id ?? null,
     meeting_id: body.meeting_id ?? null,
+    asked_on: askedOn,
   });
   return NextResponse.json({ question }, { status: 201 });
 }
