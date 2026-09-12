@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
-  return NextResponse.json({ places: listPlaces() });
+  return NextResponse.json({ places: await listPlaces() });
 }

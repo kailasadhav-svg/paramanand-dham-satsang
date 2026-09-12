@@ -21,7 +21,7 @@ export async function PATCH(
   if (body.answered_by && !["atmaprabha", "madhusudandas"].includes(body.answered_by)) {
     return jsonError("अवैध उत्तर स्रोत", 400);
   }
-  const question = updateQuestion(Number(id), body);
+  const question = await updateQuestion(Number(id), body);
   if (!question) return jsonError("प्रश्न सापडला नाही", 404);
   return NextResponse.json({ question });
 }
@@ -33,7 +33,7 @@ export async function DELETE(
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
-  const ok = deleteQuestion(Number(id));
+  const ok = await deleteQuestion(Number(id));
   if (!ok) return jsonError("प्रश्न सापडला नाही", 404);
   return NextResponse.json({ ok: true });
 }

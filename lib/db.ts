@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import Database from "better-sqlite3";
+import { createClient, type Client, type Row } from "@libsql/client";
 import { DEFAULT_MEETING_TIME } from "./dates";
 
 const DB_PATH = path.join(process.cwd(), "data", "satsang.db");
@@ -13,7 +13,10 @@ const SEED_PLACES = [
   "नाशिक",
 ];
 
-type GlobalDb = { satsangDb?: Database.Database };
+type GlobalDb = {
+  satsangClient?: Client;
+  satsangMigrate?: Promise<void>;
+};
 
 export type Place = { id: number; name: string; sort_order: number };
 
@@ -47,15 +50,106 @@ export type Question = {
 export type MeetingWithPlace = Meeting & { place_name: string };
 export type QuestionWithPlace = Question & { place_name: string | null };
 
-function migrate(db: Database.Database) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS places (
+function num(value: unknown, fallback = 0): number {
+  if (value == null) return fallback;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function str(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
+function strOrNull(value: unknown): string | null {
+  if (value == null) return null;
+  return String(value);
+}
+
+function topicKind(value: unknown): Meeting["topic_kind"] {
+  return value === "atmaprabha" || value === "upadesh" ? value : null;
+}
+
+function answeredBy(value: unknown): Question["answered_by"] {
+  return value === "atmaprabha" || value === "madhusudandas" ? value : null;
+}
+
+function asPlace(row: Row): Place {
+  return {
+    id: num(row.id),
+    name: str(row.name),
+    sort_order: num(row.sort_order),
+  };
+}
+
+function asMeeting(row: Row): Meeting {
+  return {
+    id: num(row.id),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    meeting_time: str(row.meeting_time),
+    men: num(row.men),
+    women: num(row.women),
+    children: num(row.children),
+    topic_kind: topicKind(row.topic_kind),
+    topic_title: strOrNull(row.topic_title),
+    conductor: strOrNull(row.conductor),
+    notes: strOrNull(row.notes),
+    updated_at: str(row.updated_at),
+  };
+}
+
+function asMeetingWithPlace(row: Row): MeetingWithPlace {
+  return { ...asMeeting(row), place_name: str(row.place_name) };
+}
+
+function asQuestion(row: Row): Question {
+  return {
+    id: num(row.id),
+    meeting_id: row.meeting_id == null ? null : num(row.meeting_id),
+    place_id: row.place_id == null ? null : num(row.place_id),
+    question: str(row.question),
+    answer: strOrNull(row.answer),
+    answered_by: answeredBy(row.answered_by),
+    asked_on: str(row.asked_on),
+    created_at: str(row.created_at),
+    updated_at: str(row.updated_at),
+  };
+}
+
+function asQuestionWithPlace(row: Row): QuestionWithPlace {
+  return { ...asQuestion(row), place_name: strOrNull(row.place_name) };
+}
+
+function remoteUrl(): string | undefined {
+  return process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || undefined;
+}
+
+function createDbClient(): Client {
+  const url = remoteUrl();
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  if (url) {
+    return createClient({ url, authToken });
+  }
+  if (process.env.VERCEL) {
+    throw new Error(
+      "SQLite files do not persist on Vercel. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN (Turso) in project environment variables.",
+    );
+  }
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  const fileUrl = `file:${DB_PATH.split(path.sep).join("/")}`;
+  return createClient({ url: fileUrl });
+}
+
+async function migrate(db: Client) {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS places (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       sort_order INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS meetings (
+    )`,
+    `CREATE TABLE IF NOT EXISTS meetings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       place_id INTEGER NOT NULL REFERENCES places(id),
       meeting_date TEXT NOT NULL,
@@ -69,9 +163,8 @@ function migrate(db: Database.Database) {
       notes TEXT,
       updated_at TEXT NOT NULL,
       UNIQUE (place_id, meeting_date)
-    );
-
-    CREATE TABLE IF NOT EXISTS questions (
+    )`,
+    `CREATE TABLE IF NOT EXISTS questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       meeting_id INTEGER REFERENCES meetings(id),
       place_id INTEGER REFERENCES places(id),
@@ -81,63 +174,75 @@ function migrate(db: Database.Database) {
       asked_on TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(meeting_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_questions_place ON questions(place_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_questions_created ON questions(created_at)`,
+  ];
+  for (const sql of statements) {
+    await db.execute(sql);
+  }
+
+  const cols = await db.execute("PRAGMA table_info(questions)");
+  if (!cols.rows.some((c) => c.name === "asked_on")) {
+    await db.execute("ALTER TABLE questions ADD COLUMN asked_on TEXT");
+    await db.execute(
+      "UPDATE questions SET asked_on = substr(created_at, 1, 10) WHERE asked_on IS NULL",
     );
-
-    CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(meeting_date);
-    CREATE INDEX IF NOT EXISTS idx_questions_place ON questions(place_id);
-    CREATE INDEX IF NOT EXISTS idx_questions_created ON questions(created_at);
-  `);
-
-  const cols = db.prepare("PRAGMA table_info(questions)").all() as { name: string }[];
-  if (!cols.some((c) => c.name === "asked_on")) {
-    db.exec("ALTER TABLE questions ADD COLUMN asked_on TEXT");
-    db.exec("UPDATE questions SET asked_on = substr(created_at, 1, 10) WHERE asked_on IS NULL");
   }
-  db.exec("CREATE INDEX IF NOT EXISTS idx_questions_asked_on ON questions(asked_on)");
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_questions_asked_on ON questions(asked_on)");
 
-  const count = db.prepare("SELECT COUNT(*) AS n FROM places").get() as { n: number };
-  if (count.n === 0) {
-    const insert = db.prepare("INSERT INTO places (name, sort_order) VALUES (?, ?)");
-    const tx = db.transaction(() => {
-      SEED_PLACES.forEach((name, i) => insert.run(name, i + 1));
-    });
-    tx();
-  }
+  const insert = SEED_PLACES.map((name, i) => ({
+    sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",
+    args: [name, i + 1] as (string | number)[],
+  }));
+  await db.batch(insert, "write");
 }
 
-export function getDb(): Database.Database {
+export async function getDb(): Promise<Client> {
   const g = globalThis as typeof globalThis & GlobalDb;
-  if (!g.satsangDb) {
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    const db = new Database(DB_PATH);
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-    migrate(db);
-    g.satsangDb = db;
+  if (!g.satsangClient) {
+    g.satsangClient = createDbClient();
   }
-  return g.satsangDb;
+  if (!g.satsangMigrate) {
+    g.satsangMigrate = migrate(g.satsangClient);
+  }
+  await g.satsangMigrate;
+  return g.satsangClient;
 }
 
-export function listPlaces(): Place[] {
-  return getDb()
-    .prepare("SELECT id, name, sort_order FROM places ORDER BY sort_order, id")
-    .all() as Place[];
+export async function pingDb(): Promise<{ ok: true; store: "turso" | "file" }> {
+  const db = await getDb();
+  await db.execute("SELECT 1 AS ok");
+  return { ok: true, store: remoteUrl() ? "turso" : "file" };
 }
 
-export function getPlace(id: number): Place | undefined {
-  return getDb().prepare("SELECT id, name, sort_order FROM places WHERE id = ?").get(id) as
-    | Place
-    | undefined;
+export async function listPlaces(): Promise<Place[]> {
+  const db = await getDb();
+  const rs = await db.execute("SELECT id, name, sort_order FROM places ORDER BY sort_order, id");
+  return rs.rows.map(asPlace);
+}
+
+export async function getPlace(id: number): Promise<Place | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT id, name, sort_order FROM places WHERE id = ?",
+    args: [id],
+  });
+  return rs.rows[0] ? asPlace(rs.rows[0]) : undefined;
 }
 
 function nowIso() {
   return new Date().toISOString();
 }
 
-export function getMeeting(placeId: number, date: string): Meeting | undefined {
-  return getDb()
-    .prepare("SELECT * FROM meetings WHERE place_id = ? AND meeting_date = ?")
-    .get(placeId, date) as Meeting | undefined;
+export async function getMeeting(placeId: number, date: string): Promise<Meeting | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM meetings WHERE place_id = ? AND meeting_date = ?",
+    args: [placeId, date],
+  });
+  return rs.rows[0] ? asMeeting(rs.rows[0]) : undefined;
 }
 
 export type MeetingPatch = {
@@ -153,8 +258,8 @@ export type MeetingPatch = {
   notes?: string | null;
 };
 
-export function upsertMeeting(patch: MeetingPatch): Meeting {
-  const existing = getMeeting(patch.place_id, patch.meeting_date);
+export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
+  const existing = await getMeeting(patch.place_id, patch.meeting_date);
   const merged = {
     place_id: patch.place_id,
     meeting_date: patch.meeting_date,
@@ -172,15 +277,12 @@ export function upsertMeeting(patch: MeetingPatch): Meeting {
     updated_at: nowIso(),
   };
 
-  getDb()
-    .prepare(
-      `INSERT INTO meetings (
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO meetings (
         place_id, meeting_date, meeting_time, men, women, children,
         topic_kind, topic_title, conductor, notes, updated_at
-      ) VALUES (
-        @place_id, @meeting_date, @meeting_time, @men, @women, @children,
-        @topic_kind, @topic_title, @conductor, @notes, @updated_at
-      )
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(place_id, meeting_date) DO UPDATE SET
         meeting_time = excluded.meeting_time,
         men = excluded.men,
@@ -191,66 +293,88 @@ export function upsertMeeting(patch: MeetingPatch): Meeting {
         conductor = excluded.conductor,
         notes = excluded.notes,
         updated_at = excluded.updated_at`,
-    )
-    .run(merged);
+    args: [
+      merged.place_id,
+      merged.meeting_date,
+      merged.meeting_time,
+      merged.men,
+      merged.women,
+      merged.children,
+      merged.topic_kind,
+      merged.topic_title,
+      merged.conductor,
+      merged.notes,
+      merged.updated_at,
+    ],
+  });
 
-  const saved = getMeeting(patch.place_id, patch.meeting_date);
+  const saved = await getMeeting(patch.place_id, patch.meeting_date);
   if (!saved) throw new Error("Failed to save meeting");
   return saved;
 }
 
-export function listMeetingsOnDate(date: string): MeetingWithPlace[] {
-  return getDb()
-    .prepare(
-      `SELECT m.*, p.name AS place_name
+export async function listMeetingsOnDate(date: string): Promise<MeetingWithPlace[]> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT m.*, p.name AS place_name
        FROM meetings m
        JOIN places p ON p.id = m.place_id
        WHERE m.meeting_date = ?
        ORDER BY p.sort_order`,
-    )
-    .all(date) as MeetingWithPlace[];
+    args: [date],
+  });
+  return rs.rows.map(asMeetingWithPlace);
 }
 
-export function listMeetingsInRange(start: string, end: string): MeetingWithPlace[] {
-  return getDb()
-    .prepare(
-      `SELECT m.*, p.name AS place_name
+export async function listMeetingsInRange(start: string, end: string): Promise<MeetingWithPlace[]> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT m.*, p.name AS place_name
        FROM meetings m
        JOIN places p ON p.id = m.place_id
        WHERE m.meeting_date >= ? AND m.meeting_date <= ?
        ORDER BY m.meeting_date, p.sort_order`,
-    )
-    .all(start, end) as MeetingWithPlace[];
+    args: [start, end],
+  });
+  return rs.rows.map(asMeetingWithPlace);
 }
 
-export function createQuestion(input: {
+export async function createQuestion(input: {
   question: string;
   place_id?: number | null;
   meeting_id?: number | null;
   asked_on: string;
-}): Question {
+}): Promise<Question> {
   const now = nowIso();
-  const result = getDb()
-    .prepare(
-      `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, created_at, updated_at)
+  const db = await getDb();
+  const result = await db.execute({
+    sql: `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, created_at, updated_at)
        VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`,
-    )
-    .run(
+    args: [
       input.meeting_id ?? null,
       input.place_id ?? null,
       input.question.trim(),
       input.asked_on,
       now,
       now,
-    );
-  return getQuestion(Number(result.lastInsertRowid))!;
+    ],
+  });
+  const id = Number(result.lastInsertRowid);
+  const saved = await getQuestion(id);
+  if (!saved) throw new Error("Failed to save question");
+  return saved;
 }
 
-export function getQuestion(id: number): Question | undefined {
-  return getDb().prepare("SELECT * FROM questions WHERE id = ?").get(id) as Question | undefined;
+export async function getQuestion(id: number): Promise<Question | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM questions WHERE id = ?",
+    args: [id],
+  });
+  return rs.rows[0] ? asQuestion(rs.rows[0]) : undefined;
 }
 
-export function updateQuestion(
+export async function updateQuestion(
   id: number,
   patch: {
     question?: string;
@@ -258,8 +382,8 @@ export function updateQuestion(
     answered_by?: "atmaprabha" | "madhusudandas" | null;
     place_id?: number | null;
   },
-): Question | undefined {
-  const existing = getQuestion(id);
+): Promise<Question | undefined> {
+  const existing = await getQuestion(id);
   if (!existing) return undefined;
   const merged = {
     id,
@@ -269,30 +393,41 @@ export function updateQuestion(
     place_id: patch.place_id !== undefined ? patch.place_id : existing.place_id,
     updated_at: nowIso(),
   };
-  getDb()
-    .prepare(
-      `UPDATE questions
-       SET question = @question, answer = @answer, answered_by = @answered_by,
-           place_id = @place_id, updated_at = @updated_at
-       WHERE id = @id`,
-    )
-    .run(merged);
+  const db = await getDb();
+  await db.execute({
+    sql: `UPDATE questions
+       SET question = ?, answer = ?, answered_by = ?,
+           place_id = ?, updated_at = ?
+       WHERE id = ?`,
+    args: [
+      merged.question,
+      merged.answer,
+      merged.answered_by,
+      merged.place_id,
+      merged.updated_at,
+      merged.id,
+    ],
+  });
   return getQuestion(id);
 }
 
-export function deleteQuestion(id: number): boolean {
-  const result = getDb().prepare("DELETE FROM questions WHERE id = ?").run(id);
-  return result.changes > 0;
+export async function deleteQuestion(id: number): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "DELETE FROM questions WHERE id = ?",
+    args: [id],
+  });
+  return (result.rowsAffected ?? 0) > 0;
 }
 
-export function listQuestions(opts: {
+export async function listQuestions(opts: {
   place_id?: number;
   unanswered?: boolean;
   from?: string;
   to?: string;
-}): QuestionWithPlace[] {
+}): Promise<QuestionWithPlace[]> {
   const clauses: string[] = [];
-  const params: unknown[] = [];
+  const params: (string | number)[] = [];
   if (opts.place_id) {
     clauses.push("q.place_id = ?");
     params.push(opts.place_id);
@@ -309,15 +444,16 @@ export function listQuestions(opts: {
     params.push(opts.to);
   }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  return getDb()
-    .prepare(
-      `SELECT q.*, p.name AS place_name
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT q.*, p.name AS place_name
        FROM questions q
        LEFT JOIN places p ON p.id = q.place_id
        ${where}
        ORDER BY q.created_at DESC, q.id DESC`,
-    )
-    .all(...params) as QuestionWithPlace[];
+    args: params,
+  });
+  return rs.rows.map(asQuestionWithPlace);
 }
 
 export function attendanceTotal(m: Pick<Meeting, "men" | "women" | "children">): number {
