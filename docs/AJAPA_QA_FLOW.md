@@ -46,13 +46,13 @@
 | # | टेम्प्लेट नाव | कधी |
 |---|--------------|-----|
 | 1 | `ajapa_ai_answer` | AI उत्तर चरणसेवकाला |
-| 2 | `ajapa_ask_madhusudan` | “१ दाबा” पर्याय / सूचना |
+| 2 | `ajapa_ask_madhusudan` *(optional; escalate often on `ajapa_ai_answer` buttons)* | “१ / बटण” पर्याय |
 | 3 | `ajapa_notify_guru` | मधुसुदनदासांना नवीन प्रश्न |
-| 4 | `ajapa_guru_answer_ready` | चरणसेवकाला: उत्तर आले |
+| 4 | `ajapa_answer_ready` *(alias `ajapa_guru_answer_ready`)* | चरणसेवकाला: उत्तर आले |
 | 5 | `ajapa_weekly_question` | साप्ताहिक प्रश्न (ANS/अजपा) |
-| 6 | `ajapa_login_code` | नोंद/कोड (bulk अपलोड नंतर) |
+| 6 | `ajapa_welcome_code` *(alias `ajapa_login_code`)* | नोंद/कोड (bulk अपलोड नंतर) |
 
-प्रत्येकात: मराठी मजकूर + `{{1}}` (नाव/प्रश्न-थोडक्यात इ.) व्हेरिएबल्स.
+बटण मसुदा (Quick Reply): [`AJAPA_WABA_TEMPLATES.md`](./AJAPA_WABA_TEMPLATES.md) — **Meta submit फक्त `submit हो` नंतर.**
 
 ---
 

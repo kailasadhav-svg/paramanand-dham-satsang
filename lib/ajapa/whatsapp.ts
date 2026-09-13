@@ -175,7 +175,8 @@ export async function askEscalate(opts: {
     "मधुसुदनदास विजयानंद यांच्याकडून उत्तर हवे असेल तर खालील बटण निवडा (किंवा `1` दाबा).";
   if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
     await sendButtons(opts.to, body, [
-      { id: "ajapa_escalate", title: "मधुसुदनदासांकडे" },
+      // WhatsApp interactive title ≤20 chars (full label on Meta template)
+      { id: "ajapa_escalate", title: "गुरुंकडे पाठवा" },
       { id: "ajapa_enough", title: "पुरे आहे" },
       { id: "ajapa_open_app", title: "अ‍ॅप उघडा" },
     ]);
@@ -251,7 +252,7 @@ export async function notifyGuruAnswerReady(opts: {
     to: opts.to,
     lastInboundAt: opts.lastInboundAt,
     text,
-    templateName: "ajapa_guru_answer_ready",
+    templateName: "ajapa_answer_ready",
     templateParams: [truncateParam(opts.questionShort, 120)],
   });
 }
