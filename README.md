@@ -104,9 +104,15 @@ COOKIE_SECURE=false
 - Tailwind CSS
 - libSQL (`@libsql/client`) — local file or Turso
 
-## Out of scope (MVP)
+## Locked product: अजपा WhatsApp Q&A
 
-- WhatsApp bots / Cloud API webhooks
+See [`docs/AJAPA_QA_FLOW.md`](docs/AJAPA_QA_FLOW.md) — locked 2026-09-13.
+
+Commands: `अजपा Q` (चरणसेवक) → AI ≥200 words → `1` escalate to मधुसुदनदास; `अजपा A` + mobile (गुरु) → type/`1` or voice/`2` → notify seeker. WABA `7030111501` templates listed in that doc.
+
+## Out of scope (current MVP code)
+
+- WhatsApp bots / Cloud API webhooks *(planned per locked Ajapa flow above)*
 - Native iOS/Android apps
 - Multi-user RBAC beyond the shared admin PIN
 
