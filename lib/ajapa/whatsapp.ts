@@ -1,0 +1,269 @@
+import type { AjapaQuestion } from "./types";
+
+const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v21.0";
+
+export type WaSendResult =
+  | { ok: true; id?: string }
+  | { ok: false; error: string; skipped?: boolean };
+
+function cfg() {
+  return {
+    token: process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || "",
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
+    apiBase: (
+      process.env.WHATSAPP_API_BASE || `https://graph.facebook.com/${GRAPH_VERSION}`
+    ).replace(/\/$/, ""),
+    dryRun: process.env.WHATSAPP_DRY_RUN === "1" || process.env.WHATSAPP_DRY_RUN === "true",
+    forceTemplates: process.env.WHATSAPP_FORCE_TEMPLATES === "1",
+  };
+}
+
+export function whatsappConfigured(): boolean {
+  const c = cfg();
+  return Boolean(c.token && c.phoneNumberId) || c.dryRun;
+}
+
+async function postMessage(body: Record<string, unknown>): Promise<WaSendResult> {
+  const c = cfg();
+  if (c.dryRun) {
+    console.info("[whatsapp:dry-run]", JSON.stringify(body).slice(0, 800));
+    return { ok: true, id: "dry-run" };
+  }
+  if (!c.token || !c.phoneNumberId) {
+    return { ok: false, error: "WhatsApp not configured", skipped: true };
+  }
+  const url = `${c.apiBase}/${c.phoneNumberId}/messages`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${c.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      ...body,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    console.error("WhatsApp send failed", res.status, err.slice(0, 500));
+    return { ok: false, error: err || `HTTP ${res.status}` };
+  }
+  const data = (await res.json()) as { messages?: { id?: string }[] };
+  return { ok: true, id: data.messages?.[0]?.id };
+}
+
+const MESSAGE_FOOTER = "\n\n|| हरि ॐ परमानंद विश्वव्यापकम् ||";
+
+export function withFooter(body: string): string {
+  const trimmed = body.trimEnd();
+  if (trimmed.includes("हरि ॐ परमानंद विश्वव्यापकम्")) return trimmed;
+  return `${trimmed}${MESSAGE_FOOTER}`;
+}
+
+export async function sendText(to: string, body: string): Promise<WaSendResult> {
+  return postMessage({
+    to,
+    type: "text",
+    text: { preview_url: false, body: withFooter(body).slice(0, 4096) },
+  });
+}
+
+export async function sendButtons(
+  to: string,
+  body: string,
+  buttons: { id: string; title: string }[],
+): Promise<WaSendResult> {
+  return postMessage({
+    to,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: withFooter(body).slice(0, 1024) },
+      action: {
+        buttons: buttons.slice(0, 3).map((b) => ({
+          type: "reply",
+          reply: { id: b.id, title: b.title.slice(0, 20) },
+        })),
+      },
+    },
+  });
+}
+
+export async function sendTemplate(
+  to: string,
+  name: string,
+  bodyParams: string[],
+  languageCode = "mr",
+): Promise<WaSendResult> {
+  return postMessage({
+    to,
+    type: "template",
+    template: {
+      name,
+      language: { code: languageCode },
+      components: bodyParams.length
+        ? [
+            {
+              type: "body",
+              parameters: bodyParams.map((text) => ({
+                type: "text",
+                text: text.slice(0, 1024),
+              })),
+            },
+          ]
+        : [],
+    },
+  });
+}
+
+export async function sendAudioById(to: string, mediaId: string): Promise<WaSendResult> {
+  return postMessage({
+    to,
+    type: "audio",
+    audio: { id: mediaId },
+  });
+}
+
+function within24h(lastInboundAt: string | null | undefined): boolean {
+  if (!lastInboundAt) return false;
+  return Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000;
+}
+
+export async function sendSmart(opts: {
+  to: string;
+  text: string;
+  lastInboundAt: string | null | undefined;
+  templateName: string;
+  templateParams: string[];
+}): Promise<WaSendResult> {
+  const c = cfg();
+  if (!c.forceTemplates && within24h(opts.lastInboundAt)) {
+    return sendText(opts.to, opts.text);
+  }
+  const tpl = await sendTemplate(opts.to, opts.templateName, opts.templateParams);
+  if (tpl.ok) return tpl;
+  return sendText(opts.to, opts.text);
+}
+
+export function truncateParam(text: string, max = 200): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  return t.length <= max ? t : `${t.slice(0, max - 1)}…`;
+}
+
+export async function notifyAiAnswer(opts: {
+  to: string;
+  lastInboundAt: string | null;
+  question: AjapaQuestion;
+}): Promise<void> {
+  const q = truncateParam(opts.question.question, 120);
+  const full = opts.question.ai_answer || "";
+  if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
+    await sendText(opts.to, full);
+  } else {
+    await sendTemplate(opts.to, "ajapa_ai_answer", [q]);
+  }
+}
+
+export async function askEscalate(opts: {
+  to: string;
+  lastInboundAt: string | null;
+  questionShort: string;
+}): Promise<void> {
+  const body =
+    "मधुसुदनदास विजयानंद यांच्याकडून उत्तर हवे असेल तर खालील बटण निवडा (किंवा `1` दाबा).";
+  if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
+    await sendButtons(opts.to, body, [
+      { id: "ajapa_escalate", title: "मधुसुदनदासांकडे" },
+      { id: "ajapa_enough", title: "पुरे आहे" },
+      { id: "ajapa_open_app", title: "अ‍ॅप उघडा" },
+    ]);
+    return;
+  }
+  await sendSmart({
+    to: opts.to,
+    lastInboundAt: opts.lastInboundAt,
+    text: body,
+    templateName: "ajapa_ask_madhusudan",
+    templateParams: [truncateParam(opts.questionShort, 120)],
+  });
+}
+
+export async function askGuruReplyMode(opts: {
+  to: string;
+  lastInboundAt: string | null;
+  seekerLabel: string;
+}): Promise<void> {
+  const body = `चरणसेवक ${opts.seekerLabel} — उत्तर कसे द्याल?`;
+  if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
+    await sendButtons(opts.to, body, [
+      { id: "ajapa_type", title: "टाइप करा" },
+      { id: "ajapa_voice", title: "व्हॉइस नोट" },
+      { id: "ajapa_cancel", title: "रद्द" },
+    ]);
+    return;
+  }
+  await sendText(
+    opts.to,
+    `${body}\n\`1\` = टाइप · \`2\` = व्हॉइस (किंवा टेम्प्लेट बटण: ajapa_guru_reply_choice)`,
+  );
+}
+
+export async function notifyGuruNewQuestion(opts: {
+  to: string;
+  lastInboundAt: string | null;
+  seekerPhone: string;
+  question: string;
+  aiAnswer: string;
+}): Promise<void> {
+  const short = truncateParam(`सेवक ${opts.seekerPhone}: ${opts.question}`, 200);
+  const text = `नवा अजपा प्रश्न (एस्केलेट)
+सेवक: ${opts.seekerPhone}
+
+प्रश्न:
+${opts.question}
+
+AI उत्तर (संक्षेप):
+${truncateParam(opts.aiAnswer, 800)}
+
+उत्तर देण्यासाठी लिहा:
+अजपा A ${opts.seekerPhone}`;
+  await sendSmart({
+    to: opts.to,
+    lastInboundAt: opts.lastInboundAt,
+    text,
+    templateName: "ajapa_notify_guru",
+    templateParams: [short],
+  });
+}
+
+export async function notifyGuruAnswerReady(opts: {
+  to: string;
+  lastInboundAt: string | null;
+  questionShort: string;
+  answerText?: string | null;
+}): Promise<void> {
+  const text = opts.answerText
+    ? `तुझ्या प्रश्नाचे उत्तर आले — अ‍ॅप किंवा WhatsApp वर पाहा.\n\nप्रश्न: ${opts.questionShort}\n\nउत्तर:\n${opts.answerText}`
+    : `तुझ्या प्रश्नाचे उत्तर आले — अ‍ॅप किंवा WhatsApp वर पाहा.\n\nप्रश्न: ${opts.questionShort}`;
+  await sendSmart({
+    to: opts.to,
+    lastInboundAt: opts.lastInboundAt,
+    text,
+    templateName: "ajapa_guru_answer_ready",
+    templateParams: [truncateParam(opts.questionShort, 120)],
+  });
+}
+
+export async function fetchMediaUrl(mediaId: string): Promise<string | null> {
+  const c = cfg();
+  if (c.dryRun) return `https://example.invalid/media/${mediaId}`;
+  if (!c.token) return null;
+  const meta = await fetch(`${c.apiBase}/${mediaId}`, {
+    headers: { Authorization: `Bearer ${c.token}` },
+  });
+  if (!meta.ok) return null;
+  const data = (await meta.json()) as { url?: string };
+  return data.url || null;
+}

@@ -34,8 +34,32 @@ App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Role names ab
 | --- | --- | --- |
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
 | विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
-| प्रश्न | `/questions` | Questions for the week; answers + source |
+| प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
+| अजपा | `/ajapa` | WhatsApp Ajapa Q→AI→guru flow (live) |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
+
+Short aliases: `/a` `/t` `/q` `/j` `/r`.
+
+## Locked product: अजपा WhatsApp Q&A
+
+See [`docs/AJAPA_QA_FLOW.md`](docs/AJAPA_QA_FLOW.md) (locked) and [`docs/AJAPA_WABA_TEMPLATES.md`](docs/AJAPA_WABA_TEMPLATES.md).
+
+| Who | Command | Next |
+| --- | --- | --- |
+| चरणसेवक | `अजपा Q` + प्रश्न | AI ≥200 words → `1` escalate to मधुसुदनदास |
+| मधुसुदनदास | `अजपा A` + mobile | show pending → `1` text / `2` voice → notify seeker |
+
+Webhook: `POST/GET /api/whatsapp/webhook` · App list: `GET /api/ajapa/questions` · WABA `7030111501`.
+
+```bash
+npm run test:ajapa
+```
+
+## Out of scope (remaining)
+
+- Native iOS/Android apps
+- Multi-user RBAC beyond the shared admin PIN
+- Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
 
 ## Run locally
 
@@ -94,7 +118,7 @@ COOKIE_SECURE=false
    | `TURSO_AUTH_TOKEN` | token from `turso db tokens create` |
 
 4. Redeploy after saving env vars. Turn **Deployment Protection** off so phones can open the URL without a Vercel login.
-5. Short aliases on the production host: `/a` → attendance, `/t` → topic, `/q` → questions, `/r` → report.
+5. Short aliases on the production host: `/a` → attendance, `/t` → topic, `/q` → questions, `/j` → ajapa, `/r` → report.
 
 `GET /api/health` returns `{ ok, db: { store: "turso" | "file" } }` when the store is reachable.
 
@@ -103,18 +127,6 @@ COOKIE_SECURE=false
 - Next.js App Router + TypeScript
 - Tailwind CSS
 - libSQL (`@libsql/client`) — local file or Turso
-
-## Locked product: अजपा WhatsApp Q&A
-
-See [`docs/AJAPA_QA_FLOW.md`](docs/AJAPA_QA_FLOW.md) — locked 2026-09-13.
-
-Commands: `अजपा Q` (चरणसेवक) → AI ≥200 words → `1` escalate to मधुसुदनदास; `अजपा A` + mobile (गुरु) → type/`1` or voice/`2` → notify seeker. WABA `7030111501` templates listed in that doc.
-
-## Out of scope (current MVP code)
-
-- WhatsApp bots / Cloud API webhooks *(planned per locked Ajapa flow above)*
-- Native iOS/Android apps
-- Multi-user RBAC beyond the shared admin PIN
 
 ## License
 

@@ -56,14 +56,17 @@
 
 ---
 
-## 4. अ‍ॅप एजंट — अंमलबजावणी नोट्स
+## 4. अंमलबजावणी स्थिती (implemented)
 
-सध्याचे MVP (`README`: WhatsApp bot out of scope) या फ्लोमुळे **विस्तार** होते:
+| आयटम | स्थिती |
+|------|--------|
+| WhatsApp webhook `GET/POST /api/whatsapp/webhook` | ✅ |
+| State machine `अजपा Q` / `1` / `अजपा A` / `1`|`2` | ✅ `lib/ajapa/bot.ts` |
+| DB `ajapa_questions` + `wa_sessions` | ✅ |
+| AI ≥200 शब्द (knowledge / optional OpenAI) | ✅ |
+| Templates + 24h session send | ✅ `lib/ajapa/whatsapp.ts` |
+| अ‍ॅप UI `/ajapa` + API | ✅ |
+| Meta submit copy | ✅ `docs/AJAPA_WABA_TEMPLATES.md` |
+| Voice permanence (S3/R2) | ⏳ stores media id/URL only |
 
-1. WhatsApp inbound webhook: `अजपा Q` / `अजपा A` / `1` / `2` state machine  
-2. प्रश्न DB: चरणसेवक मोबाइल, प्रश्न, AI उत्तर, गुरु उत्तर (text/audio URL), status (`ai_answered` → `escalated` → `guru_answered`)  
-3. Outbound: २४तास आत session message; बाहेर वरील टेम्प्लेट  
-4. अ‍ॅप UI: प्रलंबित / गुरु-उत्तरित प्रश्न दाखवणे (विद्यमान `/questions` टॅबशी जोडणे किंवा नवीन अजपा स्क्रीन)  
-5. गुरु भूमिका: फोन `9850120960` (README roles)
-
-**अ‍ॅप एजंट:** हा LOCKED स्पेक अंमलात आणा; टेम्प्लेट कॉपी Meta submit साठी वेगळ्या PR/डोकमध्ये ठेवता येईल.
+गुरु फोन default: `9850120960` (`GURU_PHONE`). Smoke: `WHATSAPP_DRY_RUN=1 npx tsx scripts/ajapa-smoke.ts`.
