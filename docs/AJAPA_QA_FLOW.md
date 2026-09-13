@@ -1,7 +1,10 @@
 # अजपा प्रश्नोत्तर फ्लो (LOCKED)
 
 **Status:** Locked — 2026-09-13 (KAILAS / cloud agent confirm: `Ho`)  
-**WABA:** `7030111501` (Dove Soft / Meta Business Manager)
+**WABA:** `7030111501` (Dove Soft / Meta Business Manager)  
+**सर-बॉट:** या नंबरवरील विद्यमान बॉट **अस्पर्श**. अजपा फक्त `अजपा` / `ajapa`.  
+**Footer:** `|| हरि ॐ परमानंद विश्वव्यापकम् ||`  
+**टेम्प्लेट submit:** फक्त स्पष्ट `submit हो` — ऑटो-submit नाही.
 
 हा दस्तऐवज WhatsApp बॉट + अ‍ॅप सिंकसाठी अंतिम सोपा फ्लो आहे. बदलण्यापूर्वी नवीन लॉक हवे.
 
