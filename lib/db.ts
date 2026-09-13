@@ -178,6 +178,34 @@ async function migrate(db: Client) {
     `CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_questions_place ON questions(place_id)`,
     `CREATE INDEX IF NOT EXISTS idx_questions_created ON questions(created_at)`,
+    `CREATE TABLE IF NOT EXISTS members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      mobile TEXT NOT NULL UNIQUE,
+      place_code TEXT NOT NULL,
+      login_code TEXT NOT NULL UNIQUE,
+      login_code_collision INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_members_place ON members(place_code)`,
+    `CREATE INDEX IF NOT EXISTS idx_members_collision ON members(login_code_collision)`,
+    `CREATE TABLE IF NOT EXISTS weekly_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start TEXT NOT NULL UNIQUE,
+      question TEXT NOT NULL,
+      source TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS weekly_answers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      weekly_question_id INTEGER NOT NULL REFERENCES weekly_questions(id),
+      member_id INTEGER NOT NULL REFERENCES members(id),
+      answer TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE (weekly_question_id, member_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_weekly_answers_member ON weekly_answers(member_id)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);

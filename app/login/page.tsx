@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -90,6 +91,15 @@ export default function LoginPage() {
             OK
           </button>
         </div>
+      </div>
+
+      <div className="mt-6 flex justify-center gap-4 text-sm font-semibold">
+        <Link href="/register" className="text-saffron-800">
+          चरणसेवक नोंदणी
+        </Link>
+        <Link href="/member-login" className="text-saffron-800">
+          चरणसेवक प्रवेश
+        </Link>
       </div>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-temple-muted">

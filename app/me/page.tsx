@@ -1,0 +1,124 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+
+type MePayload = {
+  member: {
+    id: number;
+    name: string;
+    mobile: string;
+    place_label: string;
+    login_code: string;
+    login_code_collision: boolean;
+  };
+  weekly: {
+    week_start: string;
+    question: { question: string; source: string | null } | null;
+    answer: { answer: string } | null;
+  };
+};
+
+export default function MemberHomePage() {
+  const [data, setData] = useState<MePayload | null>(null);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    const next = await api<MePayload>("/api/me");
+    setData(next);
+  }
+
+  useEffect(() => {
+    void load().catch((e) => setError(e instanceof Error ? e.message : "लोड अयशस्वी"));
+  }, []);
+
+  async function submitAnswer() {
+    setSaving(true);
+    setError(null);
+    try {
+      await api("/api/me/answer", {
+        method: "POST",
+        body: JSON.stringify({ answer: draft }),
+      });
+      setDraft("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "उत्तर जतन अयशस्वी");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!data) {
+    return <p className="text-sm text-temple-muted">{error || "लोड होत आहे…"}</p>;
+  }
+
+  const { member, weekly } = data;
+
+  return (
+    <div className="space-y-4">
+      <div className="card space-y-2 p-4">
+        <p className="text-sm text-temple-muted">नमस्कार</p>
+        <h2 className="text-xl font-bold">{member.name}</h2>
+        <p className="text-sm text-temple-muted">{member.place_label}</p>
+        <dl className="grid grid-cols-2 gap-2 pt-2 text-sm">
+          <div className="rounded-xl bg-saffron-50 px-3 py-2">
+            <dt className="text-xs text-temple-muted">सेवक क्रमांक</dt>
+            <dd className="font-bold text-saffron-800">{member.id}</dd>
+          </div>
+          <div className="rounded-xl bg-saffron-50 px-3 py-2">
+            <dt className="text-xs text-temple-muted">प्रवेश संकेत</dt>
+            <dd className="font-bold tracking-widest text-saffron-800">{member.login_code}</dd>
+          </div>
+        </dl>
+        {member.login_code_collision ? (
+          <p className="text-xs text-amber-800">तुमचा संकेत ६-अंकी आहे (शेवटचे ४ अंक आधी वापरले होते).</p>
+        ) : null}
+      </div>
+
+      <div className="card space-y-3 p-4">
+        <h3 className="font-bold">या आठवड्याचा प्रश्न</h3>
+        {weekly.question ? (
+          <>
+            <p className="leading-relaxed">{weekly.question.question}</p>
+            {weekly.question.source ? (
+              <p className="text-xs text-temple-muted">स्रोत: {weekly.question.source}</p>
+            ) : null}
+            {weekly.answer ? (
+              <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm">
+                <p className="text-xs font-semibold text-emerald-800">तुमचे उत्तर</p>
+                <p className="mt-1 whitespace-pre-wrap">{weekly.answer.answer}</p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={4}
+                  placeholder="उत्तर लिहा…"
+                  className="w-full rounded-xl px-3 py-2 ring-1 ring-saffron-200"
+                />
+                <button
+                  type="button"
+                  disabled={saving || !draft.trim()}
+                  onClick={() => void submitAnswer()}
+                  className="w-full rounded-2xl bg-saffron-700 py-3 font-semibold text-white disabled:opacity-60"
+                >
+                  {saving ? "पाठवत आहे…" : "उत्तर पाठवा"}
+                </button>
+                <p className="text-xs text-temple-muted">एकदा पाठवलेले उत्तर बदलता येत नाही.</p>
+              </>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-temple-muted">
+            या आठवड्याचा प्रश्न अद्याप नाही. प्रशासक प्रश्न टाकेल तेव्हा इथे दिसेल.
+          </p>
+        )}
+      </div>
+      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+    </div>
+  );
+}

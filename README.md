@@ -18,7 +18,7 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 | Super admin | मधुसुदनदास विजयानंद | 9850120960 |
 | Software | KAILAS ADHAV | 9225118811 |
 
-App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Role names above are operational, not a second login system.
+App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`) for coordinators. **चरणसेवक** (members) register at `/register` and sign in with mobile + login code (default: last 4 digits of the mobile). If that last-4 is already taken, the first member keeps it and the new member gets a random unique 6-digit code (flagged for admin on `/members` and the report page).
 
 ## Seed places
 
@@ -36,6 +36,16 @@ App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Role names ab
 | विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
 | प्रश्न | `/questions` | Questions for the week; answers + source |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
+
+Member (separate session cookie):
+
+| Screen | Route | Use |
+| --- | --- | --- |
+| नोंदणी | `/register` (`/reg`) | Name, 10-digit mobile, place |
+| सेवक प्रवेश | `/member-login` | Mobile + login code |
+| सेवक घर | `/me` (`/m`) | Own profile + weekly question / one ANS |
+| सेवक यादी | `/members` | Admin: members + 6-digit collision flags |
+| साप्ताहिक प्रश्न | `/weekly` | Admin: one question + source per Thursday |
 
 ## Run locally
 
@@ -60,7 +70,9 @@ npm start
 
 - Local: SQLite file `data/satsang.db` via `@libsql/client` (created on first request; gitignored)
 - Production (Vercel): **Turso** (libSQL over HTTP). A SQLite file on Vercel serverless is ephemeral and must not be used for attendance / Q&A.
-- Cookie session after PIN; change PIN with env `ADMIN_PIN`
+- Cookie session after PIN (`satsang_session`); member session is a separate cookie (`satsang_member`)
+- `members` table: id, name, mobile (unique), place_code, login_code, login_code_collision, created_at. SQL up/down in `sql/`
+- Change PIN with env `ADMIN_PIN`
 - Optional `SESSION_SECRET` for cookie HMAC
 - On Vercel, login cookies are marked `Secure` automatically. Locally, keep `COOKIE_SECURE=false` unless you use HTTPS.
 
@@ -108,7 +120,7 @@ COOKIE_SECURE=false
 
 - WhatsApp bots / Cloud API webhooks
 - Native iOS/Android apps
-- Multi-user RBAC beyond the shared admin PIN
+- Full RBAC / roles beyond admin PIN + member mobile login
 
 ## License
 
