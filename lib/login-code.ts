@@ -23,6 +23,7 @@ export function cryptoRandom6(): string {
   return String(randomInt(100000, 1000000));
 }
 
+/** First member keeps last-4; later same last-4 gets a unique random 6-digit. */
 export async function allocateLoginCode(
   mobile: string,
   isUsed: (code: string) => boolean | Promise<boolean>,
