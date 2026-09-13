@@ -18,7 +18,7 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 | Super admin | मधुसुदनदास विजयानंद | 9850120960 |
 | Software | KAILAS ADHAV | 9225118811 |
 
-App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). चरणसेवक register at `/register` (rules live in schema + UI, not extra docs).
+App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Members start with **अजपा / ajpa** (`/register`) — not नोंदणी.
 
 ## Seed places
 

@@ -127,7 +127,7 @@ export async function registerMember(input: {
     });
     const id = Number(result.lastInsertRowid);
     const saved = await getMemberById(id);
-    if (!saved) throw new MemberError("नोंदणी अयशस्वी", 500);
+    if (!saved) throw new MemberError("अजपा अयशस्वी", 500);
     return saved;
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
@@ -143,7 +143,7 @@ export async function registerMember(input: {
       });
       const id = Number(result.lastInsertRowid);
       const saved = await getMemberById(id);
-      if (!saved) throw new MemberError("नोंदणी अयशस्वी", 500);
+      if (!saved) throw new MemberError("अजपा अयशस्वी", 500);
       return saved;
     }
     throw err;

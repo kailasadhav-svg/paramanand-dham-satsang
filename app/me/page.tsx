@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AJPA_LABEL } from "@/lib/ajpa";
 import { api } from "@/lib/api";
 
 type MePayload = {
@@ -108,7 +109,9 @@ export default function MemberHomePage() {
                 >
                   {saving ? "पाठवत आहे…" : "उत्तर पाठवा"}
                 </button>
-                <p className="text-xs text-temple-muted">एकदा पाठवलेले उत्तर बदलता येत नाही.</p>
+                <p className="text-xs text-temple-muted">
+                  एकदा पाठवलेले उत्तर बदलता येत नाही. {AJPA_LABEL} + उत्तर
+                </p>
               </>
             )}
           </>

@@ -28,3 +28,14 @@ export function placeLabel(code: string): string {
 export function placeName(code: string): string {
   return BY_CODE.get(code as PlaceCode)?.name ?? code;
 }
+
+/** Match a typed/WhatsApp place (label, full name, or code). */
+export function parsePlaceInput(raw: string): PlaceCode | null {
+  const t = raw.trim().toLowerCase().replace(/\s+/g, "");
+  if (!t) return null;
+  for (const p of PLACE_OPTIONS) {
+    const keys = [p.code, p.label, p.name].map((s) => s.toLowerCase().replace(/\s+/g, ""));
+    if (keys.some((k) => k === t || t.includes(k) || k.includes(t))) return p.code;
+  }
+  return null;
+}

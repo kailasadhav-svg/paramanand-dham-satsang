@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AJPA_LABEL, AJPA_MR, applyRegisterReply, type RegisterChatStep, type RegisterDraft } from "@/lib/ajpa";
 import { api } from "@/lib/api";
 import { PLACE_OPTIONS } from "@/lib/places";
 
@@ -15,35 +16,63 @@ type Registered = {
 };
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [placeCode, setPlaceCode] = useState(PLACE_OPTIONS[0]?.code ?? "ranantri");
+  const [step, setStep] = useState<RegisterChatStep>("ask_name");
+  const [draft, setDraft] = useState<RegisterDraft>({});
+  const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<Registered | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function finish(next: RegisterDraft) {
     setLoading(true);
     setError(null);
     try {
       const data = await api<{ member: Registered }>("/api/register", {
         method: "POST",
-        body: JSON.stringify({ name, mobile, place_code: placeCode }),
+        body: JSON.stringify({
+          name: next.name,
+          mobile: next.mobile,
+          place_code: next.place_code,
+        }),
       });
       setDone(data.member);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "नोंदणी अयशस्वी");
+      setError(err instanceof Error ? err.message : "अजपा अयशस्वी");
     } finally {
       setLoading(false);
     }
+  }
+
+  function advance(text: string) {
+    const next = applyRegisterReply(step, text, draft);
+    setError(next.error ?? null);
+    setDraft(next.draft);
+    if (next.error) return;
+    setReply("");
+    if (next.step === "done" && next.draft.name && next.draft.mobile && next.draft.place_code) {
+      void finish(next.draft);
+      return;
+    }
+    setStep(next.step);
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step === "ask_place") {
+      if (!reply) {
+        setError("स्थान निवडा");
+        return;
+      }
+    }
+    advance(reply);
   }
 
   if (done) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-6 py-10">
         <p className="text-center text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
-        <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">नोंदणी पूर्ण</h1>
+        <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">{AJPA_MR}</h1>
+        <p className="mt-1 text-center text-sm text-temple-muted">पूर्ण · ajpa</p>
         <div className="card mt-8 space-y-3 px-5 py-6">
           <p className="text-sm text-temple-muted">{done.name} · {done.place_label}</p>
           <div className="rounded-2xl bg-saffron-50 px-4 py-3 text-center">
@@ -77,58 +106,76 @@ export default function RegisterPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-6 py-10">
       <p className="text-center text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
-      <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">चरणसेवक नोंदणी</h1>
-      <p className="mt-2 text-center text-sm text-temple-muted">नाव · मोबाइल · स्थान</p>
+      <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">{AJPA_MR}</h1>
+      <p className="mt-2 text-center text-sm text-temple-muted">{AJPA_LABEL}</p>
+      <p className="mt-1 text-center text-xs text-temple-muted">नाव · मोबाइल · स्थान — एक एक करून</p>
 
-      <form onSubmit={(e) => void submit(e)} className="card mt-8 space-y-4 px-5 py-6">
-        <label className="block text-xs font-semibold text-temple-muted">
-          नाव
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-            required
-            className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 text-base ring-1 ring-saffron-200"
-          />
-        </label>
-        <label className="block text-xs font-semibold text-temple-muted">
-          मोबाइल (१० अंक)
-          <input
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            inputMode="numeric"
-            autoComplete="tel"
-            required
-            className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 text-base tabular-nums ring-1 ring-saffron-200"
-          />
-        </label>
-        <label className="block text-xs font-semibold text-temple-muted">
-          स्थान
-          <select
-            value={placeCode}
-            onChange={(e) => setPlaceCode(e.target.value as typeof placeCode)}
-            className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 text-base ring-1 ring-saffron-200"
-          >
-            {PLACE_OPTIONS.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <form onSubmit={submit} className="card mt-8 space-y-4 px-5 py-6">
+        {step === "ask_name" ? (
+          <label className="block text-xs font-semibold text-temple-muted">
+            नाव
+            <input
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              autoComplete="name"
+              autoFocus
+              required
+              className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 text-base ring-1 ring-saffron-200"
+            />
+          </label>
+        ) : null}
+        {step === "ask_mobile" ? (
+          <label className="block text-xs font-semibold text-temple-muted">
+            मोबाइल (१० अंक)
+            <input
+              value={reply}
+              onChange={(e) => setReply(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              inputMode="numeric"
+              autoComplete="tel"
+              autoFocus
+              required
+              className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 text-base tabular-nums ring-1 ring-saffron-200"
+            />
+          </label>
+        ) : null}
+        {step === "ask_place" ? (
+          <div>
+            <p className="mb-2 text-xs font-semibold text-temple-muted">स्थान</p>
+            <div className="flex flex-wrap gap-2">
+              {PLACE_OPTIONS.map((p) => (
+                <button
+                  key={p.code}
+                  type="button"
+                  onClick={() => advance(p.label)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${
+                    reply === p.label
+                      ? "bg-saffron-700 text-white ring-saffron-700"
+                      : "bg-white ring-saffron-200"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-2xl bg-saffron-700 py-3.5 font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? "नोंद होत आहे…" : "नोंदणी करा"}
-        </button>
+        {step !== "ask_place" ? (
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-2xl bg-saffron-700 py-3.5 font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? "…" : "पुढे"}
+          </button>
+        ) : (
+          <p className="text-center text-xs text-temple-muted">स्थान टॅप करा</p>
+        )}
       </form>
 
       <p className="mt-6 text-center text-sm">
         <Link href="/member-login" className="font-semibold text-saffron-800">
-          आधी नोंद आहे? प्रवेश करा
+          आधी {AJPA_MR}? प्रवेश करा
         </Link>
       </p>
       <p className="mt-2 text-center text-sm">

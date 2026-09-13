@@ -72,7 +72,7 @@ function MemberLoginForm() {
 
       <p className="mt-6 text-center text-sm">
         <Link href="/register" className="font-semibold text-saffron-800">
-          नवीन नोंदणी
+          अजपा · ajpa
         </Link>
       </p>
       <p className="mt-2 text-center text-sm">

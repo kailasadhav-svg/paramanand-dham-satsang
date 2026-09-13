@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { source: "/q", destination: "/questions", permanent: false },
       { source: "/r", destination: "/report", permanent: false },
       { source: "/reg", destination: "/register", permanent: false },
+      { source: "/ajpa", destination: "/register", permanent: false },
       { source: "/m", destination: "/me", permanent: false },
     ];
   },
