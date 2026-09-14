@@ -77,12 +77,12 @@ export function canAppointSatsangi(role: StaffRole): boolean {
 export function appDisplayName(role: StaffRole): string {
   if (role === "charansevak") return "परमानंद चरणसेवक";
   if (role === "guru") return "अजपा संवाद";
-  return "परमानंद संचालक";
+  return "परमानंद सेवक";
 }
 
 /** User-facing role name (गुरु → संवादक). */
 export function roleLabelMarathi(role: StaffRole): string {
-  if (role === "software") return "संचालक";
+  if (role === "software") return "सेवक";
   if (role === "guru") return "संवादक";
   return "चरणसेवक";
 }

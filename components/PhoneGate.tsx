@@ -85,7 +85,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
           <h1 className="font-display text-3xl text-saffron-900">मोबाइल निवडा</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            क्रमांकानुसार स्क्रीन — संचालक / संवादक / चरणसेवक
+            क्रमांकानुसार स्क्रीन — सेवक / संवादक / चरणसेवक
           </p>
         </div>
         <form
@@ -115,13 +115,13 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           </label>
           <ul className="space-y-1 text-xs text-temple-muted">
             <li>
-              · <strong>9225118811</strong> — संचालक (कैलास · सर्व स्क्रीन)
+              · <strong>9225118811</strong> — सेवक (कैलास · सर्व स्क्रीन)
             </li>
             <li>
               · <strong>9850120960</strong> — संवादक (उपस्थिती · अहवाल · संवाद)
             </li>
             <li>
-              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · संचालक नाही)
+              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सेवक नाही)
             </li>
             <li>
               · <strong>9136443333</strong> — चरणसेवक मधुसुदनदास (भेद नसेल · फक्त स्वतःचे काम)
