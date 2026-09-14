@@ -1,9 +1,7 @@
 import { api } from "@/lib/api";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
 import { getAllQuestions, getMeta, setMeta, upsertQuestions } from "./idb";
-import { phonesEqual } from "./phone";
 import type { LocalProfile } from "./profile";
-import { canSeeStaffScreens } from "@/lib/roles";
 
 export type SyncResult = {
   pulled: number;
@@ -12,28 +10,41 @@ export type SyncResult = {
   at: string;
 };
 
-function filterForRole(profile: LocalProfile, questions: AjapaQuestion[]): AjapaQuestion[] {
-  if (canSeeStaffScreens(profile.role)) {
-    if (profile.role === "guru") {
-      return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
-    }
-    return questions; // software / संचालक
+export type DialogueScope = {
+  place_id: number;
+  meeting_date: string;
+};
+
+/** Shared संवाद for one place + गुरुवार विषय — सर्वांना त्या स्थळाचे प्रश्न. */
+export async function readLocalForDialogue(
+  profile: LocalProfile,
+  scope: DialogueScope,
+): Promise<AjapaQuestion[]> {
+  const all = await getAllQuestions();
+  let list = all.filter(
+    (q) => q.place_id === scope.place_id && q.meeting_date === scope.meeting_date,
+  );
+  if (profile.role === "guru") {
+    list = list.filter((q) => q.status === "escalated" || q.status === "guru_answered");
   }
-  return questions.filter((q) => phonesEqual(q.seeker_phone, profile.phone));
+  return list;
 }
 
-export async function readLocalForProfile(profile: LocalProfile): Promise<AjapaQuestion[]> {
-  return filterForRole(profile, await getAllQuestions());
-}
-
-/** Pull deltas since last sync — keeps server load low. */
-export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncResult> {
-  const since = (await getMeta("ajapa_since")) || undefined;
+/** Pull questions for one place+date संवाद (shared). */
+export async function syncAjapaFromServer(
+  profile: LocalProfile,
+  scope?: DialogueScope,
+): Promise<SyncResult> {
+  const sinceKey = scope
+    ? `ajapa_since_${scope.place_id}_${scope.meeting_date}`
+    : "ajapa_since";
+  const since = (await getMeta(sinceKey)) || undefined;
   const base = new URLSearchParams();
   base.set("limit", "200");
   if (since) base.set("since", since);
-  if (profile.role === "charansevak" || profile.role === "satsangi") {
-    base.set("seeker_phone", profile.phone);
+  if (scope) {
+    base.set("place_id", String(scope.place_id));
+    base.set("meeting_date", scope.meeting_date);
   }
 
   try {
@@ -60,10 +71,12 @@ export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncRe
       (max, q) => (q.updated_at > max ? q.updated_at : max),
       since || "",
     );
-    if (latest) await setMeta("ajapa_since", latest);
+    if (latest) await setMeta(sinceKey, latest);
     await setMeta("ajapa_last_sync", new Date().toISOString());
 
-    const local = await readLocalForProfile(profile);
+    const local = scope
+      ? await readLocalForDialogue(profile, scope)
+      : await getAllQuestions();
     return {
       pulled: questions.length,
       localCount: local.length,
@@ -71,7 +84,9 @@ export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncRe
       at: new Date().toISOString(),
     };
   } catch {
-    const local = await readLocalForProfile(profile);
+    const local = scope
+      ? await readLocalForDialogue(profile, scope)
+      : await getAllQuestions();
     return {
       pulled: 0,
       localCount: local.length,
@@ -79,4 +94,12 @@ export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncRe
       at: new Date().toISOString(),
     };
   }
+}
+
+/** @deprecated use readLocalForDialogue */
+export async function readLocalForProfile(
+  profile: LocalProfile,
+): Promise<AjapaQuestion[]> {
+  void profile;
+  return getAllQuestions();
 }

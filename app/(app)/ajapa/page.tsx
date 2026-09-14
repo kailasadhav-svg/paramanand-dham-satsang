@@ -2,19 +2,27 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PlaceDateBar, type Place } from "@/components/FormBits";
 import { useProfile } from "@/components/PhoneGate";
-import { WeeklyTopics } from "@/components/WeeklyTopics";
 import { api } from "@/lib/api";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { defaultThursdayYmd } from "@/lib/dates";
 import { searchLocal, upsertQuestions } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
-import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
+import {
+  readLocalForDialogue,
+  syncAjapaFromServer,
+} from "@/lib/offline/sync";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
   ai_answered: "परमानंद साहित्य",
   escalated: "संवादकांकडे",
   guru_answered: "संवादक उत्तर",
+};
+
+const KIND_LABEL: Record<string, string> = {
+  atmaprabha: "आत्मप्रभा",
+  upadesh: "उपदेश",
 };
 
 const ROLE_LABEL = {
@@ -24,8 +32,20 @@ const ROLE_LABEL = {
   satsangi: "सत्संगी चरणसेवक",
 } as const;
 
+type MeetingTopic = {
+  topic_kind: "atmaprabha" | "upadesh" | null;
+  topic_title: string | null;
+  conductor: string | null;
+  notes: string | null;
+};
+
 export default function AjapaPage() {
   const profile = useProfile();
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [placeId, setPlaceId] = useState<number | "">("");
+  const [date, setDate] = useState(defaultThursdayYmd());
+  const [meeting, setMeeting] = useState<MeetingTopic | null>(null);
+
   const [items, setItems] = useState<AjapaQuestion[]>([]);
   const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
   const [query, setQuery] = useState("");
@@ -48,18 +68,54 @@ export default function AjapaPage() {
     profile.role === "satsangi" ||
     profile.role === "software";
 
+  const selectedPlace = useMemo(
+    () => places.find((p) => p.id === placeId) || null,
+    [places, placeId],
+  );
+
+  const topicTitle = meeting?.topic_title?.trim() || "";
+  const hasTopic = Boolean(topicTitle);
+  const scope =
+    placeId !== "" && date
+      ? { place_id: placeId, meeting_date: date }
+      : null;
+
+  useEffect(() => {
+    void api<{ places: Place[] }>("/api/places").then((data) => {
+      setPlaces(data.places);
+      setPlaceId((id) => {
+        if (id !== "" && data.places.some((p) => p.id === id)) return id;
+        const nashik = data.places.find((p) => p.name === "नाशिक");
+        return nashik?.id ?? data.places[0]?.id ?? "";
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!placeId || !date) {
+      setMeeting(null);
+      return;
+    }
+    void api<{ meeting: MeetingTopic }>(
+      `/api/meetings?place_id=${placeId}&date=${date}`,
+    )
+      .then((data) => setMeeting(data.meeting))
+      .catch(() => setMeeting(null));
+  }, [placeId, date]);
+
   const syncAndLoad = useCallback(async () => {
+    if (!scope) return;
     setSyncing(true);
     setError(null);
     try {
-      setItems(await readLocalForProfile(profile));
-      const result = await syncAjapaFromServer(profile);
-      setItems(await readLocalForProfile(profile));
+      setItems(await readLocalForDialogue(profile, scope));
+      const result = await syncAjapaFromServer(profile, scope);
+      setItems(await readLocalForDialogue(profile, scope));
       setOffline(result.offline);
       setSyncNote(
         result.offline
-          ? "ऑफलाइन · लोकल यादी"
-          : `सिंक · +${result.pulled} · एकूण ${result.localCount}`,
+          ? "ऑफलाइन · लोकल संवाद"
+          : `सिंक · +${result.pulled} · या विषयावर ${result.localCount}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "लोड अयशस्वी");
@@ -67,11 +123,13 @@ export default function AjapaPage() {
       setSyncing(false);
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, scope?.place_id, scope?.meeting_date]);
 
   useEffect(() => {
+    if (!scope) return;
+    setLoading(true);
     void syncAndLoad();
-  }, [syncAndLoad]);
+  }, [syncAndLoad, scope?.place_id, scope?.meeting_date]);
 
   const visible = useMemo(() => {
     let list = items;
@@ -79,18 +137,17 @@ export default function AjapaPage() {
     return searchLocal(list, query);
   }, [items, filter, query]);
 
-  const viewHint =
-    profile.role === "software"
-      ? "संचालक — सर्व प्रश्न"
-      : profile.role === "guru"
-        ? "संवादक — उत्तर द्यावयाचे प्रश्न"
-        : profile.role === "charansevak"
-          ? "चरणसेवक — प्रश्न टाका / सिंक"
-          : "सत्संगी — प्रश्न टाका / सिंक";
-
   async function submitQuestion(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
+    if (!scope) {
+      setError("स्थळ व तारीख निवडा");
+      return;
+    }
+    if (!hasTopic) {
+      setError("प्रथम «विषय» मेनूमध्ये या स्थळाचा विषय जतन करा — मग संवाद सुरू होईल");
+      return;
+    }
     if (text.length < 3) {
       setError("प्रश्न थोडा मोठा लिहा");
       return;
@@ -104,18 +161,16 @@ export default function AjapaPage() {
         body: JSON.stringify({
           question: text,
           seeker_name: profile.name || null,
+          place_id: scope.place_id,
+          meeting_date: scope.meeting_date,
         }),
       });
       await upsertQuestions([data.question]);
       setDraft("");
       setFilter("all");
       setQuery("");
-      setOkMsg(
-        data.question.ai_answer
-          ? "प्रश्न + परमानंद साहित्य उत्तर खाली आहे"
-          : "प्रश्न जतन · उत्तर लोड करा (सिंक)",
-      );
-      setItems(await readLocalForProfile(profile));
+      setOkMsg(`«${topicTitle}» विषयावरील उत्तर खाली आहे`);
+      setItems(await readLocalForDialogue(profile, scope));
       void syncAndLoad();
     } catch (err) {
       setError(err instanceof Error ? err.message : "प्रश्न जतन अयशस्वी");
@@ -146,6 +201,7 @@ export default function AjapaPage() {
   }
 
   async function verifyOtp(q: AjapaQuestion) {
+    if (!scope) return;
     setOtpBusy(true);
     setError(null);
     try {
@@ -157,7 +213,7 @@ export default function AjapaPage() {
         },
       );
       await upsertQuestions([data.question]);
-      setItems(await readLocalForProfile(profile));
+      setItems(await readLocalForDialogue(profile, scope));
       setOtpForId(null);
       setOtpValue("");
       setOtpHint(null);
@@ -180,16 +236,14 @@ export default function AjapaPage() {
             {ROLE_LABEL[profile.role]} · {displayPhone(profile.phone)}
             {offline ? " · ऑफलाइन" : ""}
           </p>
-          <p className="text-[11px] text-temple-muted">{viewHint}</p>
-          {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
-          <p className="mt-1 text-[11px] leading-snug text-temple-muted">
-            «विषय» = सत्संग शीर्षक (नाशिकसह सर्वांना). इथे फक्त अजपा{" "}
-            <strong>प्रश्न–उत्तर</strong>.
+          <p className="text-[11px] text-temple-muted">
+            जो विषय जतन — त्यावरच संवाद · स्थळातील सर्वांना दिसतो
           </p>
+          {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
         </div>
         <button
           type="button"
-          disabled={syncing}
+          disabled={syncing || !scope}
           onClick={() => void syncAndLoad()}
           className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
         >
@@ -197,19 +251,58 @@ export default function AjapaPage() {
         </button>
       </div>
 
-      <WeeklyTopics date={defaultThursdayYmd()} compact />
+      <PlaceDateBar
+        places={places}
+        placeId={placeId}
+        date={date}
+        onPlace={setPlaceId}
+        onDate={setDate}
+      />
 
-      {canAsk ? (
+      {hasTopic ? (
+        <div className="rounded-2xl bg-saffron-700 px-4 py-3 text-white shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-saffron-100">
+            आजचा संवाद विषय
+            {selectedPlace ? ` · ${selectedPlace.name}` : ""}
+            {meeting?.topic_kind ? ` · ${KIND_LABEL[meeting.topic_kind]}` : ""}
+          </p>
+          <p className="mt-1 font-display text-2xl leading-tight">{topicTitle}</p>
+          {meeting?.conductor ? (
+            <p className="mt-1 text-xs text-saffron-100">संचालक: {meeting.conductor}</p>
+          ) : null}
+          {meeting?.notes ? (
+            <p className="mt-2 text-sm text-saffron-50/95">{meeting.notes}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950 ring-1 ring-amber-200">
+          <p className="font-bold">विषय नसेल तर संवाद सुरू होत नाही</p>
+          <p>
+            {selectedPlace?.name || "स्थळ"} · {date} साठी विषय जतन करा — उदा. «मी कोण आहे».
+            मग त्या विषयावर प्रश्न–उत्तर येथे चालेल व नाशिक/स्थळातील सर्वांना दिसेल.
+          </p>
+          <Link
+            href="/topic"
+            className="inline-block rounded-full bg-saffron-700 px-4 py-2 text-xs font-bold text-white"
+          >
+            विषय जतन करा →
+          </Link>
+        </div>
+      )}
+
+      {canAsk && hasTopic ? (
         <form
           onSubmit={(e) => void submitQuestion(e)}
           className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200"
         >
-          <p className="text-sm font-bold text-saffron-900">नवीन प्रश्न टाका</p>
+          <p className="text-sm font-bold text-saffron-900">
+            «{topicTitle}» वर प्रश्न टाका
+          </p>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
-            placeholder="उदा. अजपा म्हणजे काय?"
+            placeholder={`उदा. «${topicTitle}» या विषयात …`}
             className="w-full rounded-xl border border-saffron-200 bg-saffron-50 px-3 py-2 text-sm"
           />
           <button
@@ -217,55 +310,60 @@ export default function AjapaPage() {
             disabled={submitting || draft.trim().length < 3}
             className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {submitting ? "परमानंद साहित्य उत्तर तयार…" : "प्रश्न पाठवा"}
+            {submitting ? "या विषयावर उत्तर तयार…" : "प्रश्न पाठवा"}
           </button>
-          <p className="text-[11px] text-temple-muted">
-            वरचा शोध बॉक्स फक्त यादी शोधतो — प्रश्न येथे टाका. उत्तर खाली «परमानंद साहित्य उत्तर» मध्ये दिसेल.
-          </p>
         </form>
-      ) : (
+      ) : null}
+
+      {!canAsk && hasTopic ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-xs text-temple-muted">
-          संवादक यादी पाहतात · प्रश्न चरणसेवक / सत्संगी टाकतात
+          संवादक — या विषयावरील उत्तर द्यावयाचे प्रश्न खाली
         </p>
-      )}
+      ) : null}
 
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="लोकल शोध — प्रश्न / उत्तर / नाव"
-        className="w-full rounded-xl border border-saffron-200 bg-white px-3 py-2 text-sm"
-      />
+      {hasTopic ? (
+        <>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="या विषयातील शोध — प्रश्न / उत्तर"
+            className="w-full rounded-xl border border-saffron-200 bg-white px-3 py-2 text-sm"
+          />
 
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ["all", "सर्व"],
-            ["ai_answered", "परमानंद साहित्य"],
-            ["escalated", "संवादकांकडे"],
-            ["guru_answered", "पूर्ण"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-              filter === value
-                ? "bg-saffron-700 text-white ring-saffron-700"
-                : "bg-white ring-saffron-200"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["all", "सर्व"],
+                ["ai_answered", "परमानंद साहित्य"],
+                ["escalated", "संवादकांकडे"],
+                ["guru_answered", "पूर्ण"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                  filter === value
+                    ? "bg-saffron-700 text-white ring-saffron-700"
+                    : "bg-white ring-saffron-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
 
       {okMsg ? (
         <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{okMsg}</p>
       ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      {loading ? <p className="text-sm text-temple-muted">लोड होत आहे…</p> : null}
+      {loading && hasTopic ? (
+        <p className="text-sm text-temple-muted">संवाद लोड…</p>
+      ) : null}
 
       <ul className="space-y-3">
         {visible.map((q) => (
@@ -276,10 +374,18 @@ export default function AjapaPage() {
                 {STATUS_LABEL[q.status]}
               </span>
             </div>
-            {profile.role === "software" || profile.role === "guru" ? (
+            {q.topic_title ? (
+              <p className="text-[11px] font-semibold text-saffron-800">
+                विषय: {q.topic_title}
+                {q.place_name ? ` · ${q.place_name}` : ""}
+              </p>
+            ) : null}
+            {q.seeker_name || profile.role === "software" || profile.role === "guru" ? (
               <p className="text-xs text-temple-muted">
-                {q.seeker_name ? `${q.seeker_name} · ` : ""}
-                {displayPhone(q.seeker_phone)}
+                {q.seeker_name ? `${q.seeker_name}` : "सत्संगी"}
+                {profile.role === "software" || profile.role === "guru"
+                  ? ` · ${displayPhone(q.seeker_phone)}`
+                  : ""}
               </p>
             ) : null}
 
@@ -292,7 +398,7 @@ export default function AjapaPage() {
               </div>
             ) : (
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                साहित्य उत्तर अजून नाही — पुन्हा प्रश्न पाठवा किंवा सिंक करा
+                साहित्य उत्तर अजून नाही — सिंक करा
               </p>
             )}
 
@@ -308,7 +414,9 @@ export default function AjapaPage() {
                       inputMode="numeric"
                       maxLength={6}
                       value={otpValue}
-                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      onChange={(e) =>
+                        setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
                       placeholder="६ अंकी OTP"
                       className="w-full rounded-xl border border-saffron-200 px-3 py-2 text-center text-lg font-bold tracking-widest"
                     />
@@ -344,7 +452,7 @@ export default function AjapaPage() {
 
             {q.status === "escalated" ? (
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
-                संवादकांकडे पाठवले · मधुसुदनदास उत्तर येईल तेव्हा «पूर्ण» मध्ये दिसेल
+                संवादकांकडे · «{q.topic_title || topicTitle}» विषयावर उत्तर येईल
               </p>
             ) : null}
 
@@ -361,25 +469,16 @@ export default function AjapaPage() {
         ))}
       </ul>
 
-      {!loading && visible.length === 0 ? (
-        <div className="space-y-2 rounded-2xl bg-saffron-50 px-3 py-4 text-center text-sm text-temple-muted ring-1 ring-saffron-100">
-          {query ? (
-            <p>शोध रिक्त — फिल्टर «सर्व» करा</p>
-          ) : canAsk ? (
-            <>
-              <p className="font-semibold text-temple-ink">अजून अजपा प्रश्न नाहीत</p>
-              <p>
-                वर «नवीन प्रश्न टाका» मध्ये लिहून <strong>प्रश्न पाठवा</strong>.
-                सत्संगचा विषय («मी कोण आहे» इ.) इथे येत नाही — तो{" "}
-                <Link href="/topic" className="font-semibold text-saffron-800 underline">
-                  विषय
-                </Link>{" "}
-                / अहवाल मध्ये राहतो.
-              </p>
-            </>
-          ) : (
-            <p>प्रश्न नाहीत — सिंक करा · प्रश्न चरणसेवक / सत्संगी टाकतात</p>
-          )}
+      {!loading && hasTopic && visible.length === 0 ? (
+        <div className="rounded-2xl bg-saffron-50 px-3 py-4 text-center text-sm text-temple-muted ring-1 ring-saffron-100">
+          <p className="font-semibold text-temple-ink">
+            «{topicTitle}» वर अजून संवाद नाही
+          </p>
+          <p className="mt-1">
+            {canAsk
+              ? "वर प्रश्न टाका — उत्तर या विषयावरच येईल व स्थळातील सर्वांना दिसेल."
+              : "प्रश्न येईल तेव्हा येथे दिसेल."}
+          </p>
         </div>
       ) : null}
     </div>

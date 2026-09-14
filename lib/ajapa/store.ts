@@ -37,6 +37,11 @@ function asState(value: unknown): AjapaSessionState {
   return ok.includes(value as AjapaSessionState) ? (value as AjapaSessionState) : "idle";
 }
 
+function asTopicKind(value: unknown): "atmaprabha" | "upadesh" | null {
+  if (value === "atmaprabha" || value === "upadesh") return value;
+  return null;
+}
+
 function asAjapa(row: Row): AjapaQuestion {
   return {
     id: num(row.id),
@@ -48,6 +53,11 @@ function asAjapa(row: Row): AjapaQuestion {
     guru_answer_text: strOrNull(row.guru_answer_text),
     guru_answer_audio_url: strOrNull(row.guru_answer_audio_url),
     guru_answer_audio_media_id: strOrNull(row.guru_answer_audio_media_id),
+    place_id: row.place_id == null ? null : num(row.place_id),
+    place_name: strOrNull(row.place_name),
+    meeting_date: strOrNull(row.meeting_date),
+    topic_kind: asTopicKind(row.topic_kind),
+    topic_title: strOrNull(row.topic_title),
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
     escalated_at: strOrNull(row.escalated_at),
@@ -125,6 +135,11 @@ export async function createAjapaQuestion(input: {
   seeker_name?: string | null;
   question: string;
   ai_answer: string;
+  place_id?: number | null;
+  place_name?: string | null;
+  meeting_date?: string | null;
+  topic_kind?: "atmaprabha" | "upadesh" | null;
+  topic_title?: string | null;
 }): Promise<AjapaQuestion> {
   const now = nowIso();
   const db = await getDb();
@@ -132,13 +147,19 @@ export async function createAjapaQuestion(input: {
     sql: `INSERT INTO ajapa_questions (
       seeker_phone, seeker_name, question, ai_answer, status,
       guru_answer_text, guru_answer_audio_url, guru_answer_audio_media_id,
+      place_id, place_name, meeting_date, topic_kind, topic_title,
       created_at, updated_at, escalated_at, answered_at
-    ) VALUES (?, ?, ?, ?, 'ai_answered', NULL, NULL, NULL, ?, ?, NULL, NULL)`,
+    ) VALUES (?, ?, ?, ?, 'ai_answered', NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
     args: [
       input.seeker_phone,
       input.seeker_name ?? null,
       input.question.trim(),
       input.ai_answer,
+      input.place_id ?? null,
+      input.place_name ?? null,
+      input.meeting_date ?? null,
+      input.topic_kind ?? null,
+      input.topic_title ?? null,
       now,
       now,
     ],
@@ -221,6 +242,8 @@ export async function saveGuruVoiceAnswer(
 export async function listAjapaQuestions(opts?: {
   status?: AjapaStatus;
   seeker_phone?: string;
+  place_id?: number;
+  meeting_date?: string;
   /** ISO timestamp — only rows with updated_at > since (incremental sync). */
   since?: string;
   limit?: number;
@@ -234,6 +257,14 @@ export async function listAjapaQuestions(opts?: {
   if (opts?.seeker_phone) {
     clauses.push("seeker_phone = ?");
     params.push(opts.seeker_phone);
+  }
+  if (opts?.place_id) {
+    clauses.push("place_id = ?");
+    params.push(opts.place_id);
+  }
+  if (opts?.meeting_date) {
+    clauses.push("meeting_date = ?");
+    params.push(opts.meeting_date);
   }
   if (opts?.since) {
     clauses.push("updated_at > ?");

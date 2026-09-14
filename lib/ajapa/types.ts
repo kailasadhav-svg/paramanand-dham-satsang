@@ -17,6 +17,12 @@ export type AjapaQuestion = {
   guru_answer_text: string | null;
   guru_answer_audio_url: string | null;
   guru_answer_audio_media_id: string | null;
+  /** सत्संग स्थळ — संवाद या विषयावर चालतो */
+  place_id: number | null;
+  place_name: string | null;
+  meeting_date: string | null;
+  topic_kind: "atmaprabha" | "upadesh" | null;
+  topic_title: string | null;
   created_at: string;
   updated_at: string;
   escalated_at: string | null;

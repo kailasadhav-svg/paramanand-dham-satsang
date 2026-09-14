@@ -84,8 +84,8 @@ export default function TopicPage() {
     <div className="space-y-4">
       <h2 className="text-lg font-bold">विषय व संचालक</h2>
       <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs leading-relaxed text-emerald-950 ring-1 ring-emerald-100">
-        नाशिकसह <strong>सर्व स्थळांचे विषय</strong> प्रत्येक लॉगिनला दिसतात (उपस्थिती /
-        विषय / अजपा).
+        जतन केलेला विषय = <strong>अजपा संवाद</strong> चा आधार. नाशिक/इतर स्थळातील
+        सर्वांना तो विषय व त्यावरील प्रश्न–उत्तर दिसतात.
         {canEdit
           ? " संचालक / संवादक जतन करू शकतात."
           : " तुम्ही फक्त पाहू शकता — जतन संचालक / संवादक करतील."}
@@ -165,11 +165,11 @@ export default function TopicPage() {
       )}
       {saved ? (
         <p className="text-center text-xs text-emerald-800">
-          विषय जतन · नाशिक / सर्व स्थळांना उपस्थिती व अजपा वर दिसेल · अजपा प्रश्नासाठी{" "}
+          विषय जतन · आता{" "}
           <Link href="/ajapa" className="font-semibold underline">
             अजपा
           </Link>{" "}
-          उघडा
+          मध्ये या विषयावर संवाद सुरू होईल (स्थळातील सर्वांना)
         </p>
       ) : null}
     </div>

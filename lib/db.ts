@@ -299,6 +299,14 @@ async function migrate(db: Client) {
   await ensureColumn(db, "meetings", "checkin_phone", "TEXT");
   await ensureColumn(db, "meetings", "checkin_at", "TEXT");
 
+  await ensureColumn(db, "ajapa_questions", "place_id", "INTEGER");
+  await ensureColumn(db, "ajapa_questions", "place_name", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "meeting_date", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "topic_kind", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "topic_title", "TEXT");
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_ajapa_place_date ON ajapa_questions(place_id, meeting_date)",
+  );
 
   const insert = SEED_PLACES.map((name, i) => ({
     sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",

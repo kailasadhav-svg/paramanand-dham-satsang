@@ -89,6 +89,8 @@ export function searchLocal(questions: AjapaQuestion[], query: string): AjapaQue
       item.guru_answer_text || "",
       item.seeker_name || "",
       item.seeker_phone,
+      item.topic_title || "",
+      item.place_name || "",
     ]
       .join("\n")
       .toLowerCase();
