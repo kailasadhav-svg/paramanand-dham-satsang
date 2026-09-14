@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useProfileOptional } from "@/components/PhoneGate";
+import { profileAppName } from "@/lib/offline/profile";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -8,6 +10,8 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export function InstallBanner() {
+  const profile = useProfileOptional();
+  const appName = profileAppName(profile);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [hidden, setHidden] = useState(true);
   const [iosHint, setIosHint] = useState(false);
@@ -51,7 +55,9 @@ export function InstallBanner() {
 
   return (
     <div className="card mb-3 space-y-2 border-saffron-200 bg-saffron-50/80 p-3">
-      <p className="text-sm font-semibold text-saffron-900">अजपा संवाद · होम स्क्रीनवर अ‍ॅड करा</p>
+      <p className="text-sm font-semibold text-saffron-900">
+        {appName} · होम स्क्रीनवर अ‍ॅड करा
+      </p>
       {iosHint ? (
         <p className="text-xs leading-relaxed text-temple-muted">
           Safari → Share (□↑) → <strong>Add to Home Screen</strong>

@@ -25,7 +25,7 @@ export default function LoginPage() {
         setPin("");
         return;
       }
-      router.replace("/attendance");
+      router.replace("/ajapa");
       router.refresh();
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export default function LoginPage() {
         <p className="text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
         <h1 className="mt-1 font-display text-4xl text-saffron-900">अजपा संवाद</h1>
         <p className="mt-2 text-sm text-temple-muted">
-          चरणसेवक · गुरु प्रश्नोत्तर · होम स्क्रीन अ‍ॅप
+          मोबाइलनुसार स्क्रीन · सॉफ्टवेअर / गुरु / चरणसेवक
         </p>
       </div>
 
@@ -93,9 +93,11 @@ export default function LoginPage() {
       </div>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-temple-muted">
-        सुपर अॅडमिन: मधुसुदनदास विजयानंद · 9850120960
+        गुरु: मधुसुदनदास · 9850120960
         <br />
-        सॉफ्टवेअर: KAILAS ADHAV · 9225118811
+        सॉफ्टवेअर: कैलास आढाव · 9225118811
+        <br />
+        चरणसेवक (कैलास): 9423078811 · shortcut: परमानंद चरणसेवक
       </p>
     </div>
   );

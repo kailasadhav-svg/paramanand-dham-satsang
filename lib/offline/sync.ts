@@ -1,8 +1,9 @@
 import { api } from "@/lib/api";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
-import { getMeta, setMeta, upsertQuestions, getAllQuestions } from "./idb";
+import { getAllQuestions, getMeta, setMeta, upsertQuestions } from "./idb";
 import { phonesEqual } from "./phone";
 import type { LocalProfile } from "./profile";
+import { canSeeStaffScreens } from "@/lib/roles";
 
 export type SyncResult = {
   pulled: number;
@@ -12,11 +13,13 @@ export type SyncResult = {
 };
 
 function filterForRole(profile: LocalProfile, questions: AjapaQuestion[]): AjapaQuestion[] {
-  if (profile.role === "admin") return questions;
-  if (profile.role === "charansevak") {
-    return questions.filter((q) => phonesEqual(q.seeker_phone, profile.phone));
+  if (canSeeStaffScreens(profile.role)) {
+    if (profile.role === "guru") {
+      return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
+    }
+    return questions; // software
   }
-  return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
+  return questions.filter((q) => phonesEqual(q.seeker_phone, profile.phone));
 }
 
 export async function readLocalForProfile(profile: LocalProfile): Promise<AjapaQuestion[]> {
