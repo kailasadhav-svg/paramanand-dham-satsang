@@ -1,10 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { loadProfile } from "@/lib/offline/profile";
+import { defaultHomePath } from "@/lib/roles";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const search = useSearchParams();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,15 @@ export default function LoginPage() {
         setPin("");
         return;
       }
-      router.replace("/ajapa");
+      const next = search.get("next");
+      const profile = loadProfile();
+      const dest =
+        next && next.startsWith("/")
+          ? next
+          : profile
+            ? defaultHomePath(profile.role)
+            : "/ajapa";
+      router.replace(dest);
       router.refresh();
     } finally {
       setLoading(false);
@@ -102,5 +113,13 @@ export default function LoginPage() {
         चरणसेवक (मधुसुदनदास): 9136443333
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<p className="p-6 text-sm text-temple-muted">लोड…</p>}>
+      <LoginForm />
+    </Suspense>
   );
 }
