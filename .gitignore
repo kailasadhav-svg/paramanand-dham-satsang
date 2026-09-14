@@ -12,3 +12,6 @@ out
 *.tsbuildinfo
 tsbuildinfo
 .vercel
+data/literature/*.docx
+data/literature/*.txt
+data/literature/*.jpg

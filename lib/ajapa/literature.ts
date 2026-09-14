@@ -14,7 +14,8 @@ export type LiteratureChunk = {
 const LITERATURE_DIR = path.join(process.cwd(), "data", "literature");
 
 const CORPUS_FILES = [
-  "atmaprabha-01-58.md",
+  "atmaprabha-full.md", // पूर्ण ग्रंथ (Drive aatmaprabha.docx)
+  "atmaprabha-01-58.md", // प्रश्नोत्तर संक्षेप
   "aartya-va-chauda-upadesh.md",
 ] as const;
 
@@ -150,25 +151,18 @@ function readFileSafe(name: string): string | null {
 function parseCorpus(): LiteratureChunk[] {
   const entries: LiteratureChunk[] = [];
 
-  const atma = readFileSafe("atmaprabha-01-58.md");
-  if (atma) {
-    for (const chunk of splitByH2(atma)) {
-      const title = enrichAtmaprabhaTitle(chunk.title, chunk.body);
+  for (const file of CORPUS_FILES) {
+    const text = readFileSafe(file);
+    if (!text) continue;
+    for (const chunk of splitByH2(text)) {
+      if (chunk.body.length < 40) continue;
+      let title = chunk.title;
+      if (file.startsWith("atmaprabha")) {
+        title = enrichAtmaprabhaTitle(title, chunk.body);
+      }
       entries.push({
         title,
         keywords: keywordsFrom(title, chunk.body),
-        body: chunk.body,
-      });
-    }
-  }
-
-  const aartya = readFileSafe("aartya-va-chauda-upadesh.md");
-  if (aartya) {
-    for (const chunk of splitByH2(aartya)) {
-      if (chunk.body.length < 40) continue;
-      entries.push({
-        title: chunk.title,
-        keywords: keywordsFrom(chunk.title, chunk.body),
         body: chunk.body,
       });
     }
