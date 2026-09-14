@@ -2,8 +2,19 @@
 
 import { addDaysYmd, defaultThursdayYmd, formatMarathiDate } from "@/lib/dates";
 
-export type Place = { id: number; name: string; sort_order: number; latitude?: number | null; longitude?: number | null };
+export type Place = {
+  id: number;
+  name: string;
+  sort_order: number;
+  latitude?: number | null;
+  longitude?: number | null;
+};
 
+/**
+ * Place + date controls.
+ * Place is always a full-width <select> on phone and computer —
+ * no horizontal chips that clip Marathi names (e.g. नाशिक).
+ */
 export function PlaceDateBar({
   places,
   placeId,
@@ -17,51 +28,37 @@ export function PlaceDateBar({
   date: string;
   onPlace: (id: number) => void;
   onDate: (ymd: string) => void;
-  /** सत्संगी: फक्त घरचे स्थळ — इतर निवडता येत नाही */
   locked?: boolean;
 }) {
   return (
     <div className="space-y-3">
       <div>
         <label className="mb-1 block text-xs font-semibold text-temple-muted">
-          स्थान{locked ? " · तुमचे स्थळ" : ""}
+          स्थान
         </label>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {places.map((p) => {
-            const selected = placeId === p.id;
-            const disabled = locked && !selected && places.length > 1;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                disabled={disabled || (locked && places.length === 1)}
-                onClick={() => {
-                  if (locked && !selected) return;
-                  onPlace(p.id);
-                }}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${
-                  selected
-                    ? "bg-saffron-700 text-white ring-saffron-700"
-                    : disabled
-                      ? "cursor-not-allowed bg-stone-100 text-stone-400 ring-stone-200"
-                      : "bg-white text-temple-ink ring-saffron-200"
-                }`}
-              >
-                {p.name}
-              </button>
-            );
-          })}
-        </div>
-        {locked && places.length === 1 ? (
-          <p className="mt-1 text-[11px] text-temple-muted">
-            तुमचे नोंदलेले स्थळ — दुसरे निवडता येणार नाही
-          </p>
-        ) : null}
+        <select
+          disabled={locked || places.length === 0}
+          value={placeId === "" ? "" : String(placeId)}
+          onChange={(e) => {
+            const id = Number(e.target.value);
+            if (Number.isFinite(id)) onPlace(id);
+          }}
+          className="w-full min-w-0 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold leading-normal ring-1 ring-saffron-200 disabled:opacity-60"
+          aria-label="स्थान निवडा"
+        >
+          {places.length === 0 ? <option value="">स्थळ नाही</option> : null}
+          {places.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
+
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
-          className="rounded-xl bg-white px-3 py-2 text-lg ring-1 ring-saffron-200"
+          className="shrink-0 rounded-xl bg-white px-3 py-2 text-lg ring-1 ring-saffron-200"
           onClick={() => onDate(addDaysYmd(date || defaultThursdayYmd(), -7))}
           aria-label="मागील गुरुवार"
         >
@@ -72,13 +69,15 @@ export function PlaceDateBar({
             type="date"
             value={date}
             onChange={(e) => onDate(e.target.value)}
-            className="w-full rounded-xl bg-white px-3 py-2 text-center text-sm ring-1 ring-saffron-200"
+            className="w-full min-w-0 rounded-xl bg-white px-3 py-2 text-center text-sm ring-1 ring-saffron-200"
           />
-          <p className="mt-1 text-xs text-temple-muted">{date ? formatMarathiDate(date) : ""}</p>
+          <p className="mt-1 break-words text-xs leading-snug text-temple-muted">
+            {date ? formatMarathiDate(date) : ""}
+          </p>
         </div>
         <button
           type="button"
-          className="rounded-xl bg-white px-3 py-2 text-lg ring-1 ring-saffron-200"
+          className="shrink-0 rounded-xl bg-white px-3 py-2 text-lg ring-1 ring-saffron-200"
           onClick={() => onDate(addDaysYmd(date || defaultThursdayYmd(), 7))}
           aria-label="पुढील गुरुवार"
         >
@@ -102,12 +101,16 @@ export function NumberStepper({
 }) {
   return (
     <div
-      className={`flex items-center justify-between bg-white ring-1 ring-saffron-200 ${
+      className={`flex items-center justify-between gap-2 bg-white ring-1 ring-saffron-200 ${
         compact ? "rounded-xl px-3 py-2" : "rounded-2xl px-4 py-3"
       }`}
     >
-      <span className={`font-semibold ${compact ? "text-sm" : ""}`}>{label}</span>
-      <div className="flex items-center gap-1.5">
+      <span
+        className={`min-w-0 break-words font-semibold leading-snug ${compact ? "text-sm" : ""}`}
+      >
+        {label}
+      </span>
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           aria-label={`${label} कमी`}
@@ -167,10 +170,14 @@ export function SaveBar({
       }`}
     >
       {error ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
+        <p className="break-words rounded-xl bg-red-50 px-3 py-2 text-sm leading-snug text-red-800">
+          {error}
+        </p>
       ) : null}
       {saved ? (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{savedLabel}</p>
+        <p className="break-words rounded-xl bg-emerald-50 px-3 py-2 text-sm leading-snug text-emerald-800">
+          {savedLabel}
+        </p>
       ) : null}
       <button
         type="button"

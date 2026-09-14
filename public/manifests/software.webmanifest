@@ -1,8 +1,8 @@
 {
   "id": "/i/software",
-  "name": "परमानंद संचालक",
-  "short_name": "संचालक",
-  "description": "परमानंद धाम · संचालक नोंदी व नेमणूक",
+  "name": "परमानंद सेवक",
+  "short_name": "सेवक",
+  "description": "परमानंद धाम · सेवक नोंदी",
   "start_url": "/i/software?src=pwa",
   "scope": "/",
   "display": "standalone",

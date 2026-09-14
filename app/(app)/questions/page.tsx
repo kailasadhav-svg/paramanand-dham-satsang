@@ -30,9 +30,11 @@ export default function QuestionsPage() {
   useEffect(() => {
     void api<{
       places: Place[];
-      default_place_id: number | null;
+      default_place_id?: number | null;
+      place_locked?: boolean;
     }>("/api/places").then((data) => {
       setPlaces(data.places);
+      setPlaceLocked(Boolean(data.place_locked));
       setPlaceId((id) => {
         if (id !== "" && data.places.some((p) => p.id === id)) return id;
         if (

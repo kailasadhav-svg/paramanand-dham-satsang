@@ -22,9 +22,9 @@ export const INSTALL_SLOTS: Record<
   software: {
     phone: "9225118811",
     role: "software",
-    shortName: "संचालक",
-    name: "परमानंद संचालक",
-    forWhom: "कैलास · सर्व स्क्रीन · नेमणूक",
+    shortName: "सेवक",
+    name: "परमानंद सेवक",
+    forWhom: "कैलास · सर्व स्क्रीन",
     manifest: "/manifests/software.webmanifest",
     icon: "/icons/software/icon-192.png",
     appleIcon: "/icons/software/apple-touch-icon.png",
