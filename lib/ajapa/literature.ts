@@ -14,9 +14,10 @@ export type LiteratureChunk = {
 const LITERATURE_DIR = path.join(process.cwd(), "data", "literature");
 
 const CORPUS_FILES = [
+  "AARTI_PARAMANAND.md", // seeker proof — आरती + अर्थ
+  "aartya-va-chauda-upadesh.md",
   "atmaprabha-full.md", // पूर्ण ग्रंथ (Drive aatmaprabha.docx)
   "atmaprabha-01-58.md", // प्रश्नोत्तर संक्षेप
-  "aartya-va-chauda-upadesh.md",
 ] as const;
 
 let cached: LiteratureChunk[] | null = null;
@@ -71,7 +72,7 @@ function keywordsFrom(title: string, body: string): string[] {
   const fromBody = tokens(body.slice(0, 400)).slice(0, 40);
   const extras: string[] = [];
   if (/आरती|आरति/i.test(title + body.slice(0, 200))) {
-    extras.push("आरती", "aarti", "arti", "पाठ", "अर्थ");
+    extras.push("आरती", "aarti", "arti", "पाठ", "अर्थ", "परमानंद");
   }
   if (/रत्न|उपदेश/i.test(title)) {
     extras.push("रत्न", "उपदेश", "चौदा", "रत्ने");
@@ -114,7 +115,6 @@ function splitByH2(markdown: string): { title: string; body: string }[] {
       buf = [line];
       continue;
     }
-    // Promote # title only if no ## yet
     const h1 = line.match(/^#\s+(.+)$/);
     if (h1 && !title && buf.length === 0) {
       title = h1[1].trim();
@@ -148,6 +148,21 @@ function readFileSafe(name: string): string | null {
   }
 }
 
+/** Drop internal notes (paths, AI, code) so they never reach seekers. */
+function scrubInternalNotes(body: string): string {
+  return body
+    .split("\n")
+    .filter((line) => {
+      const t = line.trim();
+      if (/^स्रोत:/.test(t)) return false;
+      if (/lib\/ajapa|AI कल्पित|ज्ञानबेस|data\/literature/i.test(t)) return false;
+      if (/^अ‍ॅप उत्तरे/.test(t)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
 function parseCorpus(): LiteratureChunk[] {
   const entries: LiteratureChunk[] = [];
 
@@ -155,15 +170,18 @@ function parseCorpus(): LiteratureChunk[] {
     const text = readFileSafe(file);
     if (!text) continue;
     for (const chunk of splitByH2(text)) {
-      if (chunk.body.length < 40) continue;
-      let title = chunk.title;
+      const body = scrubInternalNotes(chunk.body);
+      if (body.length < 40) continue;
+      let title = chunk.title
+        .replace(/^परमानंद साहित्य\s*[—–-]\s*/i, "")
+        .trim();
       if (file.startsWith("atmaprabha")) {
-        title = enrichAtmaprabhaTitle(title, chunk.body);
+        title = enrichAtmaprabhaTitle(title, body);
       }
       entries.push({
         title,
-        keywords: keywordsFrom(title, chunk.body),
-        body: chunk.body,
+        keywords: keywordsFrom(title, body),
+        body,
       });
     }
   }
@@ -188,4 +206,25 @@ export function literatureCorpusStats(): { files: string[]; chunks: number } {
     files: CORPUS_FILES.slice(),
     chunks: loadLiteratureCorpus().length,
   };
+}
+
+/**
+ * Turn internal knowledge blocks into seeker-facing literature text
+ * (no 【】, no ## dump, no code/AI notes).
+ */
+export function formatLiteratureForSeeker(knowledge: string): string {
+  return knowledge
+    .replace(/【\s*([^】]+?)\s*】\s*\n?/g, (_, title: string) => {
+      const clean = String(title)
+        .replace(/^\d+\.\s*/, "")
+        .replace(/^\(अ‍ॅप\)\s*/i, "")
+        .trim();
+      if (/सामान्य परमानंद साहित्य/i.test(clean)) return "";
+      return `\n${clean}\n\n`;
+    })
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/`1`/g, "१")
+    .replace(/\bAI\b/gi, "साहित्य")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

@@ -170,6 +170,22 @@ export async function escalateAjapaQuestion(id: number): Promise<AjapaQuestion |
   return getAjapaQuestion(id);
 }
 
+/** चुकीचे/जुने साहित्य उत्तर पुन्हा तयार — फक्त ai_answered. */
+export async function updateAjapaAiAnswer(
+  id: number,
+  ai_answer: string,
+): Promise<AjapaQuestion | undefined> {
+  const now = nowIso();
+  const db = await getDb();
+  await db.execute({
+    sql: `UPDATE ajapa_questions
+      SET ai_answer = ?, updated_at = ?
+      WHERE id = ? AND status = 'ai_answered'`,
+    args: [ai_answer, now, id],
+  });
+  return getAjapaQuestion(id);
+}
+
 export async function latestEscalatedForSeeker(
   seekerPhone: string,
 ): Promise<AjapaQuestion | undefined> {
