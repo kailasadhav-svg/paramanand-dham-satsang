@@ -1,11 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ProfileChip, useClearProfile, useProfileOptional } from "@/components/PhoneGate";
+import { profileAppName } from "@/lib/offline/profile";
 
 export function AppHeader({ subtitle }: { subtitle?: string }) {
   const router = useRouter();
+  const profile = useProfileOptional();
+  const clearProfile = useClearProfile();
+  const title = profileAppName(profile);
 
   async function logout() {
+    clearProfile();
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
@@ -16,16 +22,33 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
       <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-wide text-saffron-700">परमानंद धाम</p>
-          <h1 className="font-display text-2xl leading-tight text-saffron-900">सत्संग</h1>
-          {subtitle ? <p className="mt-0.5 text-sm text-temple-muted">{subtitle}</p> : null}
+          <h1 className="font-display text-2xl leading-tight text-saffron-900">{title}</h1>
+          <ProfileChip />
+          {subtitle && profile && profile.role !== "charansevak" ? (
+            <p className="mt-0.5 text-sm text-temple-muted">{subtitle}</p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          className="rounded-full border border-saffron-200 px-3 py-1.5 text-xs font-semibold text-saffron-800"
-        >
-          बाहेर पडा
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-full border border-saffron-200 px-3 py-1.5 text-xs font-semibold text-saffron-800"
+          >
+            बाहेर पडा
+          </button>
+          {profile ? (
+            <button
+              type="button"
+              onClick={() => {
+                clearProfile();
+                router.refresh();
+              }}
+              className="text-[11px] font-semibold text-temple-muted underline"
+            >
+              मोबाइल बदला
+            </button>
+          ) : null}
+        </div>
       </div>
     </header>
   );

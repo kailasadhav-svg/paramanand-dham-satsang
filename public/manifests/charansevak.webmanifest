@@ -1,0 +1,19 @@
+{
+  "id": "/i/charansevak",
+  "name": "परमानंद चरणसेवक",
+  "short_name": "चरणसेवक",
+  "description": "परमानंद धाम · चरणसेवक सेवा",
+  "start_url": "/i/charansevak?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fff8f1",
+  "theme_color": "#7c2d12",
+  "lang": "mr",
+  "icons": [
+    { "src": "/icons/charansevak/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/charansevak/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/charansevak/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
