@@ -283,7 +283,7 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
   if (/^(?:अजपा|ajapa)\b/i.test(text)) {
     await sendText(
       from,
-      "वापर:\n• चरणसेवक: `अजपा Q` आणि प्रश्न\n• गुरु: `अजपा A` आणि सेवकाचा मोबाइल",
+      "वापर:\n• चरणसेवक: `अजपा Q` आणि प्रश्न\n• संवादक: `अजपा A` आणि सेवकाचा मोबाइल",
     );
     return { handled: true, replies: ["help"] };
   }

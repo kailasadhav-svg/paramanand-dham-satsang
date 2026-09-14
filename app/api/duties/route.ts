@@ -65,7 +65,7 @@ export async function PUT(request: Request) {
 
   const actor = actorFromRequest(request);
   if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
-    return jsonError("फक्त गुरु / सॉफ्टवेअर नेमणूक करू शकतात", 403);
+    return jsonError("फक्त संवादक / सॉफ्टवेअर नेमणूक करू शकतात", 403);
   }
 
   const body = (await request.json().catch(() => ({}))) as {

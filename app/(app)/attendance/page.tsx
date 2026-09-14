@@ -250,7 +250,7 @@ export default function AttendancePage() {
       <div className="space-y-3">
         <h2 className="text-lg font-bold">उपस्थिती</h2>
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
-          या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. गुरु (
+          या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. संवादक (
           <strong>9850120960</strong>) किंवा सॉफ्टवेअर (
           <strong>9225118811</strong>) नेमणूक ठरतील — मग तुमचे काम येथे दिसेल.
         </p>

@@ -60,7 +60,7 @@ function LoginForm() {
         <p className="text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
         <h1 className="mt-1 font-display text-4xl text-saffron-900">अजपा संवाद</h1>
         <p className="mt-2 text-sm text-temple-muted">
-          मोबाइलनुसार स्क्रीन · सॉफ्टवेअर / गुरु / चरणसेवक
+          मोबाइलनुसार स्क्रीन · सॉफ्टवेअर / संवादक / चरणसेवक
         </p>
       </div>
 
@@ -104,7 +104,7 @@ function LoginForm() {
       </div>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-temple-muted">
-        गुरु: मधुसुदनदास · 9850120960
+        संवादक: मधुसुदनदास · 9850120960
         <br />
         सॉफ्टवेअर: कैलास आढाव · 9225118811
         <br />

@@ -16,7 +16,7 @@ import {
   type LocalProfile,
 } from "@/lib/offline/profile";
 import { displayPhone } from "@/lib/offline/phone";
-import { defaultHomePath } from "@/lib/roles";
+import { defaultHomePath, roleLabelMarathi } from "@/lib/roles";
 
 type CtxValue = { profile: LocalProfile; clear: () => void };
 
@@ -85,7 +85,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
           <h1 className="font-display text-3xl text-saffron-900">मोबाइल निवडा</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            क्रमांकानुसार स्क्रीन — सॉफ्टवेअर / गुरु / चरणसेवक
+            क्रमांकानुसार स्क्रीन — सॉफ्टवेअर / संवादक / चरणसेवक
           </p>
         </div>
         <form
@@ -118,7 +118,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
               · <strong>9225118811</strong> — सॉफ्टवेअर (कैलास · सर्व स्क्रीन)
             </li>
             <li>
-              · <strong>9850120960</strong> — गुरु (उपस्थिती · अहवाल · संवाद)
+              · <strong>9850120960</strong> — संवादक (उपस्थिती · अहवाल · संवाद)
             </li>
             <li>
               · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सॉफ्टवेअर नाही)
@@ -157,15 +157,9 @@ export function PhoneGate({ children }: { children: ReactNode }) {
 export function ProfileChip() {
   const profile = useProfileOptional();
   if (!profile) return null;
-  const label =
-    profile.role === "software"
-      ? "सॉफ्टवेअर"
-      : profile.role === "guru"
-        ? "गुरु"
-        : "चरणसेवक";
   return (
     <p className="text-[11px] text-temple-muted">
-      {label} · {displayPhone(profile.phone)}
+      {roleLabelMarathi(profile.role)} · {displayPhone(profile.phone)}
     </p>
   );
 }

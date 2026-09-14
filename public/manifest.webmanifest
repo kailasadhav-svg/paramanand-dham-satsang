@@ -1,7 +1,7 @@
 {
   "name": "अजपा संवाद",
   "short_name": "अजपा संवाद",
-  "description": "अजपा प्रश्नोत्तर — चरणसेवक व गुरु संवाद · Add to Home Screen",
+  "description": "अजपा प्रश्नोत्तर — चरणसेवक व संवादक संवाद · Add to Home Screen",
   "start_url": "/ajapa",
   "scope": "/",
   "display": "standalone",
