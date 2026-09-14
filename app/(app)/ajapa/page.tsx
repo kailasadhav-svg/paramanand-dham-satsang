@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
@@ -47,7 +47,9 @@ export default function AjapaPage() {
   const [meeting, setMeeting] = useState<MeetingTopic | null>(null);
 
   const [items, setItems] = useState<AjapaQuestion[]>([]);
-  const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
+  const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>(
+    profile.role === "guru" ? "escalated" : "all",
+  );
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
   const [visibility, setVisibility] = useState<AjapaVisibility>("private");
@@ -64,10 +66,35 @@ export default function AjapaPage() {
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpHint, setOtpHint] = useState<string | null>(null);
 
+  const [replyForId, setReplyForId] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyAudioUrl, setReplyAudioUrl] = useState<string | null>(null);
+  const [replyBusy, setReplyBusy] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordSecs, setRecordSecs] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const canAsk =
     profile.role === "charansevak" ||
     profile.role === "satsangi" ||
     profile.role === "software";
+  const canAnswer = profile.role === "guru" || profile.role === "software";
+
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      const rec = mediaRecorderRef.current;
+      if (rec && rec.state !== "inactive") {
+        try {
+          rec.stop();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, []);
 
   const selectedPlace = useMemo(
     () => places.find((p) => p.id === placeId) || null,
@@ -233,6 +260,114 @@ export default function AjapaPage() {
     }
   }
 
+  function openReply(q: AjapaQuestion) {
+    stopRecording();
+    setReplyForId(q.id);
+    setReplyText("");
+    setReplyAudioUrl(null);
+    setError(null);
+  }
+
+  function stopRecording() {
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    const rec = mediaRecorderRef.current;
+    if (rec && rec.state !== "inactive") {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  }
+
+  async function startRecording(q: AjapaQuestion) {
+    setError(null);
+    setReplyForId(q.id);
+    setReplyAudioUrl(null);
+    chunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "audio/webm";
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      mediaRecorderRef.current = rec;
+      rec.ondataavailable = (ev) => {
+        if (ev.data.size > 0) chunksRef.current.push(ev.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mime });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setReplyAudioUrl(typeof reader.result === "string" ? reader.result : null);
+        };
+        reader.readAsDataURL(blob);
+        setRecording(false);
+        if (recordTimerRef.current) {
+          clearInterval(recordTimerRef.current);
+          recordTimerRef.current = null;
+        }
+      };
+      rec.start(250);
+      setRecording(true);
+      setRecordSecs(0);
+      recordTimerRef.current = setInterval(() => {
+        setRecordSecs((s) => {
+          if (s >= 59) {
+            stopRecording();
+            return 60;
+          }
+          return s + 1;
+        });
+      }, 1000);
+    } catch {
+      setError("मायक्रोफोन परवानगी द्या — व्हॉइस रेकॉर्ड करता येईल");
+    }
+  }
+
+  async function submitGuruAnswer(q: AjapaQuestion) {
+    if (!scope) return;
+    if (!replyText.trim() && !replyAudioUrl) {
+      setError("मजकूर लिहा किंवा व्हॉइस रेकॉर्ड करा");
+      return;
+    }
+    setReplyBusy(true);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const data = await api<{ question: AjapaQuestion; message: string }>(
+        `/api/ajapa/questions/${q.id}/answer`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            text: replyText.trim() || undefined,
+            audio_data_url: replyAudioUrl || undefined,
+          }),
+        },
+      );
+      await upsertQuestions([data.question]);
+      setItems(await readLocalForDialogue(profile, scope));
+      setReplyForId(null);
+      setReplyText("");
+      setReplyAudioUrl(null);
+      setFilter("guru_answered");
+      setOkMsg(data.message);
+      void syncAndLoad();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "उत्तर जतन अयशस्वी");
+    } finally {
+      setReplyBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
@@ -353,7 +488,8 @@ export default function AjapaPage() {
 
       {!canAsk && hasTopic ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-xs text-temple-muted">
-          संवादक — या विषयावरील उत्तर द्यावयाचे प्रश्न खाली
+          संवादक — «संवादकांकडे» फिल्टर पाहा · प्रत्येक प्रश्नावर{" "}
+          <strong>उत्तर द्या · मजकूर / व्हॉइस नोट</strong>
         </p>
       ) : null}
 
@@ -505,7 +641,97 @@ export default function AjapaPage() {
               </div>
             ) : null}
 
-            {q.status === "escalated" ? (
+            {q.status === "escalated" && canAnswer ? (
+              <div className="space-y-3 border-t border-saffron-100 pt-3">
+                {replyForId === q.id ? (
+                  <>
+                    <p className="text-sm font-bold text-saffron-900">
+                      संवादक उत्तर (मजकूर / व्हॉइस)
+                    </p>
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      rows={4}
+                      placeholder="येथे उत्तर लिहा…"
+                      className="w-full rounded-xl border border-saffron-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {!recording ? (
+                        <button
+                          type="button"
+                          disabled={replyBusy}
+                          onClick={() => void startRecording(q)}
+                          className="rounded-full bg-white px-4 py-2.5 text-sm font-bold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
+                        >
+                          {replyAudioUrl ? "पुन्हा रेकॉर्ड" : "व्हॉइस रेकॉर्ड"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => stopRecording()}
+                          className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
+                        >
+                          थांबवा · {recordSecs}से
+                        </button>
+                      )}
+                      {replyAudioUrl ? (
+                        <button
+                          type="button"
+                          disabled={replyBusy}
+                          onClick={() => setReplyAudioUrl(null)}
+                          className="text-xs font-semibold text-red-700 underline"
+                        >
+                          व्हॉइस काढा
+                        </button>
+                      ) : null}
+                    </div>
+                    {replyAudioUrl ? (
+                      <audio controls src={replyAudioUrl} className="w-full" />
+                    ) : null}
+                    {recording ? (
+                      <p className="text-xs font-semibold text-red-700">
+                        रेकॉर्डिंग सुरू · कमाल ~१ मिनिट
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={
+                        replyBusy ||
+                        recording ||
+                        (!replyText.trim() && !replyAudioUrl)
+                      }
+                      onClick={() => void submitGuruAnswer(q)}
+                      className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
+                    >
+                      {replyBusy ? "जतन…" : "उत्तर पाठवा"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={replyBusy || recording}
+                      onClick={() => {
+                        stopRecording();
+                        setReplyForId(null);
+                        setReplyText("");
+                        setReplyAudioUrl(null);
+                      }}
+                      className="w-full text-xs font-semibold text-temple-muted underline"
+                    >
+                      रद्द
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openReply(q)}
+                    className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white"
+                  >
+                    उत्तर द्या · मजकूर / व्हॉइस नोट
+                  </button>
+                )}
+              </div>
+            ) : null}
+
+            {q.status === "escalated" && !canAnswer ? (
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
                 संवादकांकडे · «{q.topic_title || topicTitle}» विषयावर उत्तर येईल
               </p>
@@ -518,7 +744,10 @@ export default function AjapaPage() {
               </div>
             ) : null}
             {q.guru_answer_audio_url ? (
-              <audio controls src={q.guru_answer_audio_url} className="w-full" />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-emerald-900">व्हॉइस नोट</p>
+                <audio controls src={q.guru_answer_audio_url} className="w-full" />
+              </div>
             ) : null}
           </li>
         ))}
@@ -532,7 +761,9 @@ export default function AjapaPage() {
           <p className="mt-1">
             {canAsk
               ? "वर प्रश्न टाका — उत्तर या विषयावरच येईल व स्थळातील सर्वांना दिसेल."
-              : "प्रश्न येईल तेव्हा येथे दिसेल."}
+              : canAnswer
+                ? "फिल्टर «संवादकांकडे» निवडा — किंवा सिंक करा. उत्तर/व्हॉइस बटण तेथे दिसेल."
+                : "प्रश्न येईल तेव्हा येथे दिसेल."}
           </p>
         </div>
       ) : null}
