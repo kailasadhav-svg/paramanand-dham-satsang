@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * साधकाचा प्रश्न — AI नेहमी उत्तर देते.
+ * साधकाचा प्रश्न — परमानंद साहित्य उत्तर नेहमी मिळते.
  * visibility: private (फक्त स्वतः) | public (स्थळातील सर्वांना).
  * मधुसुदनदास उत्तर = नंतर Meta WhatsApp OTP.
  */
