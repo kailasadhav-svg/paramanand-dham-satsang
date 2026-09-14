@@ -420,20 +420,21 @@ export default function AjapaPage() {
       ) : null}
 
       <div className="rounded-2xl bg-white px-3 py-3 text-xs leading-relaxed text-temple-ink ring-1 ring-saffron-200">
-        <p className="font-bold text-saffron-900">हमी · नियम</p>
-        <ul className="mt-1 list-disc space-y-1 pl-4 text-temple-muted">
+        <p className="font-bold text-saffron-900">हमी व नियम</p>
+        <ul className="mt-2 list-disc space-y-2 pl-4 text-temple-muted">
           <li>
-            एका अधव्याड्यात एका सत्संगी चरणसेवकाकडून मधुसुदनदास यांना{" "}
-            <strong className="text-temple-ink">फक्त एकच</strong> प्रश्न.
+            प्रत्येक सत्संगी चरणसेवकाला आठवड्यातून मधुसुदनदास यांना{" "}
+            <strong className="text-temple-ink">फक्त एकच प्रश्न</strong> विचारता
+            येईल.
           </li>
           <li>
-            व्हॉइस नोट या आठवड्यात सेव्ह;{" "}
-            <strong className="text-temple-ink">पुढील गुरुवारानंतर सर्वरवर राहत नाही</strong>{" "}
-            (भविष्यात Google Drive).
+            या आठवड्यातील व्हॉइस नोट पुढील गुरुवारपर्यंत सर्वरवर जतन केली जाईल.
+            त्यानंतर ती सर्वरवर उपलब्ध राहणार नाही. (भविष्यात Google Drive वर जतन
+            करण्याची सुविधा उपलब्ध होईल.)
           </li>
           <li>
-            आजच्या गुरुवारी मागील गुरुवाराचे प्रश्न/विषय दिसत नाहीत — बघायचे
-            असल्यास वर तारीख निवडा.
+            मागील गुरुवारचे प्रश्न व विषय या गुरुवारच्या यादीत दिसणार नाहीत. ते
+            पाहण्यासाठी वर दिलेल्या पर्यायातून संबंधित तारीख निवडा.
           </li>
         </ul>
       </div>
