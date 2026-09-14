@@ -200,10 +200,18 @@ export default function AjapaPage() {
                 </span>
               </div>
               {profile.role !== "charansevak" ? (
-                <p className="text-xs text-temple-muted">
-                  {q.seeker_name ? `${q.seeker_name} · ` : ""}
-                  {displayPhone(q.seeker_phone)}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 break-words text-xs text-temple-muted">
+                    {q.seeker_name ? `${q.seeker_name} · ` : ""}
+                    {displayPhone(q.seeker_phone)}
+                  </p>
+                  <a
+                    href={`tel:${displayPhone(q.seeker_phone)}`}
+                    className="shrink-0 rounded-full bg-saffron-700 px-3 py-1 text-xs font-semibold text-white"
+                  >
+                    कॉल
+                  </a>
+                </div>
               ) : null}
 
               {q.status === "ai_answered" && isOwner ? (
