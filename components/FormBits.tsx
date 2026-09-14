@@ -10,6 +10,11 @@ export type Place = {
   longitude?: number | null;
 };
 
+/**
+ * Place + date controls.
+ * Place is always a full-width <select> on phone and computer —
+ * no horizontal chips that clip Marathi names (e.g. नाशिक).
+ */
 export function PlaceDateBar({
   places,
   placeId,
@@ -23,7 +28,6 @@ export function PlaceDateBar({
   date: string;
   onPlace: (id: number) => void;
   onDate: (ymd: string) => void;
-  /** When true, place cannot be changed (e.g. satsangi home lock). */
   locked?: boolean;
 }) {
   return (
@@ -32,8 +36,6 @@ export function PlaceDateBar({
         <label className="mb-1 block text-xs font-semibold text-temple-muted">
           स्थान
         </label>
-
-        {/* Mobile: full-width select — no cut-off Marathi names */}
         <select
           disabled={locked || places.length === 0}
           value={placeId === "" ? "" : String(placeId)}
@@ -41,37 +43,16 @@ export function PlaceDateBar({
             const id = Number(e.target.value);
             if (Number.isFinite(id)) onPlace(id);
           }}
-          className="w-full rounded-xl bg-white px-3 py-2.5 text-sm font-semibold ring-1 ring-saffron-200 disabled:opacity-60 md:hidden"
+          className="w-full min-w-0 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold leading-normal ring-1 ring-saffron-200 disabled:opacity-60"
           aria-label="स्थान निवडा"
         >
-          {places.length === 0 ? (
-            <option value="">स्थळ नाही</option>
-          ) : null}
+          {places.length === 0 ? <option value="">स्थळ नाही</option> : null}
           {places.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </select>
-
-        {/* Desktop / tablet: wrapping chips — never horizontal clip */}
-        <div className="hidden flex-wrap gap-2 md:flex">
-          {places.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              disabled={locked}
-              onClick={() => onPlace(p.id)}
-              className={`max-w-full break-words rounded-full px-3 py-1.5 text-sm font-semibold ring-1 disabled:opacity-60 ${
-                placeId === p.id
-                  ? "bg-saffron-700 text-white ring-saffron-700"
-                  : "bg-white text-temple-ink ring-saffron-200"
-              }`}
-            >
-              {p.name}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -90,7 +71,7 @@ export function PlaceDateBar({
             onChange={(e) => onDate(e.target.value)}
             className="w-full min-w-0 rounded-xl bg-white px-3 py-2 text-center text-sm ring-1 ring-saffron-200"
           />
-          <p className="mt-1 break-words text-xs text-temple-muted">
+          <p className="mt-1 break-words text-xs leading-snug text-temple-muted">
             {date ? formatMarathiDate(date) : ""}
           </p>
         </div>
@@ -124,7 +105,9 @@ export function NumberStepper({
         compact ? "rounded-xl px-3 py-2" : "rounded-2xl px-4 py-3"
       }`}
     >
-      <span className={`min-w-0 break-words font-semibold ${compact ? "text-sm" : ""}`}>
+      <span
+        className={`min-w-0 break-words font-semibold leading-snug ${compact ? "text-sm" : ""}`}
+      >
         {label}
       </span>
       <div className="flex shrink-0 items-center gap-1.5">
@@ -187,12 +170,12 @@ export function SaveBar({
       }`}
     >
       {error ? (
-        <p className="break-words rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p className="break-words rounded-xl bg-red-50 px-3 py-2 text-sm leading-snug text-red-800">
           {error}
         </p>
       ) : null}
       {saved ? (
-        <p className="break-words rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p className="break-words rounded-xl bg-emerald-50 px-3 py-2 text-sm leading-snug text-emerald-800">
           {savedLabel}
         </p>
       ) : null}
