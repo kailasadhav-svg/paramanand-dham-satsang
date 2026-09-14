@@ -109,6 +109,14 @@ async function llmAnswer(
   return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
+function polishSeekerAnswer(text: string): string {
+  return text
+    .replace(/【([^】]*)】/g, "$1")
+    .replace(/`1`/g, "«मधुसुदनदास विजयानंद यांच्याकडे पाठवा»")
+    .replace(/\b1\s*दाबून/g, "बटण दाबून")
+    .trim();
+}
+
 /** Generate Marathi literature answer ≥200 words — question-first, unique per seeker. */
 export async function generateAjapaAiAnswer(
   question: string,
@@ -121,7 +129,9 @@ export async function generateAjapaAiAnswer(
   const knowledge = pickKnowledgeForQuestion(question, topic?.topic_title);
   const llm = await llmAnswer(question, knowledge, topic);
   if (llm) {
-    const answer = expandToMinWords(llm, question, knowledge, topic);
+    const answer = polishSeekerAnswer(
+      expandToMinWords(llm, question, knowledge, topic),
+    );
     return { answer, source: "llm", wordCount: countWords(answer) };
   }
 
@@ -134,8 +144,10 @@ export async function generateAjapaAiAnswer(
 
 ${knowledge}
 
-सारांश: वरील साहित्य वाचा व चिंतन करा. आवश्यक वाटल्यास मधुसुदनदास विजयानंद यांच्याकडे \`1\` दाबून मार्गदर्शन मागा.`;
+सारांश: वरील साहित्य वाचा व चिंतन करा. आवश्यक वाटल्यास मधुसुदनदास विजयानंद यांच्याकडे पाठवा.`;
 
-  const answer = expandToMinWords(base, question, knowledge, topic);
+  const answer = polishSeekerAnswer(
+    expandToMinWords(base, question, knowledge, topic),
+  );
   return { answer, source: "knowledge", wordCount: countWords(answer) };
 }
