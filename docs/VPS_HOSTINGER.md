@@ -67,7 +67,7 @@ Open on phone: **https://satsang.dhyeyapurti.in**
 File: `/var/www/satsang/.env.local`
 
 - Uses **local SQLite** (`data/satsang.db`) — do **not** set `TURSO_*` on the VPS unless you intentionally want Turso
-- Set `COOKIE_SECURE=true` and `APP_PUBLIC_URL=https://satsang.dhyeyapurti.in`
+- Set `COOKIE_SECURE=true` and `APP_PUBLIC_URL=https://satsang.dhyeyapurti.in/ajapa`
 - Add WhatsApp / Turiya keys when ready; keep `WHATSAPP_DRY_RUN=1` until webhook points to this domain
 
 After env changes:
