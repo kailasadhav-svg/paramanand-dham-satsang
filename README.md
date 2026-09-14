@@ -100,6 +100,12 @@ SESSION_SECRET=change-me-in-production
 COOKIE_SECURE=false
 ```
 
+### Production URL
+
+- **Primary (Hostinger VPS):** [https://satsang.dhyeyapurti.in](https://satsang.dhyeyapurti.in)  
+  Full self-host steps: [`docs/VPS_HOSTINGER.md`](docs/VPS_HOSTINGER.md) · script: `deploy/setup-vps.sh`
+- Optional Vercel mirror: `https://paramanand-dham-satsang.vercel.app` (needs Turso)
+
 ### Vercel production
 
 1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new) (or `npx vercel --prod` while logged in).

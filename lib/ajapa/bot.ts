@@ -258,7 +258,8 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
       return { handled: true, replies: ["enough"] };
     }
     if (choice === "app") {
-      const appUrl = process.env.APP_PUBLIC_URL || "https://paramanand-dham-satsang.vercel.app/ajapa";
+      const appUrl =
+        process.env.APP_PUBLIC_URL || "https://satsang.dhyeyapurti.in/ajapa";
       await sendText(from, `अ‍ॅप: ${appUrl}`);
       return { handled: true, replies: ["app link"] };
     }
