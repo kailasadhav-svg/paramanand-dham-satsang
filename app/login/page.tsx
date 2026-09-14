@@ -47,9 +47,9 @@ export default function LoginPage() {
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-6 py-10">
       <div className="mt-6 text-center">
         <p className="text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
-        <h1 className="mt-1 font-display text-4xl text-saffron-900">सत्संग नोंद</h1>
+        <h1 className="mt-1 font-display text-4xl text-saffron-900">अजपा संवाद</h1>
         <p className="mt-2 text-sm text-temple-muted">
-          उपस्थिती · विषय · प्रश्नोत्तर · साप्ताहिक अहवाल
+          चरणसेवक · गुरु प्रश्नोत्तर · होम स्क्रीन अ‍ॅप
         </p>
       </div>
 

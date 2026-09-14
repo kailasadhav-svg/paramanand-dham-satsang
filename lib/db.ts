@@ -178,6 +178,31 @@ async function migrate(db: Client) {
     `CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_questions_place ON questions(place_id)`,
     `CREATE INDEX IF NOT EXISTS idx_questions_created ON questions(created_at)`,
+    `CREATE TABLE IF NOT EXISTS ajapa_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      seeker_phone TEXT NOT NULL,
+      seeker_name TEXT,
+      question TEXT NOT NULL,
+      ai_answer TEXT,
+      status TEXT NOT NULL CHECK (status IN ('ai_answered', 'escalated', 'guru_answered')),
+      guru_answer_text TEXT,
+      guru_answer_audio_url TEXT,
+      guru_answer_audio_media_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      escalated_at TEXT,
+      answered_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_ajapa_seeker ON ajapa_questions(seeker_phone)`,
+    `CREATE INDEX IF NOT EXISTS idx_ajapa_status ON ajapa_questions(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_ajapa_created ON ajapa_questions(created_at)`,
+    `CREATE TABLE IF NOT EXISTS wa_sessions (
+      phone TEXT PRIMARY KEY,
+      state TEXT NOT NULL DEFAULT 'idle',
+      ajapa_question_id INTEGER,
+      last_inbound_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
   ];
   for (const sql of statements) {
     await db.execute(sql);

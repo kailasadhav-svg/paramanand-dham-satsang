@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
   { href: "/topic", label: "विषय", icon: BookIcon },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
+  { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
   { href: "/report", label: "अहवाल", icon: ReportIcon },
 ];
 
@@ -14,7 +15,7 @@ export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-saffron-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className="mx-auto grid max-w-lg grid-cols-4">
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
         {ITEMS.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -73,6 +74,17 @@ function ReportIcon({ active }: { active: boolean }) {
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6" />
       <path d="M8 13h8M8 17h5" />
+    </svg>
+  );
+}
+
+function AjapaIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#c74407" : "#7a5a42"} strokeWidth="1.8">
+      <path d="M12 3v18" />
+      <path d="M5 8h14" />
+      <path d="M7 8c0 4 2.5 8 5 11" />
+      <path d="M17 8c0 4-2.5 8-5 11" />
     </svg>
   );
 }
