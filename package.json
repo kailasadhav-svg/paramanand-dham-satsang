@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -p 43123",
     "lint": "next lint",
+    "test": "node --experimental-strip-types --test lib/*.test.ts",
     "test:ajapa": "WHATSAPP_DRY_RUN=1 tsx scripts/ajapa-smoke.ts",
     "submit:templates": "tsx scripts/submit-waba-templates.ts",
     "submit:templates:dry": "SUBMIT_DRY_RUN=1 tsx scripts/submit-waba-templates.ts"

@@ -134,7 +134,7 @@ export default function AttendancePage() {
 
   const loadMembers = useCallback(async () => {
     if (!canAppoint) return;
-    const data = await api<{ members: Member[] }>("/api/members");
+    const data = await api<{ members: Member[] }>("/api/satsangi-members");
     setMembers(data.members);
   }, [canAppoint]);
 
@@ -205,7 +205,7 @@ export default function AttendancePage() {
     try {
       const data = await api<{
         member: Member & { home_place_name?: string };
-      }>("/api/members", {
+      }>("/api/satsangi-members", {
         method: "POST",
         body: JSON.stringify({
           name: newName,

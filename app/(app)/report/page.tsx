@@ -29,6 +29,7 @@ export default function ReportPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [collisionCount, setCollisionCount] = useState(0);
 
   useEffect(() => {
     setCopied(false);
@@ -36,6 +37,12 @@ export default function ReportPage() {
       .then(setReport)
       .catch((e) => setError(e instanceof Error ? e.message : "अहवाल लोड नाही"));
   }, [thursday]);
+
+  useEffect(() => {
+    void api<{ collision_count: number }>("/api/members").then((data) => {
+      setCollisionCount(data.collision_count);
+    });
+  }, []);
 
   async function copyText() {
     if (!report) return;
@@ -54,6 +61,14 @@ export default function ReportPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold">साप्ताहिक अहवाल</h2>
+      {collisionCount > 0 ? (
+        <a
+          href="/members"
+          className="block rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200"
+        >
+          {collisionCount} सेवकांना ६-अंकी संकेत दिला (टक्कर) — यादी पाहा
+        </a>
+      ) : null}
       <div className="flex items-center gap-2">
         <button
           type="button"
