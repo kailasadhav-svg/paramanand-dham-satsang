@@ -2,25 +2,41 @@
 
 import { useEffect } from "react";
 
-/** Registers /sw.js for PWA / Add to Home Screen; refreshes when a new SW waits. */
+/** Registers /sw.js for PWA; force-activates updates so UI buttons are not stuck on old cache. */
 export function PwaRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    const run = () => {
-      void navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          // Prefer the newest SW so stale HTML shells are dropped quickly.
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: "SKIP_WAITING" });
-          }
-          reg.update().catch(() => undefined);
-        })
-        .catch(() => undefined);
+
+    void navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        reg.update().catch(() => undefined);
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        reg.addEventListener("updatefound", () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener("statechange", () => {
+            if (sw.state === "installed" && navigator.serviceWorker.controller) {
+              sw.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+      })
+      .catch(() => undefined);
+
+    let refreshing = false;
+    const onController = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
     };
-    if (document.readyState === "complete") run();
-    else window.addEventListener("load", run);
-    return () => window.removeEventListener("load", run);
+    navigator.serviceWorker.addEventListener("controllerchange", onController);
+    return () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", onController);
+    };
   }, []);
+
   return null;
 }

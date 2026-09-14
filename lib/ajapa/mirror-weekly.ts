@@ -2,6 +2,7 @@ import { getDb, getPlace, getSatsangiByPhone } from "@/lib/db";
 import { detectStaffRole, roleLabelMarathi } from "@/lib/roles";
 import { generateAjapaAiAnswer } from "./ai";
 import { normalizePhone } from "./phone";
+import { polishSeekerAnswer } from "./polish";
 import { createAjapaQuestion, findAjapaBySeekerAndQuestion } from "./store";
 import type { AjapaQuestion } from "./types";
 
@@ -9,6 +10,10 @@ function ymdDaysAgo(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().slice(0, 10);
+}
+
+function nowIso() {
+  return new Date().toISOString();
 }
 
 async function seekerDisplayName(phone: string): Promise<string> {
@@ -19,6 +24,22 @@ async function seekerDisplayName(phone: string): Promise<string> {
     /* table may be empty */
   }
   return roleLabelMarathi(detectStaffRole(phone));
+}
+
+/** Keep प्रश्नोत्तर in sync so «उत्तर प्रलंबित» does not stick after संवाद answer. */
+async function fillWeeklyAnswerIfEmpty(question: string, answer: string) {
+  try {
+    const db = await getDb();
+    await db.execute({
+      sql: `UPDATE questions
+        SET answer = ?, answered_by = 'atmaprabha', updated_at = ?
+        WHERE lower(trim(question)) = lower(trim(?))
+          AND (answer IS NULL OR trim(answer) = '')`,
+      args: [polishSeekerAnswer(answer).slice(0, 12000), nowIso(), question.trim()],
+    });
+  } catch (err) {
+    console.error("fillWeeklyAnswerIfEmpty", err);
+  }
 }
 
 /** Copy a weekly प्रश्नोत्तर into अजपा संवाद for this seeker (literature / AI answer). */
@@ -37,7 +58,10 @@ export async function mirrorWeeklyQuestionToAjapa(input: {
   if (!phone) return null;
 
   const existing = await findAjapaBySeekerAndQuestion(phone, text);
-  if (existing) return existing;
+  if (existing) {
+    if (existing.ai_answer) await fillWeeklyAnswerIfEmpty(text, existing.ai_answer);
+    return existing;
+  }
 
   let placeName = input.place_name ?? null;
   if (!placeName && input.place_id) {
@@ -48,18 +72,19 @@ export async function mirrorWeeklyQuestionToAjapa(input: {
   const name =
     input.seeker_name?.trim() || (await seekerDisplayName(phone));
 
-  // Knowledge fallback always works; LLM used when key is set (may be slow).
   const { answer } = await generateAjapaAiAnswer(text, {
     place_name: placeName,
     meeting_date: input.asked_on ?? null,
   });
 
-  return createAjapaQuestion({
+  const row = await createAjapaQuestion({
     seeker_phone: phone,
     seeker_name: name,
     question: text,
     ai_answer: answer,
   });
+  await fillWeeklyAnswerIfEmpty(text, answer);
+  return row;
 }
 
 type WeeklyRow = {

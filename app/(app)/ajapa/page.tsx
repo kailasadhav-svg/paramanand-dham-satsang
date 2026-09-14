@@ -161,6 +161,23 @@ export default function AjapaPage() {
                 {displayPhone(q.seeker_phone)}
               </p>
             ) : null}
+            {q.status === "ai_answered" ? (
+              <button
+                type="button"
+                disabled={busyId === q.id}
+                onClick={() => void sendToGuru(q.id)}
+                className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busyId === q.id
+                  ? "पाठवत आहे…"
+                  : "मधुसुदनदास विजयानंद यांच्याकडे पाठवा"}
+              </button>
+            ) : null}
+            {q.status === "escalated" ? (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+                संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
+              </p>
+            ) : null}
             {q.ai_answer ? (
               <details open={q.status === "ai_answered"} className="text-sm">
                 <summary className="cursor-pointer font-medium text-saffron-800">
@@ -170,18 +187,6 @@ export default function AjapaPage() {
                   {q.ai_answer}
                 </p>
               </details>
-            ) : null}
-            {q.status === "ai_answered" ? (
-              <button
-                type="button"
-                disabled={busyId === q.id}
-                onClick={() => void sendToGuru(q.id)}
-                className="w-full rounded-xl bg-saffron-700 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {busyId === q.id
-                  ? "पाठवत आहे…"
-                  : "मधुसुदनदास विजयानंद यांच्याकडे पाठवा"}
-              </button>
             ) : null}
             {q.guru_answer_text ? (
               <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">

@@ -1,4 +1,5 @@
 import { pickKnowledgeForQuestion } from "./knowledge";
+import { polishSeekerAnswer } from "./polish";
 
 const MIN_WORDS = 200;
 
@@ -107,14 +108,6 @@ async function llmAnswer(
     choices?: { message?: { content?: string } }[];
   };
   return data.choices?.[0]?.message?.content?.trim() || null;
-}
-
-function polishSeekerAnswer(text: string): string {
-  return text
-    .replace(/【([^】]*)】/g, "$1")
-    .replace(/`1`/g, "«मधुसुदनदास विजयानंद यांच्याकडे पाठवा»")
-    .replace(/\b1\s*दाबून/g, "बटण दाबून")
-    .trim();
 }
 
 /** Generate Marathi literature answer ≥200 words — question-first, unique per seeker. */

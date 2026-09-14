@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { healAjapaAnswers } from "@/lib/ajapa/heal";
 import { mirrorRecentWeeklyQuestions } from "@/lib/ajapa/mirror-weekly";
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { listAjapaQuestions } from "@/lib/ajapa/store";
@@ -43,13 +44,14 @@ export async function GET(request: Request) {
     }
   }
 
-  const questions = await listAjapaQuestions({
+  let questions = await listAjapaQuestions({
     status: status || undefined,
     seeker_phone: seeker,
-    // After backfill, ignore stale since so newly mirrored rows always return.
     since: mirrored > 0 ? undefined : since,
     limit: limit ? Number(limit) : 100,
   });
+  questions = await healAjapaAnswers(questions);
+
   return NextResponse.json({
     questions,
     mirrored,
