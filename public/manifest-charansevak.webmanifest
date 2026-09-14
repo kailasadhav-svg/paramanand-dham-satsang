@@ -1,0 +1,26 @@
+{
+  "name": "परमानंद चरणसेवक",
+  "short_name": "परमानंद चरणसेवक",
+  "description": "परमानंद धाम — चरणसेवक अजपा प्रश्नोत्तर",
+  "start_url": "/ajapa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8f1",
+  "theme_color": "#c74407",
+  "lang": "mr",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

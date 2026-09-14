@@ -1,8 +1,9 @@
 # Meta टेम्प्लेट मसुदा — LOCKED (submit नंतर)
 
 **Status:** DRAFT LOCKED — payloads ready (`npm run submit:templates`).  
-**Live Meta/Dove Soft submit:** credentials (`WHATSAPP_TOKEN` + `WHATSAPP_WABA_ID`) हवेत; नंबर `7030111501` ≠ WABA_ID.  
-**WABA / नंबर:** `7030111501`  
+**तुम्ही UI मधून कराल:** [`META_TEMPLATE_STEP_BY_STEP.md`](./META_TEMPLATE_STEP_BY_STEP.md) ← **Step-by-step इथे**  
+**Live Meta/Dove Soft / Turiya submit:** credentials (`WHATSAPP_TOKEN` + `WHATSAPP_WABA_ID`) किंवा portal `+` Create Template; नंबर `7030111501` ≠ WABA_ID.  
+**WABA / नंबर:** `7030111501` (Team Dhyeyapurti · `917030111501`)  
 **सर-बॉट:** या नंबरवर चालू असलेला बॉट **अस्पर्श / धक्का नाही / मोडू नये**.  
 **परमानंद धाम अजपा:** फक्त keyword `अजपा` / `ajapa` (सर यांच्या कमांडला अडथळा नाही).  
 **Language:** `mr`  
@@ -15,7 +16,7 @@ Quick Reply ≤ ३ बटणे. Session interactive title ≤ २० अक्
 1. टेम्प्लेट / webhook बदल **परवानगीशिवाय** लावणार नाही.  
 2. Dove Soft / Meta वर सर यांचे काम अस्पर्श.  
 3. काही जोडायचे ⇒ आधी मसुदा → तुमची `हो` → मगच.  
-4. Meta submit ⇒ फक्त **`submit हो`**. Approve १–२ दिवस; ऑटो-approve नाही.
+4. Meta submit ⇒ UI किंवा स्पष्ट **`submit हो`**. Approve १–२ दिवस; ऑटो-approve नाही.
 
 ---
 

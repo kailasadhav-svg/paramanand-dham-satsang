@@ -2,15 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { InstallBanner } from "@/components/InstallBanner";
+import { useProfile } from "@/components/PhoneGate";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { searchLocal } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
-import {
-  clearProfile,
-  loadProfile,
-  saveProfile,
-  type LocalProfile,
-} from "@/lib/offline/profile";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
@@ -19,15 +14,14 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
   guru_answered: "गुरु उत्तर",
 };
 
-const ROLE_LABEL: Record<LocalProfile["role"], string> = {
+const ROLE_LABEL = {
   charansevak: "चरणसेवक",
   guru: "गुरु",
-  admin: "अ‍ॅडमिन",
-};
+  software: "सॉफ्टवेअर",
+} as const;
 
 export default function AjapaPage() {
-  const [profile, setProfile] = useState<LocalProfile | null>(null);
-  const [phoneInput, setPhoneInput] = useState("");
+  const profile = useProfile();
   const [items, setItems] = useState<AjapaQuestion[]>([]);
   const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
   const [query, setQuery] = useState("");
@@ -37,17 +31,13 @@ export default function AjapaPage() {
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
 
-  useEffect(() => {
-    setProfile(loadProfile());
-  }, []);
-
-  const syncAndLoad = useCallback(async (p: LocalProfile) => {
+  const syncAndLoad = useCallback(async () => {
     setSyncing(true);
     setError(null);
     try {
-      setItems(await readLocalForProfile(p));
-      const result = await syncAjapaFromServer(p);
-      setItems(await readLocalForProfile(p));
+      setItems(await readLocalForProfile(profile));
+      const result = await syncAjapaFromServer(profile);
+      setItems(await readLocalForProfile(profile));
       setOffline(result.offline);
       setSyncNote(
         result.offline
@@ -60,15 +50,11 @@ export default function AjapaPage() {
       setSyncing(false);
       setLoading(false);
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
-    if (!profile) {
-      setLoading(false);
-      return;
-    }
-    void syncAndLoad(profile);
-  }, [profile, syncAndLoad]);
+    void syncAndLoad();
+  }, [syncAndLoad]);
 
   const visible = useMemo(() => {
     let list = items;
@@ -76,53 +62,12 @@ export default function AjapaPage() {
     return searchLocal(list, query);
   }, [items, filter, query]);
 
-  function onSaveProfile(e: React.FormEvent) {
-    e.preventDefault();
-    if (phoneInput.replace(/\D/g, "").length < 10) {
-      setError("१० अंकी मोबाइल टाका");
-      return;
-    }
-    setProfile(saveProfile({ phone: phoneInput }));
-    setError(null);
-    setLoading(true);
-  }
-
-  if (!profile) {
-    return (
-      <div className="space-y-4">
-        <InstallBanner />
-        <div>
-          <h2 className="text-lg font-bold">अजपा संवाद</h2>
-          <p className="text-sm text-temple-muted">
-            मोबाइल टाका — फक्त तुमचे प्रश्न फोनवर सेव्ह + लोकल शोध
-          </p>
-        </div>
-        <form onSubmit={onSaveProfile} className="card space-y-3 p-4">
-          <label className="block text-sm font-semibold">
-            WhatsApp मोबाइल
-            <input
-              type="tel"
-              inputMode="numeric"
-              className="mt-1 w-full rounded-xl border border-saffron-200 px-3 py-2 text-base"
-              placeholder="9850120960"
-              value={phoneInput}
-              onChange={(ev) => setPhoneInput(ev.target.value)}
-            />
-          </label>
-          <p className="text-xs text-temple-muted">
-            गुरु फोन → गुरु इनबॉक्स · इतर → चरणसेवक (फक्त स्वतःचे)
-          </p>
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <button
-            type="submit"
-            className="w-full rounded-full bg-saffron-700 py-2.5 text-sm font-semibold text-white"
-          >
-            सुरू करा
-          </button>
-        </form>
-      </div>
-    );
-  }
+  const viewHint =
+    profile.role === "software"
+      ? "सॉफ्टवेअर — सर्व प्रश्न"
+      : profile.role === "guru"
+        ? "गुरु — उत्तर द्यावयाचे प्रश्न"
+        : "तुमचे प्रश्न / काम";
 
   return (
     <div className="space-y-4">
@@ -135,29 +80,17 @@ export default function AjapaPage() {
             {ROLE_LABEL[profile.role]} · {displayPhone(profile.phone)}
             {offline ? " · ऑफलाइन" : ""}
           </p>
+          <p className="text-[11px] text-temple-muted">{viewHint}</p>
           {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
         </div>
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            disabled={syncing}
-            onClick={() => void syncAndLoad(profile)}
-            className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-          >
-            {syncing ? "सिंक…" : "सिंक"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              clearProfile();
-              setProfile(null);
-              setItems([]);
-            }}
-            className="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold ring-1 ring-saffron-200"
-          >
-            मोबाइल बदला
-          </button>
-        </div>
+        <button
+          type="button"
+          disabled={syncing}
+          onClick={() => void syncAndLoad()}
+          className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+        >
+          {syncing ? "सिंक…" : "सिंक"}
+        </button>
       </div>
 
       <input
@@ -204,10 +137,12 @@ export default function AjapaPage() {
                 {STATUS_LABEL[q.status]}
               </span>
             </div>
-            <p className="text-xs text-temple-muted">
-              {q.seeker_name ? `${q.seeker_name} · ` : ""}
-              {displayPhone(q.seeker_phone)}
-            </p>
+            {profile.role !== "charansevak" ? (
+              <p className="text-xs text-temple-muted">
+                {q.seeker_name ? `${q.seeker_name} · ` : ""}
+                {displayPhone(q.seeker_phone)}
+              </p>
+            ) : null}
             {q.ai_answer ? (
               <details className="text-sm">
                 <summary className="cursor-pointer font-medium text-saffron-800">AI उत्तर</summary>
