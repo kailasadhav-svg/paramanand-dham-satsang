@@ -167,8 +167,11 @@ AI उत्तर थोडक्यात: {{4}}
 
 ---
 
-## Runtime
+## Runtime / Submit
 
 - Session बटणे: `lib/ajapa/whatsapp.ts` (`sendButtons` + footer)  
 - Keyword gate: फक्त `अजपा` / `ajapa`  
-- Submit: **`submit हो`** लिहिल्याशिवाय Dove Soft/Meta वर अर्ज नाही
+- Payload script: `scripts/submit-waba-templates.ts` (१० टेम्प्लेट)  
+- Dry run: `npm run submit:templates:dry`  
+- Live: `WHATSAPP_TOKEN=… WHATSAPP_WABA_ID=… npm run submit:templates`  
+- Dove Soft UI: Meta BM → WhatsApp → Message templates → Create (same copy)
