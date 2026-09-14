@@ -14,6 +14,7 @@ import {
   syncAjapaFromServer,
 } from "@/lib/offline/sync";
 import { VoiceNotePlayer, pickRecorderMime } from "@/components/VoiceNotePlayer";
+import { literatureLooksMismatched } from "@/lib/ajapa/mismatch";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
   ai_answered: "परमानंद साहित्य",
@@ -67,6 +68,7 @@ export default function AjapaPage() {
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpHint, setOtpHint] = useState<string | null>(null);
   const [regenId, setRegenId] = useState<number | null>(null);
+  const autoRegenDoneRef = useRef<Set<number>>(new Set());
 
   const [replyForId, setReplyForId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -281,11 +283,13 @@ export default function AjapaPage() {
     setError(null);
   }
 
-  async function regenerateLiterature(q: AjapaQuestion) {
+  async function regenerateLiterature(q: AjapaQuestion, silent = false) {
     if (!scope) return;
     setRegenId(q.id);
-    setError(null);
-    setOkMsg(null);
+    if (!silent) {
+      setError(null);
+      setOkMsg(null);
+    }
     try {
       const data = await api<{ question: AjapaQuestion }>(
         `/api/ajapa/questions/${q.id}/regenerate`,
@@ -296,11 +300,33 @@ export default function AjapaPage() {
       setOkMsg("परमानंद साहित्य उत्तर प्रश्नानुसार पुन्हा तयार झाले");
       void syncAndLoad();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "उत्तर पुन्हा तयार झाले नाही");
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "उत्तर पुन्हा तयार झाले नाही");
+      }
     } finally {
       setRegenId(null);
     }
   }
+
+  // जुने चुकीचे उत्तर (उदा. आरती → अजपा जप) दिसले की एकदा आपोआप पुन्हा तयार
+  useEffect(() => {
+    if (!scope || loading || offline) return;
+    const canFix = (q: AjapaQuestion) =>
+      q.status === "ai_answered" &&
+      literatureLooksMismatched(q.question, q.ai_answer) &&
+      (phonesEqual(profile.phone, q.seeker_phone) ||
+        profile.role === "software" ||
+        profile.role === "guru") &&
+      !autoRegenDoneRef.current.has(q.id) &&
+      regenId !== q.id;
+
+    const next = items.find(canFix);
+    if (!next) return;
+    autoRegenDoneRef.current.add(next.id);
+    setOkMsg("चुकीचे जुने उत्तर दिसले — आरती/प्रश्नानुसार पुन्हा तयार करत आहोत…");
+    void regenerateLiterature(next, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when list/mismatch changes
+  }, [items, scope, loading, offline, profile.phone, profile.role, regenId]);
 
   function stopRecording() {
     if (recordTimerRef.current) {
@@ -664,8 +690,21 @@ export default function AjapaPage() {
             ) : null}
 
             {q.ai_answer ? (
-              <div className="space-y-2 rounded-xl bg-saffron-50/80 p-3 text-sm ring-1 ring-saffron-100">
+              <div
+                className={`space-y-2 rounded-xl p-3 text-sm ring-1 ${
+                  literatureLooksMismatched(q.question, q.ai_answer)
+                    ? "bg-amber-50 ring-amber-300"
+                    : "bg-saffron-50/80 ring-saffron-100"
+                }`}
+              >
                 <p className="font-bold text-saffron-900">परमानंद साहित्य उत्तर</p>
+                {literatureLooksMismatched(q.question, q.ai_answer) ? (
+                  <p className="rounded-lg bg-amber-100 px-2 py-1.5 text-[11px] font-semibold text-amber-950">
+                    हे उत्तर प्रश्नाशी जुळत नाही (जुने अजपा टेम्प्लेट). खालील बटणाने
+                    आरती/प्रश्नानुसार पुन्हा तयार करा — किंवा पेज उघडताच आपोआप दुरुस्त
+                    होईल.
+                  </p>
+                ) : null}
                 <p className="max-h-64 overflow-y-auto whitespace-pre-wrap text-temple-ink/90">
                   {q.ai_answer}
                 </p>
@@ -677,11 +716,17 @@ export default function AjapaPage() {
                     type="button"
                     disabled={regenId === q.id}
                     onClick={() => void regenerateLiterature(q)}
-                    className="w-full rounded-full bg-white py-2 text-xs font-bold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
+                    className={`w-full rounded-full py-2.5 text-xs font-bold disabled:opacity-50 ${
+                      literatureLooksMismatched(q.question, q.ai_answer)
+                        ? "bg-saffron-700 text-white"
+                        : "bg-white text-saffron-900 ring-1 ring-saffron-300"
+                    }`}
                   >
                     {regenId === q.id
                       ? "प्रश्नानुसार उत्तर तयार…"
-                      : "चुकीचे असल्यास · उत्तर पुन्हा तयार करा"}
+                      : literatureLooksMismatched(q.question, q.ai_answer)
+                        ? "आता आरती/प्रश्नानुसार उत्तर तयार करा"
+                        : "चुकीचे असल्यास · उत्तर पुन्हा तयार करा"}
                   </button>
                 ) : null}
               </div>
