@@ -200,7 +200,7 @@ export default function AjapaPage() {
       setQuery("");
       setOkMsg(
         visibility === "private"
-          ? `खाजगी प्रश्न · AI उत्तर खाली (फक्त तुम्हाला)`
+          ? `खाजगी प्रश्न · परमानंद साहित्य उत्तर खाली (फक्त तुम्हाला)`
           : `सार्वजनिक प्रश्न · «${topicTitle}» वर सर्वांना दिसेल`,
       );
       setItems(await readLocalForDialogue(profile, scope));
@@ -378,8 +378,8 @@ export default function AjapaPage() {
             {offline ? " · ऑफलाइन" : ""}
           </p>
           <p className="text-[11px] text-temple-muted">
-            विषय → संवाद · AI उत्तर नेहमी · private/public निवड · मधुसुदनदास =
-            Meta WhatsApp OTP
+            विषय → संवाद · परमानंद साहित्य उत्तर नेहमी · private/public निवड ·
+            मधुसुदनदास = Meta WhatsApp OTP
           </p>
           {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
         </div>
@@ -466,8 +466,8 @@ export default function AjapaPage() {
           </div>
           <p className="text-[11px] text-temple-muted">
             {visibility === "private"
-              ? "फक्त तुम्हाला + संचालक/संवादक · AI उत्तर मिळेलच"
-              : "स्थळातील सर्वांना दिसेल · AI उत्तर मिळेलच"}
+              ? "फक्त तुम्हाला + संचालक/संवादक · परमानंद साहित्य उत्तर मिळेलच"
+              : "स्थळातील सर्वांना दिसेल · परमानंद साहित्य उत्तर मिळेलच"}
           </p>
           <textarea
             value={draft}
@@ -481,7 +481,9 @@ export default function AjapaPage() {
             disabled={submitting || draft.trim().length < 3}
             className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {submitting ? "AI उत्तर तयार…" : "प्रश्न पाठवा · AI उत्तर"}
+            {submitting
+              ? "परमानंद साहित्य उत्तर तयार…"
+              : "प्रश्न पाठवा · परमानंद साहित्य उत्तर"}
           </button>
         </form>
       ) : null}
