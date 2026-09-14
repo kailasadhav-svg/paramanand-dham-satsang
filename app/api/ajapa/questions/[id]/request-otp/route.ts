@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { createEscalateOtp } from "@/lib/ajapa/otp";
-import { getAjapaQuestion } from "@/lib/ajapa/store";
+import { getAjapaQuestion, hasMadhusudanAskThisWeek } from "@/lib/ajapa/store";
 import { sendText, whatsappConfigured } from "@/lib/ajapa/whatsapp";
 import { displayPhone, normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
-import { detectStaffRole } from "@/lib/roles";
+import { defaultThursdayYmd } from "@/lib/dates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const ONE_PER_WEEK_MSG =
+  "हमी: एका अधव्याड्यात (एक गुरुवार) एका सत्संगी चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न पाठवता येतो. या आठवड्याचा प्रश्न आधीच गेला आहे.";
 
 /**
  * Meta WhatsApp verified OTP — साधकाच्या मोबाइलवर.
@@ -32,17 +35,22 @@ export async function POST(request: Request, ctx: Ctx) {
     return jsonError("हा प्रश्न आधीच संवादकांकडे / पूर्ण आहे", 400);
   }
 
-  const role = detectStaffRole(actor);
   const isOwner = phonesEqual(actor, q.seeker_phone);
-  // फक्त प्रश्नकर्त्याच्या मोबाइलवर Meta OTP — staff proxy नाही
   if (!isOwner) {
-    if (role === "software" || role === "guru") {
-      return jsonError(
-        "मधुसुदनदास उत्तरासाठी प्रश्नकर्त्याच्या मोबाइलवर Meta WhatsApp OTP लागतो — स्वतः लॉगिन करा",
-        403,
-      );
-    }
-    return jsonError("फक्त प्रश्नकर्ता OTP मागू शकतो", 403);
+    return jsonError(
+      "मधुसुदनदास उत्तरासाठी प्रश्नकर्त्याच्या मोबाइलवर Meta WhatsApp OTP लागतो — स्वतः लॉगिन करा",
+      403,
+    );
+  }
+
+  const weekDate = q.meeting_date || defaultThursdayYmd();
+  if (
+    await hasMadhusudanAskThisWeek({
+      seeker_phone: q.seeker_phone,
+      meeting_date: weekDate,
+    })
+  ) {
+    return jsonError(ONE_PER_WEEK_MSG, 400);
   }
 
   const targetPhone = q.seeker_phone;
@@ -57,8 +65,8 @@ export async function POST(request: Request, ctx: Ctx) {
 
 *${code}*
 
-अ‍ॅप → संवाद मध्ये हा OTP टाका (१० मिनिटे वैध).
-ही तुमच्या मोबाइलची खात्री आहे.
+अ‍ॅप → अजपा मध्ये हा OTP टाका (१० मिनिटे वैध).
+हमी: या अधव्याड्यात फक्त एकच प्रश्न मधुसुदनदास यांना.
 प्रश्न: ${q.question.slice(0, 120)}`;
 
   let wa: { ok: boolean; error?: string; skipped?: boolean } = {

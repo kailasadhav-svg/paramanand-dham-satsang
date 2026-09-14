@@ -108,6 +108,17 @@ export default function AjapaPage() {
       ? { place_id: placeId, meeting_date: date }
       : null;
 
+  const alreadyAskedMadhusudanThisWeek = useMemo(
+    () =>
+      items.some(
+        (q) =>
+          phonesEqual(q.seeker_phone, profile.phone) &&
+          q.meeting_date === date &&
+          (q.status === "escalated" || q.status === "guru_answered"),
+      ),
+    [items, profile.phone, date],
+  );
+
   useEffect(() => {
     void api<{ places: Place[] }>("/api/places").then((data) => {
       setPlaces(data.places);
@@ -401,10 +412,36 @@ export default function AjapaPage() {
         onDate={setDate}
       />
 
+      {date !== defaultThursdayYmd() ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-950 ring-1 ring-amber-100">
+          मागील / दुसरी तारीख निवडली आहे. या गुरुवारी डीफॉल्टने फक्त{" "}
+          <strong>आजचा गुरुवार</strong> दिसतो — जुने बघायचे असल्यास वर तारीख बदला.
+        </p>
+      ) : null}
+
+      <div className="rounded-2xl bg-white px-3 py-3 text-xs leading-relaxed text-temple-ink ring-1 ring-saffron-200">
+        <p className="font-bold text-saffron-900">हमी · नियम</p>
+        <ul className="mt-1 list-disc space-y-1 pl-4 text-temple-muted">
+          <li>
+            एका अधव्याड्यात एका सत्संगी चरणसेवकाकडून मधुसुदनदास यांना{" "}
+            <strong className="text-temple-ink">फक्त एकच</strong> प्रश्न.
+          </li>
+          <li>
+            व्हॉइस नोट या आठवड्यात सेव्ह;{" "}
+            <strong className="text-temple-ink">पुढील गुरुवारानंतर सर्वरवर राहत नाही</strong>{" "}
+            (भविष्यात Google Drive).
+          </li>
+          <li>
+            आजच्या गुरुवारी मागील गुरुवाराचे प्रश्न/विषय दिसत नाहीत — बघायचे
+            असल्यास वर तारीख निवडा.
+          </li>
+        </ul>
+      </div>
+
       {hasTopic ? (
         <div className="rounded-2xl bg-saffron-700 px-4 py-3 text-white shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-saffron-100">
-            आजचा संवाद विषय
+            {date === defaultThursdayYmd() ? "या गुरुवाराचा संवाद विषय" : "निवडलेल्या तारखेचा विषय"}
             {selectedPlace ? ` · ${selectedPlace.name}` : ""}
             {meeting?.topic_kind ? ` · ${KIND_LABEL[meeting.topic_kind]}` : ""}
           </p>
@@ -590,7 +627,13 @@ export default function AjapaPage() {
             {q.status === "ai_answered" &&
             phonesEqual(profile.phone, q.seeker_phone) ? (
               <div className="space-y-2 border-t border-saffron-100 pt-2">
-                {otpForId === q.id ? (
+                {alreadyAskedMadhusudanThisWeek ? (
+                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                    हमी: या अधव्याड्यात मधुसुदनदास यांना तुमचा एक प्रश्न आधीच
+                    गेला आहे. पुढील गुरुवारी पुन्हा विचारता येईल. परमानंद साहित्य
+                    उत्तर वर आहे.
+                  </p>
+                ) : otpForId === q.id ? (
                   <>
                     <p className="text-xs text-temple-muted">
                       {otpHint ||
@@ -648,7 +691,11 @@ export default function AjapaPage() {
                 {replyForId === q.id ? (
                   <>
                     <p className="text-sm font-bold text-saffron-900">
-                      संवादक उत्तर (मजकूर / व्हॉइस)
+                      संवादक उत्तर (मजकूर / व्हॉइस · कमाल २ मि)
+                    </p>
+                    <p className="text-[11px] text-temple-muted">
+                      व्हॉइस या आठवड्यात सेव्ह · पुढील गुरुवारानंतर सर्वरवरून काढले
+                      जाईल (भविष्यात Drive)
                     </p>
                     <textarea
                       value={replyText}
@@ -750,7 +797,14 @@ export default function AjapaPage() {
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-emerald-900">व्हॉइस नोट</p>
                 <audio controls src={q.guru_answer_audio_url} className="w-full" />
+                <p className="text-[10px] text-temple-muted">
+                  पुढील गुरुवारानंतर सर्वरवर राहत नाही
+                </p>
               </div>
+            ) : q.status === "guru_answered" && !q.guru_answer_text ? (
+              <p className="text-xs text-temple-muted">
+                व्हॉइस कालबाह्य / काढली असू शकते — पुढील गुरुवारानंतर सर्वरवर नाही
+              </p>
             ) : null}
           </li>
         ))}

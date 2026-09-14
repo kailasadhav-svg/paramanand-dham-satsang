@@ -11,6 +11,7 @@ import {
   escalateAjapaQuestion,
   getAjapaQuestion,
   getWaSession,
+  hasMadhusudanAskThisWeek,
   latestEscalatedForSeeker,
   saveGuruTextAnswer,
   saveGuruVoiceAnswer,
@@ -18,6 +19,7 @@ import {
   touchWaSession,
 } from "./store";
 import type { InboundWaMessage } from "./types";
+import { defaultThursdayYmd } from "@/lib/dates";
 import {
   askEscalate,
   askGuruReplyMode,
@@ -114,6 +116,24 @@ async function handleEscalateChoice(from: string): Promise<BotResult> {
     );
     return { handled: true, replies: ["no pending"] };
   }
+
+  const pending = await getAjapaQuestion(session.ajapa_question_id);
+  const weekDate = pending?.meeting_date || defaultThursdayYmd();
+  if (
+    pending &&
+    (await hasMadhusudanAskThisWeek({
+      seeker_phone: from,
+      meeting_date: weekDate,
+    }))
+  ) {
+    await sendText(
+      from,
+      "हमी: या अधव्याड्यात मधुसुदनदास यांना तुमचा एक प्रश्न आधीच गेला आहे. पुढील गुरुवारी पुन्हा विचारता येईल.",
+    );
+    await setWaSessionState(from, "idle", session.ajapa_question_id);
+    return { handled: true, replies: ["week limit"] };
+  }
+
   const q = await escalateAjapaQuestion(session.ajapa_question_id);
   if (!q || q.status !== "escalated") {
     await sendText(from, "हा प्रश्न आधीच पाठवला गेला असू शकतो.");
@@ -133,7 +153,7 @@ async function handleEscalateChoice(from: string): Promise<BotResult> {
 
   await sendText(
     from,
-    "तुमचा प्रश्न मधुसुदनदास विजयानंद यांच्याकडे पाठवला. उत्तर आल्यावर WhatsApp/अ‍ॅप वर कळेल.",
+    "तुमचा प्रश्न मधुसुदनदास विजयानंद यांच्याकडे पाठवला. या अधव्याड्यात फक्त हा एकच प्रश्न (हमी). उत्तर आल्यावर WhatsApp/अ‍ॅप वर कळेल.",
   );
   await setWaSessionState(from, "idle", q.id);
   return { handled: true, replies: ["escalated"], questionId: q.id };

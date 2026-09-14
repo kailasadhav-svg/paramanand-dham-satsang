@@ -4,10 +4,12 @@ import {
   canViewAjapaQuestion,
   createAjapaQuestion,
   listAjapaQuestions,
+  purgeExpiredAjapaVoiceNotes,
 } from "@/lib/ajapa/store";
 import type { AjapaStatus, AjapaVisibility } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 import { getMeeting, getPlace } from "@/lib/db";
+import { defaultThursdayYmd } from "@/lib/dates";
 import { normalizePhone } from "@/lib/offline/phone";
 import { detectStaffRole } from "@/lib/roles";
 
@@ -18,6 +20,9 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
+
+  // मागील गुरुवारांच्या व्हॉइस नोट सर्वरवरून काढा
+  await purgeExpiredAjapaVoiceNotes(defaultThursdayYmd()).catch(() => 0);
 
   const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
   const role = actor ? detectStaffRole(actor) : "satsangi";
@@ -49,12 +54,12 @@ export async function GET(request: Request) {
     limit: limit ? Number(limit) : 200,
   });
 
-  // private = फक्त मालक / संचालक / संवादक
   const questions = raw.filter((q) => canViewAjapaQuestion(q, actor, role));
 
   return NextResponse.json({
     questions,
     server_time: new Date().toISOString(),
+    current_thursday: defaultThursdayYmd(),
   });
 }
 

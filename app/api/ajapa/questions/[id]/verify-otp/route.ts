@@ -5,14 +5,19 @@ import {
   escalateAjapaQuestion,
   getAjapaQuestion,
   getWaSession,
+  hasMadhusudanAskThisWeek,
 } from "@/lib/ajapa/store";
 import { notifyGuruNewQuestion } from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { defaultThursdayYmd } from "@/lib/dates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const ONE_PER_WEEK_MSG =
+  "हमी: एका अधव्याड्यात एका सत्संगी चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न. या आठवड्याचा प्रश्न आधीच संवादकांकडे गेला आहे.";
 
 /** Verify Meta WhatsApp OTP on seeker mobile → escalate to मधुसुदनदास. */
 export async function POST(request: Request, ctx: Ctx) {
@@ -41,6 +46,16 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
+  const weekDate = q.meeting_date || defaultThursdayYmd();
+  if (
+    await hasMadhusudanAskThisWeek({
+      seeker_phone: q.seeker_phone,
+      meeting_date: weekDate,
+    })
+  ) {
+    return jsonError(ONE_PER_WEEK_MSG, 400);
+  }
+
   const verified = await verifyEscalateOtp({
     questionId: id,
     phone: q.seeker_phone,
@@ -67,6 +82,6 @@ export async function POST(request: Request, ctx: Ctx) {
     question: escalated,
     auth: "meta_whatsapp_otp",
     message:
-      "मोबाइल OTP खात्री झाली · मधुसुदनदास / संवादकांकडे पाठवले",
+      "OTP खात्री · मधुसुदनदास कडे पाठवले · या अधव्याड्यात आणखी एक प्रश्न नाही (हमी)",
   });
 }

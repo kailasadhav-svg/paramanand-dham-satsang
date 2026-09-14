@@ -218,6 +218,62 @@ export async function escalateAjapaQuestion(id: number): Promise<AjapaQuestion |
   return getAjapaQuestion(id);
 }
 
+/**
+ * एका गुरुवार-अधव्याड्यात एका सत्संगीकडून मधुसुदनदास यांना फक्त एक प्रश्न.
+ * meeting_date = त्या सत्संगाचा गुरुवार.
+ */
+export async function countMadhusudanAsksForWeek(opts: {
+  seeker_phone: string;
+  meeting_date: string;
+}): Promise<number> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS c FROM ajapa_questions
+      WHERE seeker_phone = ?
+        AND meeting_date = ?
+        AND status IN ('escalated', 'guru_answered')`,
+    args: [opts.seeker_phone, opts.meeting_date],
+  });
+  return num(rs.rows[0]?.c, 0);
+}
+
+export async function hasMadhusudanAskThisWeek(opts: {
+  seeker_phone: string;
+  meeting_date: string;
+}): Promise<boolean> {
+  return (await countMadhusudanAsksForWeek(opts)) > 0;
+}
+
+/**
+ * मागील गुरुवारांच्या व्हॉइस नोट सर्वरवरून काढा (पुढील गुरुवारानंतर राहत नाहीत).
+ * भविष्यात Google Drive — सध्या फक्त सर्वर purge.
+ */
+export async function purgeExpiredAjapaVoiceNotes(
+  currentThursdayYmd: string,
+): Promise<number> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS c FROM ajapa_questions
+      WHERE meeting_date IS NOT NULL
+        AND meeting_date < ?
+        AND (guru_answer_audio_url IS NOT NULL OR guru_answer_audio_media_id IS NOT NULL)`,
+    args: [currentThursdayYmd],
+  });
+  const n = num(rs.rows[0]?.c, 0);
+  if (n === 0) return 0;
+  await db.execute({
+    sql: `UPDATE ajapa_questions
+      SET guru_answer_audio_url = NULL,
+          guru_answer_audio_media_id = NULL,
+          updated_at = ?
+      WHERE meeting_date IS NOT NULL
+        AND meeting_date < ?
+        AND (guru_answer_audio_url IS NOT NULL OR guru_answer_audio_media_id IS NOT NULL)`,
+    args: [nowIso(), currentThursdayYmd],
+  });
+  return n;
+}
+
 export async function latestEscalatedForSeeker(
   seekerPhone: string,
 ): Promise<AjapaQuestion | undefined> {
