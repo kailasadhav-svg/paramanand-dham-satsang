@@ -163,6 +163,7 @@ export default function AttendancePage() {
               ? `✓ स्थळावर (${data.meeting.checkin_distance_m ?? "?"} मी)`
               : `✗ बाहेर (${data.meeting.checkin_distance_m ?? "?"} मी)`,
           );
+          if (ok && !staff) setSaved(true);
         } else {
           setOnSite(false);
           setLastCheckin(null);
@@ -267,7 +268,9 @@ export default function AttendancePage() {
       setSaved(true);
       setOnSite(true);
       setLastCheckin(
-        geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : "✓ नोंद जतन",
+        geo
+          ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)`
+          : "✓ नोंद जतन",
       );
     } catch (e) {
       setOnSite(false);

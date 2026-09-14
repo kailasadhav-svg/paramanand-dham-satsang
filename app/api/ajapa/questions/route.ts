@@ -1,14 +1,50 @@
 import { NextResponse } from "next/server";
+import { generateAjapaAiAnswer } from "@/lib/ajapa/ai";
 import { healAjapaAnswers } from "@/lib/ajapa/heal";
 import { mirrorRecentWeeklyQuestions } from "@/lib/ajapa/mirror-weekly";
+import {
+  literatureLooksMismatched,
+  literatureLooksTechy,
+} from "@/lib/ajapa/mismatch";
 import { normalizePhone } from "@/lib/ajapa/phone";
-import { listAjapaQuestions } from "@/lib/ajapa/store";
-import type { AjapaStatus } from "@/lib/ajapa/types";
+import {
+  listAjapaQuestions,
+  updateAjapaAiAnswer,
+} from "@/lib/ajapa/store";
+import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+async function healStaleAnswers(
+  questions: AjapaQuestion[],
+): Promise<AjapaQuestion[]> {
+  const out: AjapaQuestion[] = [];
+  let healed = 0;
+  for (const q of questions) {
+    if (
+      healed >= 3 ||
+      q.status !== "ai_answered" ||
+      (!literatureLooksMismatched(q.question, q.ai_answer) &&
+        !literatureLooksTechy(q.ai_answer))
+    ) {
+      out.push(q);
+      continue;
+    }
+    try {
+      const { answer } = await generateAjapaAiAnswer(q.question);
+      const updated = await updateAjapaAiAnswer(q.id, answer);
+      out.push(updated || { ...q, ai_answer: answer });
+      healed += 1;
+    } catch (err) {
+      console.error("ajapa heal failed", q.id, err);
+      out.push(q);
+    }
+  }
+  return out;
+}
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();
@@ -21,6 +57,7 @@ export async function GET(request: Request) {
   const since = searchParams.get("since") || undefined;
   const limit = searchParams.get("limit");
   const claimOrphans = searchParams.get("claim_orphans") === "1";
+  const heal = searchParams.get("heal") !== "0";
 
   const valid: AjapaStatus[] = ["ai_answered", "escalated", "guru_answered"];
   if (status && !valid.includes(status)) {
@@ -50,7 +87,11 @@ export async function GET(request: Request) {
     since: mirrored > 0 ? undefined : since,
     limit: limit ? Number(limit) : 100,
   });
+
   questions = await healAjapaAnswers(questions);
+  if (heal) {
+    questions = await healStaleAnswers(questions);
+  }
 
   return NextResponse.json({
     questions,
