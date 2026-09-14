@@ -234,6 +234,13 @@ export default function AttendancePage() {
     return row.duty.charansevak_name || row.duty.charansevak_phone_display;
   }, [dutyRows, placeId]);
 
+  function markDirty<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setSaved(false);
+      setter(v);
+    };
+  }
+
   const total = men + women + children;
   const placeHasGps =
     selectedPlace?.latitude != null && selectedPlace?.longitude != null;
@@ -252,23 +259,21 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-8">
       <div>
-        <h2 className="text-lg font-bold">उपस्थिती</h2>
+        <h2 className="text-lg font-bold">उपस्थिती · एडिट</h2>
         <p className="text-xs text-temple-muted">
-          {staff
-            ? "नेमणूक + स्थळ GPS · चरणसेवक ≤२० मी आत नोंद करतील"
-            : `तुमची नेमणूक · सत्संग स्थळापासून ${ATTENDANCE_GEO_MAX_METERS} मी आत`}
+          चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा
         </p>
       </div>
 
       {canAssign ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
           <h3 className="text-sm font-bold text-saffron-900">
-            गुरुवारी चरणसेवक नेमणूक
+            गुरुवारी चरणसेवक नेमणूक (एडिट)
           </h3>
           <p className="text-[11px] text-temple-muted">
-            9850120960 व 9225118811 ठरवतील · 9136443333 / 9423078811 स्वतः चरणसेवक
+            9850120960 व 9225118811 ठरवतील · नाव/मोबाइल बदलून पुन्हा जतन करा
           </p>
           {dutyRows.map((row) => {
             const draft = drafts[row.place.id] || { phone: "", name: "" };
@@ -309,7 +314,7 @@ export default function AttendancePage() {
                   onClick={() => void saveDuty(row.place)}
                   className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                 >
-                  {dutyBusy === row.place.id ? "जतन…" : "नेमणूक जतन"}
+                  {dutyBusy === row.place.id ? "जतन…" : "नेमणूक दुरुस्त / जतन"}
                 </button>
               </div>
             );
@@ -324,8 +329,8 @@ export default function AttendancePage() {
         places={places}
         placeId={placeId}
         date={date}
-        onPlace={setPlaceId}
-        onDate={setDate}
+        onPlace={markDirty(setPlaceId)}
+        onDate={markDirty(setDate)}
       />
 
       {assignedLabel ? (
@@ -334,8 +339,8 @@ export default function AttendancePage() {
 
       {staff && placeId ? (
         <div className="rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-          <p className="text-xs text-temple-muted">
-            स्थळ GPS:{" "}
+          <p className="text-xs font-semibold text-saffron-900">स्थळ GPS (एडिट)</p>
+          <p className="mt-1 text-xs text-temple-muted">
             {placeHasGps
               ? `${selectedPlace?.latitude?.toFixed(5)}, ${selectedPlace?.longitude?.toFixed(5)}`
               : "अजून सेट नाही"}
@@ -346,8 +351,17 @@ export default function AttendancePage() {
             onClick={() => void pinPlaceHere()}
             className="mt-2 rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            {pinBusy ? "GPS…" : "इथेच स्थळ चिन्हांकित करा"}
+            {pinBusy
+              ? "GPS…"
+              : placeHasGps
+                ? "GPS पुन्हा सेट / दुरुस्त करा"
+                : "इथेच स्थळ चिन्हांकित करा"}
           </button>
+          {placeHasGps ? (
+            <p className="mt-1 text-[11px] text-temple-muted">
+              चुकीच्या जागी सेट झाले असेल तर स्थळावर उभे राहून पुन्हा दाबा
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -362,26 +376,51 @@ export default function AttendancePage() {
         <p className="text-xs font-semibold text-saffron-800">{lastCheckin}</p>
       ) : null}
 
-      <label className="block text-xs font-semibold text-temple-muted">
-        वेळ
+      <div className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+        <p className="text-xs font-semibold text-saffron-900">वेळ · एडिट</p>
         <input
           type="time"
           value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="mt-1 w-full rounded-xl bg-white px-3 py-2 ring-1 ring-saffron-200"
+          onChange={(e) => markDirty(setTime)(e.target.value)}
+          className="w-full rounded-xl bg-saffron-50 px-3 py-3 text-lg font-bold ring-1 ring-saffron-200"
         />
-      </label>
-      <div className="card px-4 py-4 text-center">
-        <p className="text-sm text-temple-muted">एकूण उपस्थिती</p>
-        <p className="text-4xl font-bold text-saffron-800">{total}</p>
+        <div className="flex flex-wrap gap-2">
+          {["19:30", "20:00", "20:30", "21:00"].map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => markDirty(setTime)(t)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                time === t
+                  ? "bg-saffron-700 text-white"
+                  : "bg-saffron-50 text-saffron-900 ring-1 ring-saffron-200"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
-      <NumberStepper label="पुरुष" value={men} onChange={setMen} />
-      <NumberStepper label="स्त्रिया" value={women} onChange={setWomen} />
-      <NumberStepper label="बालके" value={children} onChange={setChildren} />
+
+      <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
+        <div>
+          <p className="text-xs font-semibold text-temple-muted">एकूण उपस्थिती</p>
+          <p className="text-[11px] text-temple-muted">+/− किंवा आकडा टाइप · एडिट</p>
+        </div>
+        <p className="text-3xl font-bold tabular-nums text-saffron-800">{total}</p>
+      </div>
+      <div className="space-y-2">
+        <NumberStepper compact label="पुरुष" value={men} onChange={markDirty(setMen)} />
+        <NumberStepper compact label="स्त्रिया" value={women} onChange={markDirty(setWomen)} />
+        <NumberStepper compact label="बालके" value={children} onChange={markDirty(setChildren)} />
+      </div>
       <SaveBar
+        sticky
         saving={saving}
         saved={saved}
         error={error}
+        label={saved ? "दुरुस्ती पुन्हा जतन करा" : "जतन / दुरुस्ती करा"}
+        savedLabel="जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
         onSave={() => void saveAttendance()}
       />
     </div>

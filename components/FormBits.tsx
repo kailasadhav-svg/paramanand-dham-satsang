@@ -73,26 +73,45 @@ export function NumberStepper({
   label,
   value,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
-      <span className="font-semibold">{label}</span>
-      <div className="flex items-center gap-3">
+    <div
+      className={`flex items-center justify-between bg-white ring-1 ring-saffron-200 ${
+        compact ? "rounded-xl px-3 py-2" : "rounded-2xl px-4 py-3"
+      }`}
+    >
+      <span className={`font-semibold ${compact ? "text-sm" : ""}`}>{label}</span>
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
-          className="h-10 w-10 rounded-full bg-saffron-100 text-xl font-bold text-saffron-800"
+          aria-label={`${label} कमी`}
+          className={`${compact ? "h-9 w-9 text-lg" : "h-11 w-11 text-xl"} rounded-full bg-saffron-100 font-bold text-saffron-800`}
           onClick={() => onChange(Math.max(0, value - 1))}
         >
           −
         </button>
-        <span className="w-8 text-center text-lg font-bold tabular-nums">{value}</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={value}
+          aria-label={`${label} एडिट`}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            onChange(Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0);
+          }}
+          className={`${compact ? "h-9 w-12 text-base" : "h-11 w-14 text-lg"} rounded-xl bg-saffron-50 text-center font-bold tabular-nums ring-1 ring-saffron-200`}
+        />
         <button
           type="button"
-          className="h-10 w-10 rounded-full bg-saffron-700 text-xl font-bold text-white"
+          aria-label={`${label} वाढ`}
+          className={`${compact ? "h-9 w-9 text-lg" : "h-11 w-11 text-xl"} rounded-full bg-saffron-700 font-bold text-white`}
           onClick={() => onChange(value + 1)}
         >
           +
@@ -108,20 +127,30 @@ export function SaveBar({
   error,
   onSave,
   label = "जतन करा",
+  savedLabel = "जतन झाले · पुन्हा दुरुस्ती करता येईल",
+  sticky = false,
 }: {
   saving: boolean;
   saved: boolean;
   error: string | null;
   onSave: () => void;
   label?: string;
+  savedLabel?: string;
+  sticky?: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div
+      className={`space-y-2 ${
+        sticky
+          ? "sticky bottom-[4.5rem] z-20 -mx-1 border-t border-saffron-100 bg-temple-cream/95 px-1 pb-2 pt-2 backdrop-blur"
+          : ""
+      }`}
+    >
       {error ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
       ) : null}
       {saved ? (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">जतन झाले</p>
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{savedLabel}</p>
       ) : null}
       <button
         type="button"
