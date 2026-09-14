@@ -14,9 +14,9 @@ type NavItem = {
 
 const ITEMS: NavItem[] = [
   { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
-  { href: "/topic", label: "विषय", icon: BookIcon, staffOnly: true },
+  { href: "/topic", label: "विषय", icon: BookIcon },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon, staffOnly: true },
-  { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
+  { href: "/ajapa", label: "अजपा", icon: AjapaIcon },
   { href: "/report", label: "अहवाल", icon: ReportIcon, staffOnly: true },
 ];
 

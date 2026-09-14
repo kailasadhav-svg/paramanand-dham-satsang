@@ -1,23 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NumberStepper, PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
+import { PlaceDateBar, type Place } from "@/components/FormBits";
+import { WeeklyTopics } from "@/components/WeeklyTopics";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
-import { DEFAULT_MEETING_TIME, defaultThursdayYmd } from "@/lib/dates";
-import { ATTENDANCE_GEO_MAX_METERS, OFF_SITE_WARNING } from "@/lib/geo";
-import { canSeeStaffScreens } from "@/lib/roles";
-
-type Meeting = {
-  place_id: number;
-  meeting_date: string;
-  meeting_time: string;
-  men: number;
-  women: number;
-  children: number;
-  checkin_ok?: boolean | null;
-  checkin_distance_m?: number | null;
-};
+import { defaultThursdayYmd } from "@/lib/dates";
+import {
+  canAppointSatsangi,
+  canAssignConductor,
+  canSeeStaffScreens,
+  roleLabelMarathi,
+} from "@/lib/roles";
+import { phonesEqual } from "@/lib/offline/phone";
 
 type DutyRow = {
   place: Place;
@@ -25,234 +20,236 @@ type DutyRow = {
     charansevak_phone: string;
     charansevak_name: string | null;
     charansevak_phone_display: string;
+    rotate_hint?: string | null;
   } | null;
 };
 
-type DutyDraft = { phone: string; name: string };
-type GeoPos = { latitude: number; longitude: number; accuracy_m: number | null };
+type Member = {
+  id: number;
+  phone: string;
+  name: string;
+  phone_display: string;
+};
 
-async function readGps(): Promise<GeoPos> {
-  if (!navigator.geolocation) {
-    throw new Error("या उपकरणावर GPS उपलब्ध नाही");
-  }
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy_m: pos.coords.accuracy ?? null,
-        }),
-      () => reject(new Error("स्थान परवानगी द्या (Location)")),
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-    );
-  });
-}
+type Person = {
+  phone: string;
+  name: string | null;
+  phone_display: string;
+  source: string;
+  opinion: string | null;
+  checked_in_at: string;
+};
 
 export default function AttendancePage() {
   const profile = useProfile();
-  const staff = canSeeStaffScreens(profile.role);
+  const canAppoint = canAppointSatsangi(profile.role);
+  const canAssign = canAssignConductor(profile.role);
+  const fullStaff = canSeeStaffScreens(profile.role);
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
+  const [placeLocked, setPlaceLocked] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
-  const [men, setMen] = useState(0);
-  const [women, setWomen] = useState(0);
-  const [children, setChildren] = useState(0);
-  const [time, setTime] = useState(DEFAULT_MEETING_TIME);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [dutyRows, setDutyRows] = useState<DutyRow[]>([]);
-  const [canAssign, setCanAssign] = useState(false);
-  const [drafts, setDrafts] = useState<Record<number, DutyDraft>>({});
-  const [dutyMsg, setDutyMsg] = useState<string | null>(null);
-  const [dutyBusy, setDutyBusy] = useState<number | null>(null);
-  const [pinBusy, setPinBusy] = useState(false);
-  const [lastCheckin, setLastCheckin] = useState<string | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [appointBusy, setAppointBusy] = useState(false);
+
+  const [dutyPhone, setDutyPhone] = useState("");
+  const [dutyName, setDutyName] = useState("");
+  const [dutyBusy, setDutyBusy] = useState(false);
+  const [rotateHint, setRotateHint] = useState<string | null>(null);
+
+  const [checkinBusy, setCheckinBusy] = useState(false);
+  const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const [linkBusy, setLinkBusy] = useState(false);
 
   const selectedPlace = useMemo(
     () => places.find((p) => p.id === placeId) || null,
     [places, placeId],
   );
 
+  const myCheckedIn = useMemo(
+    () => people.some((p) => phonesEqual(p.phone, profile.phone)),
+    [people, profile.phone],
+  );
+
   const loadDuties = useCallback(async (ymd: string) => {
-    const data = await api<{ can_assign: boolean; rows: DutyRow[] }>(
-      `/api/duties?date=${ymd}`,
-    );
-    setCanAssign(data.can_assign);
+    const data = await api<{
+      can_assign: boolean;
+      can_appoint: boolean;
+      place_locked?: boolean;
+      default_place_id?: number | null;
+      rows: DutyRow[];
+    }>(`/api/duties?date=${ymd}`);
     setDutyRows(data.rows);
-    const next: Record<number, DutyDraft> = {};
-    for (const row of data.rows) {
-      next[row.place.id] = {
-        phone: row.duty?.charansevak_phone_display || "",
-        name: row.duty?.charansevak_name || "",
-      };
-    }
-    setDrafts(next);
     const visible = data.rows.map((r) => r.place);
     setPlaces(visible);
+    setPlaceLocked(Boolean(data.place_locked));
     setPlaceId((id) => {
+      if (
+        data.default_place_id != null &&
+        visible.some((p) => p.id === data.default_place_id)
+      ) {
+        return data.default_place_id;
+      }
       if (id !== "" && visible.some((p) => p.id === id)) return id;
       return visible[0]?.id ?? "";
     });
+  }, []);
+
+  const loadMembers = useCallback(async () => {
+    if (!canAppoint) return;
+    const data = await api<{ members: Member[] }>("/api/members");
+    setMembers(data.members);
+  }, [canAppoint]);
+
+  const loadPeople = useCallback(async (pid: number, ymd: string) => {
+    const data = await api<{ total: number; people: Person[] }>(
+      `/api/attendance/checkin?place_id=${pid}&date=${ymd}`,
+    );
+    setPeople(data.people);
+    setTotal(data.total);
   }, []);
 
   useEffect(() => {
     void loadDuties(date).catch((e) =>
       setError(e instanceof Error ? e.message : "नेमणूक लोड नाही"),
     );
-  }, [date, loadDuties]);
+    void loadMembers().catch(() => undefined);
+  }, [date, loadDuties, loadMembers]);
 
   useEffect(() => {
     if (!placeId || !date) return;
-    setSaved(false);
-    void api<{ meeting: Meeting }>(`/api/meetings?place_id=${placeId}&date=${date}`)
-      .then((data) => {
-        setMen(data.meeting.men || 0);
-        setWomen(data.meeting.women || 0);
-        setChildren(data.meeting.children || 0);
-        setTime(data.meeting.meeting_time || DEFAULT_MEETING_TIME);
-        if (data.meeting.checkin_ok != null) {
-          setLastCheckin(
-            data.meeting.checkin_ok
-              ? `✓ स्थळावर (${data.meeting.checkin_distance_m ?? "?"} मी)`
-              : `✗ बाहेर (${data.meeting.checkin_distance_m ?? "?"} मी)`,
-          );
-        } else {
-          setLastCheckin(null);
-        }
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "अपलोड अयशस्वी"));
-  }, [placeId, date]);
+    const row = dutyRows.find((r) => r.place.id === placeId);
+    setDutyPhone(row?.duty?.charansevak_phone_display || "");
+    setDutyName(row?.duty?.charansevak_name || "");
+    setRotateHint(row?.duty?.rotate_hint || null);
+    void loadPeople(placeId, date).catch((e) =>
+      setError(e instanceof Error ? e.message : "उपस्थिती लोड नाही"),
+    );
+  }, [placeId, date, dutyRows, loadPeople]);
 
-  async function pinPlaceHere() {
-    if (!placeId || !staff) return;
-    setPinBusy(true);
+  async function appointMember() {
+    if (!placeId) {
+      setError("आधी स्थळ निवडा — सत्संगी त्याच स्थळाचा राहील");
+      return;
+    }
+    setAppointBusy(true);
+    setMsg(null);
     setError(null);
     try {
-      const geo = await readGps();
-      await api("/api/places", {
-        method: "PUT",
+      await api("/api/members", {
+        method: "POST",
         body: JSON.stringify({
-          place_id: placeId,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
+          name: newName,
+          phone: newPhone,
+          home_place_id: placeId,
         }),
       });
-      await loadDuties(date);
-      setDutyMsg("स्थळ GPS जतन — आता २० मी आत उपस्थिती चालेल");
+      setNewName("");
+      setNewPhone("");
+      await loadMembers();
+      setMsg(
+        `सत्संगी चरणसेवक नेमला · स्थळ ${selectedPlace?.name || ""}`,
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "GPS जतन अयशस्वी");
+      setError(e instanceof Error ? e.message : "नेमणूक अयशस्वी");
     } finally {
-      setPinBusy(false);
+      setAppointBusy(false);
     }
   }
 
-  async function saveAttendance() {
+  async function saveConductor() {
     if (!placeId) return;
-    setSaving(true);
+    setDutyBusy(true);
+    setMsg(null);
     setError(null);
-    setSaved(false);
     try {
-      let geo: GeoPos | null = null;
-      if (!staff) {
-        geo = await readGps();
-      } else {
-        try {
-          geo = await readGps();
-        } catch {
-          geo = null;
-        }
-      }
-
-      await api("/api/meetings", {
+      const data = await api<{
+        rotate_hint?: string | null;
+        members?: Member[];
+      }>("/api/duties", {
         method: "PUT",
         body: JSON.stringify({
           place_id: placeId,
           meeting_date: date,
-          meeting_time: time,
-          men,
-          women,
-          children,
-          ...(geo
-            ? {
-                latitude: geo.latitude,
-                longitude: geo.longitude,
-                accuracy_m: geo.accuracy_m,
-              }
-            : {}),
+          charansevak_phone: dutyPhone,
+          charansevak_name: dutyName || null,
         }),
       });
-      setSaved(true);
-      setLastCheckin(geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : OFF_SITE_WARNING);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveDuty(place: Place) {
-    const draft = drafts[place.id] || { phone: "", name: "" };
-    setDutyBusy(place.id);
-    setDutyMsg(null);
-    try {
-      if (!draft.phone.replace(/\D/g, "")) {
-        await api("/api/duties", {
-          method: "PUT",
-          body: JSON.stringify({
-            place_id: place.id,
-            meeting_date: date,
-            clear: true,
-          }),
-        });
-      } else {
-        await api("/api/duties", {
-          method: "PUT",
-          body: JSON.stringify({
-            place_id: place.id,
-            meeting_date: date,
-            charansevak_phone: draft.phone,
-            charansevak_name: draft.name || null,
-          }),
-        });
-      }
+      if (data.members) setMembers(data.members);
+      setRotateHint(data.rotate_hint || null);
       await loadDuties(date);
-      setDutyMsg("नेमणूक जतन");
+      setMsg("सत्संग संचालन चरणसेवक नेमला");
     } catch (e) {
-      setDutyMsg(e instanceof Error ? e.message : "नेमणूक अयशस्वी");
+      setError(e instanceof Error ? e.message : "नेमणूक अयशस्वी");
     } finally {
-      setDutyBusy(null);
+      setDutyBusy(false);
     }
   }
 
-  const assignedLabel = useMemo(() => {
-    const row = dutyRows.find((r) => r.place.id === placeId);
-    if (!row?.duty) return null;
-    return row.duty.charansevak_name || row.duty.charansevak_phone_display;
-  }, [dutyRows, placeId]);
-
-  function markDirty<T>(setter: (v: T) => void) {
-    return (v: T) => {
-      setSaved(false);
-      setter(v);
-    };
+  async function selfCheckIn() {
+    if (!placeId) return;
+    setCheckinBusy(true);
+    setError(null);
+    setMsg(null);
+    try {
+      const data = await api<{ message: string; total: number }>(
+        "/api/attendance/checkin",
+        {
+          method: "POST",
+          body: JSON.stringify({ place_id: placeId, meeting_date: date }),
+        },
+      );
+      setMsg(data.message);
+      setTotal(data.total);
+      await loadPeople(placeId, date);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "उपस्थिती अयशस्वी");
+    } finally {
+      setCheckinBusy(false);
+    }
   }
 
-  const total = men + women + children;
-  const placeHasGps =
-    selectedPlace?.latitude != null && selectedPlace?.longitude != null;
+  async function makeShareLink() {
+    if (!placeId) return;
+    setLinkBusy(true);
+    setError(null);
+    try {
+      const data = await api<{ url: string }>("/api/join-links", {
+        method: "POST",
+        body: JSON.stringify({ place_id: placeId, meeting_date: date }),
+      });
+      setLinkUrl(data.url);
+      try {
+        await navigator.clipboard.writeText(data.url);
+        setMsg("लिंक कॉपी झाली — अ‍ॅप नसलेल्यांना पाठवा");
+      } catch {
+        setMsg("लिंक तयार");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "लिंक अयशस्वी");
+    } finally {
+      setLinkBusy(false);
+    }
+  }
 
-  if (!staff && places.length === 0) {
+  if (!canAssign && places.length === 0) {
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-bold">उपस्थिती</h2>
+        <WeeklyTopics date={date} />
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
-          या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. संवादक (
-          <strong>9850120960</strong>) किंवा सॉफ्टवेअर (
-          <strong>9225118811</strong>) नेमणूक ठरतील — मग तुमचे काम येथे दिसेल.
+          तुमचे स्थळ अजून नोंदलेले नाही. संचालक / संवादक / चरणसेवक नेमणूक करतील
+          — किंवा त्यांनी दिलेली स्थळ-लिंक वापरा. एकदा नाशिक (किंवा तुमचे स्थळ)
+          नोंद झाली की तेच default राहील; दुसरे स्थळ निवडता येणार नाही.
         </p>
       </div>
     );
@@ -261,168 +258,197 @@ export default function AttendancePage() {
   return (
     <div className="space-y-4 pb-8">
       <div>
-        <h2 className="text-lg font-bold">उपस्थिती · एडिट</h2>
+        <h2 className="text-lg font-bold">उपस्थिती</h2>
         <p className="text-xs text-temple-muted">
-          चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा
+          {roleLabelMarathi(profile.role)} · फक्त स्वतःची उपस्थिती · इतरांची लावता येणार
+          नाही · आकडा आपोआप वाढेल
         </p>
       </div>
 
-      {canAssign ? (
-        <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-          <h3 className="text-sm font-bold text-saffron-900">
-            गुरुवारी चरणसेवक नेमणूक (एडिट)
-          </h3>
-          <p className="text-[11px] text-temple-muted">
-            9850120960 व 9225118811 ठरवतील · नाव/मोबाइल बदलून पुन्हा जतन करा
-          </p>
-          {dutyRows.map((row) => {
-            const draft = drafts[row.place.id] || { phone: "", name: "" };
-            return (
-              <div
-                key={row.place.id}
-                className="space-y-2 rounded-xl bg-saffron-50/50 p-3"
-              >
-                <p className="text-sm font-semibold">{row.place.name}</p>
-                <input
-                  type="text"
-                  placeholder="नाव"
-                  value={draft.name}
-                  onChange={(e) =>
-                    setDrafts((d) => ({
-                      ...d,
-                      [row.place.id]: { ...draft, name: e.target.value },
-                    }))
-                  }
-                  className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
-                />
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="मोबाइल"
-                  value={draft.phone}
-                  onChange={(e) =>
-                    setDrafts((d) => ({
-                      ...d,
-                      [row.place.id]: { ...draft, phone: e.target.value },
-                    }))
-                  }
-                  className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
-                />
-                <button
-                  type="button"
-                  disabled={dutyBusy === row.place.id}
-                  onClick={() => void saveDuty(row.place)}
-                  className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                >
-                  {dutyBusy === row.place.id ? "जतन…" : "नेमणूक दुरुस्त / जतन"}
-                </button>
-              </div>
-            );
-          })}
-          {dutyMsg ? (
-            <p className="text-xs font-semibold text-saffron-800">{dutyMsg}</p>
-          ) : null}
-        </section>
-      ) : null}
+      <WeeklyTopics date={date} highlightPlaceId={placeId} />
 
       <PlaceDateBar
         places={places}
         placeId={placeId}
         date={date}
-        onPlace={markDirty(setPlaceId)}
-        onDate={markDirty(setDate)}
+        onPlace={setPlaceId}
+        onDate={setDate}
+        locked={placeLocked}
       />
 
-      {assignedLabel ? (
-        <p className="text-xs text-temple-muted">चरणसेवक: {assignedLabel}</p>
-      ) : null}
-
-      {staff && placeId ? (
-        <div className="rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-          <p className="text-xs font-semibold text-saffron-900">स्थळ GPS (एडिट)</p>
-          <p className="mt-1 text-xs text-temple-muted">
-            {placeHasGps
-              ? `${selectedPlace?.latitude?.toFixed(5)}, ${selectedPlace?.longitude?.toFixed(5)}`
-              : "अजून सेट नाही"}
+      {canAppoint ? (
+        <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+          <h3 className="text-sm font-bold text-saffron-900">
+            नवीन सत्संगी चरणसेवक नेमा
+          </h3>
+          <p className="text-[11px] text-temple-muted">
+            नाव + मोबाइल · सध्या निवडलेल्या स्थळाचा (
+            {selectedPlace?.name || "—"}) सत्संगी राहील
           </p>
+          <input
+            type="text"
+            placeholder="नाव"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="मोबाइल"
+            value={newPhone}
+            onChange={(e) => setNewPhone(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
           <button
             type="button"
-            disabled={pinBusy}
-            onClick={() => void pinPlaceHere()}
-            className="mt-2 rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            disabled={appointBusy || !placeId}
+            onClick={() => void appointMember()}
+            className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            {pinBusy
-              ? "GPS…"
-              : placeHasGps
-                ? "GPS पुन्हा सेट / दुरुस्त करा"
-                : "इथेच स्थळ चिन्हांकित करा"}
+            {appointBusy ? "नेमत आहे…" : "सत्संगी नेमा"}
           </button>
-          {placeHasGps ? (
-            <p className="mt-1 text-[11px] text-temple-muted">
-              चुकीच्या जागी सेट झाले असेल तर स्थळावर उभे राहून पुन्हा दाबा
+          {members.length ? (
+            <p className="text-[11px] text-temple-muted">
+              यादी: {members.length} सत्संगी
             </p>
           ) : null}
-        </div>
+        </section>
       ) : null}
 
-      {!staff ? (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-          उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
-          मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
+      {canAssign && placeId ? (
+        <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+          <h3 className="text-sm font-bold text-saffron-900">
+            सत्संग संचालन चरणसेवक (गुरुवार)
+          </h3>
+          <p className="text-[11px] text-temple-muted">
+            शक्यतो दर गुरुवारी वेगळा — अनिवार्य नाही
+          </p>
+          {members.length ? (
+            <select
+              className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+              value=""
+              onChange={(e) => {
+                const m = members.find((x) => String(x.id) === e.target.value);
+                if (!m) return;
+                setDutyPhone(m.phone_display);
+                setDutyName(m.name);
+              }}
+            >
+              <option value="">यादीतून निवडा…</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} · {m.phone_display}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <input
+            type="text"
+            placeholder="नाव"
+            value={dutyName}
+            onChange={(e) => setDutyName(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
+          <input
+            type="tel"
+            placeholder="मोबाइल"
+            value={dutyPhone}
+            onChange={(e) => setDutyPhone(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
+          <button
+            type="button"
+            disabled={dutyBusy}
+            onClick={() => void saveConductor()}
+            className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {dutyBusy ? "जतन…" : "संचालन नेमा"}
+          </button>
+          {rotateHint ? (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+              {rotateHint}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {placeId ? (
+        <section className="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-saffron-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-temple-muted">एकूण उपस्थिती</p>
+              <p className="text-4xl font-bold tabular-nums text-saffron-800">{total}</p>
+              <p className="text-[11px] text-temple-muted">
+                {selectedPlace?.name} · स्वयंचलित आकडा
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={checkinBusy || myCheckedIn}
+              onClick={() => void selfCheckIn()}
+              className="rounded-2xl bg-saffron-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {myCheckedIn
+                ? "नोंद झाली ✓"
+                : checkinBusy
+                  ? "…"
+                  : "मी हजर आहे"}
+            </button>
+          </div>
+
+          {canAppoint ? (
+            <div className="space-y-2 border-t border-saffron-100 pt-3">
+              <button
+                type="button"
+                disabled={linkBusy}
+                onClick={() => void makeShareLink()}
+                className="w-full rounded-full bg-saffron-50 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+              >
+                {linkBusy ? "लिंक…" : "अ‍ॅप नसलेल्यांसाठी लिंक तयार करा"}
+              </button>
+              {linkUrl ? (
+                <p className="break-all rounded-xl bg-saffron-50 px-2 py-2 text-[11px] text-saffron-900">
+                  {linkUrl}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {people.length ? (
+            <ul className="max-h-48 space-y-1 overflow-y-auto border-t border-saffron-100 pt-2 text-xs">
+              {people.map((p) => (
+                <li key={p.phone} className="flex justify-between gap-2">
+                  <span>
+                    {p.name || "—"} · {p.phone_display}
+                    {p.source === "link" ? " · लिंक" : ""}
+                  </span>
+                  {p.opinion ? (
+                    <span className="truncate text-temple-muted" title={p.opinion}>
+                      मत
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-temple-muted">अजून कोणी हजर नाही</p>
+          )}
+        </section>
+      ) : null}
+
+      {fullStaff ? (
+        <p className="text-[11px] text-temple-muted">
+          विषय / अहवाल मेनूमध्ये · स्थळ GPS संचालक/संवादक सेट करतात
         </p>
       ) : null}
 
-      {lastCheckin ? (
-        <p className="text-xs font-semibold text-saffron-800">{lastCheckin}</p>
+      {msg ? (
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p>
       ) : null}
-
-      <div className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-        <p className="text-xs font-semibold text-saffron-900">वेळ · एडिट</p>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => markDirty(setTime)(e.target.value)}
-          className="w-full rounded-xl bg-saffron-50 px-3 py-3 text-lg font-bold ring-1 ring-saffron-200"
-        />
-        <div className="flex flex-wrap gap-2">
-          {["19:30", "20:00", "20:30", "21:00"].map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => markDirty(setTime)(t)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                time === t
-                  ? "bg-saffron-700 text-white"
-                  : "bg-saffron-50 text-saffron-900 ring-1 ring-saffron-200"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
-        <div>
-          <p className="text-xs font-semibold text-temple-muted">एकूण उपस्थिती</p>
-          <p className="text-[11px] text-temple-muted">+/− किंवा आकडा टाइप · एडिट</p>
-        </div>
-        <p className="text-3xl font-bold tabular-nums text-saffron-800">{total}</p>
-      </div>
-      <div className="space-y-2">
-        <NumberStepper compact label="पुरुष" value={men} onChange={markDirty(setMen)} />
-        <NumberStepper compact label="स्त्रिया" value={women} onChange={markDirty(setWomen)} />
-        <NumberStepper compact label="बालके" value={children} onChange={markDirty(setChildren)} />
-      </div>
-      <SaveBar
-        sticky
-        saving={saving}
-        saved={saved}
-        error={error}
-        label={saved ? "दुरुस्ती पुन्हा जतन करा" : "जतन / दुरुस्ती करा"}
-        savedLabel="जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
-        onSave={() => void saveAttendance()}
-      />
+      {error ? (
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
+      ) : null}
     </div>
   );
 }

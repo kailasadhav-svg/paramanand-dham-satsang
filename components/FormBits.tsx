@@ -10,33 +10,53 @@ export function PlaceDateBar({
   date,
   onPlace,
   onDate,
+  locked = false,
 }: {
   places: Place[];
   placeId: number | "";
   date: string;
   onPlace: (id: number) => void;
   onDate: (ymd: string) => void;
+  /** सत्संगी: फक्त घरचे स्थळ — इतर निवडता येत नाही */
+  locked?: boolean;
 }) {
   return (
     <div className="space-y-3">
       <div>
-        <label className="mb-1 block text-xs font-semibold text-temple-muted">स्थान</label>
+        <label className="mb-1 block text-xs font-semibold text-temple-muted">
+          स्थान{locked ? " · तुमचे स्थळ" : ""}
+        </label>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {places.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onPlace(p.id)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${
-                placeId === p.id
-                  ? "bg-saffron-700 text-white ring-saffron-700"
-                  : "bg-white text-temple-ink ring-saffron-200"
-              }`}
-            >
-              {p.name}
-            </button>
-          ))}
+          {places.map((p) => {
+            const selected = placeId === p.id;
+            const disabled = locked && !selected && places.length > 1;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                disabled={disabled || (locked && places.length === 1)}
+                onClick={() => {
+                  if (locked && !selected) return;
+                  onPlace(p.id);
+                }}
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${
+                  selected
+                    ? "bg-saffron-700 text-white ring-saffron-700"
+                    : disabled
+                      ? "cursor-not-allowed bg-stone-100 text-stone-400 ring-stone-200"
+                      : "bg-white text-temple-ink ring-saffron-200"
+                }`}
+              >
+                {p.name}
+              </button>
+            );
+          })}
         </div>
+        {locked && places.length === 1 ? (
+          <p className="mt-1 text-[11px] text-temple-muted">
+            तुमचे नोंदलेले स्थळ — दुसरे निवडता येणार नाही
+          </p>
+        ) : null}
       </div>
       <div className="flex items-center justify-between gap-2">
         <button

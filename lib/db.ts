@@ -245,6 +245,36 @@ async function migrate(db: Client) {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
+    `CREATE TABLE IF NOT EXISTS satsangi_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      appointed_by_phone TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_satsangi_phone ON satsangi_members(phone)`,
+    `CREATE TABLE IF NOT EXISTS attendance_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id INTEGER NOT NULL REFERENCES places(id),
+      meeting_date TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      name TEXT,
+      source TEXT NOT NULL DEFAULT 'app',
+      opinion TEXT,
+      checked_in_at TEXT NOT NULL,
+      UNIQUE (place_id, meeting_date, phone)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_attendance_people_date ON attendance_people(meeting_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_attendance_people_place ON attendance_people(place_id, meeting_date)`,
+    `CREATE TABLE IF NOT EXISTS join_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      place_id INTEGER NOT NULL REFERENCES places(id),
+      meeting_date TEXT NOT NULL,
+      created_by_phone TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_join_links_token ON join_links(token)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);
@@ -269,6 +299,22 @@ async function migrate(db: Client) {
   await ensureColumn(db, "meetings", "checkin_phone", "TEXT");
   await ensureColumn(db, "meetings", "checkin_at", "TEXT");
 
+  await ensureColumn(db, "ajapa_questions", "place_id", "INTEGER");
+  await ensureColumn(db, "ajapa_questions", "place_name", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "meeting_date", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "topic_kind", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "topic_title", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "visibility", "TEXT DEFAULT 'private'");
+  await ensureColumn(db, "satsangi_members", "home_place_id", "INTEGER");
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_ajapa_place_date ON ajapa_questions(place_id, meeting_date)",
+  );
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
+  );
+  await db.execute(
+    `UPDATE ajapa_questions SET visibility = 'private' WHERE visibility IS NULL OR visibility = ''`,
+  );
 
   const insert = SEED_PLACES.map((name, i) => ({
     sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",
@@ -691,3 +737,362 @@ export async function clearDuty(placeId: number, date: string): Promise<boolean>
   });
   return (result.rowsAffected ?? 0) > 0;
 }
+
+export type SatsangiMember = {
+  id: number;
+  phone: string;
+  name: string;
+  appointed_by_phone: string | null;
+  /** स्थळ जिथे नेमला / लिंकने नोंद — सत्संगीला फक्त हेच स्थळ default */
+  home_place_id: number | null;
+  created_at: string;
+};
+
+function asSatsangi(row: Row): SatsangiMember {
+  return {
+    id: num(row.id),
+    phone: str(row.phone),
+    name: str(row.name),
+    appointed_by_phone: strOrNull(row.appointed_by_phone),
+    home_place_id: row.home_place_id == null ? null : num(row.home_place_id),
+    created_at: str(row.created_at),
+  };
+}
+
+export async function listSatsangiMembers(): Promise<SatsangiMember[]> {
+  const db = await getDb();
+  const rs = await db.execute(
+    "SELECT * FROM satsangi_members ORDER BY name COLLATE NOCASE, id",
+  );
+  return rs.rows.map(asSatsangi);
+}
+
+export async function getSatsangiByPhone(phone: string): Promise<SatsangiMember | undefined> {
+  const digits = str(phone).replace(/\D/g, "");
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM satsangi_members WHERE phone = ?",
+    args: [normalized],
+  });
+  return rs.rows[0] ? asSatsangi(rs.rows[0]) : undefined;
+}
+
+export async function upsertSatsangiMember(input: {
+  phone: string;
+  name: string;
+  appointed_by_phone?: string | null;
+  home_place_id?: number | null;
+}): Promise<SatsangiMember> {
+  const digits = str(input.phone).replace(/\D/g, "");
+  if (digits.length < 10) throw new Error("invalid phone");
+  const phone = digits.length === 10 ? `91${digits}` : digits;
+  const name = input.name.trim();
+  if (!name) throw new Error("name required");
+  const now = nowIso();
+  const homePlaceId =
+    input.home_place_id != null && Number.isFinite(Number(input.home_place_id))
+      ? Number(input.home_place_id)
+      : null;
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO satsangi_members (phone, name, appointed_by_phone, home_place_id, created_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(phone) DO UPDATE SET
+        name = excluded.name,
+        appointed_by_phone = COALESCE(excluded.appointed_by_phone, satsangi_members.appointed_by_phone),
+        home_place_id = COALESCE(excluded.home_place_id, satsangi_members.home_place_id)`,
+    args: [phone, name, input.appointed_by_phone || null, homePlaceId, now],
+  });
+  const saved = await getSatsangiByPhone(phone);
+  if (!saved) throw new Error("Failed to save member");
+  return saved;
+}
+
+/**
+ * Infer home place for older members: explicit home_place_id, else last attendance, else last duty.
+ */
+export async function resolveSatsangiHomePlaceId(
+  phone: string,
+): Promise<number | null> {
+  const member = await getSatsangiByPhone(phone);
+  if (member?.home_place_id) return member.home_place_id;
+
+  const digits = str(phone).replace(/\D/g, "");
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  const db = await getDb();
+
+  const att = await db.execute({
+    sql: `SELECT place_id FROM attendance_people
+      WHERE phone = ? ORDER BY checked_in_at DESC LIMIT 1`,
+    args: [normalized],
+  });
+  if (att.rows[0]?.place_id != null) {
+    const pid = num(att.rows[0].place_id);
+    if (member) {
+      await upsertSatsangiMember({
+        phone: normalized,
+        name: member.name,
+        home_place_id: pid,
+      });
+    }
+    return pid;
+  }
+
+  const duty = await db.execute({
+    sql: `SELECT place_id FROM place_duties
+      WHERE charansevak_phone = ? ORDER BY meeting_date DESC LIMIT 1`,
+    args: [normalized],
+  });
+  if (duty.rows[0]?.place_id != null) {
+    const pid = num(duty.rows[0].place_id);
+    if (member) {
+      await upsertSatsangiMember({
+        phone: normalized,
+        name: member.name,
+        home_place_id: pid,
+      });
+    }
+    return pid;
+  }
+
+  return null;
+}
+
+/** Places a role may use in UI / APIs. Satsangi → only home place. */
+export async function listPlacesForActor(opts: {
+  phone: string;
+  role: string;
+}): Promise<{ places: Place[]; default_place_id: number | null; place_locked: boolean }> {
+  const all = await listPlaces();
+  const staff =
+    opts.role === "software" ||
+    opts.role === "guru" ||
+    opts.role === "charansevak";
+
+  if (staff) {
+    const nashik = all.find((p) => p.name === "नाशिक");
+    return {
+      places: all,
+      default_place_id: nashik?.id ?? all[0]?.id ?? null,
+      place_locked: false,
+    };
+  }
+
+  const homeId = await resolveSatsangiHomePlaceId(opts.phone);
+  if (!homeId) {
+    return { places: [], default_place_id: null, place_locked: true };
+  }
+  const home = all.find((p) => p.id === homeId);
+  if (!home) {
+    return { places: [], default_place_id: null, place_locked: true };
+  }
+  return {
+    places: [home],
+    default_place_id: home.id,
+    place_locked: true,
+  };
+}
+
+export async function assertSatsangiMayUsePlace(
+  phone: string,
+  role: string,
+  placeId: number,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (role === "software" || role === "guru" || role === "charansevak") {
+    return { ok: true };
+  }
+  const homeId = await resolveSatsangiHomePlaceId(phone);
+  if (!homeId) {
+    return {
+      ok: false,
+      message: "तुमचे स्थळ नोंदलेले नाही — लिंकने / नेमणूकीने प्रथम नोंद करा",
+    };
+  }
+  if (Number(placeId) !== Number(homeId)) {
+    const home = await getPlace(homeId);
+    return {
+      ok: false,
+      message: `फक्त तुमचे स्थळ (${home?.name || "नोंदलेले"}) निवडता येईल`,
+    };
+  }
+  return { ok: true };
+}
+
+export type AttendancePerson = {
+  id: number;
+  place_id: number;
+  meeting_date: string;
+  phone: string;
+  name: string | null;
+  source: string;
+  opinion: string | null;
+  checked_in_at: string;
+};
+
+function asAttendancePerson(row: Row): AttendancePerson {
+  return {
+    id: num(row.id),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    phone: str(row.phone),
+    name: strOrNull(row.name),
+    source: str(row.source) || "app",
+    opinion: strOrNull(row.opinion),
+    checked_in_at: str(row.checked_in_at),
+  };
+}
+
+export async function listAttendancePeople(
+  placeId: number,
+  date: string,
+): Promise<AttendancePerson[]> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ?
+      ORDER BY checked_in_at`,
+    args: [placeId, date],
+  });
+  return rs.rows.map(asAttendancePerson);
+}
+
+export async function countAttendancePeople(placeId: number, date: string): Promise<number> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS c FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ?`,
+    args: [placeId, date],
+  });
+  return num(rs.rows[0]?.c);
+}
+
+/** Self check-in: one person, one place, one Thursday. Syncs meetings.men to headcount. */
+export async function checkInPerson(input: {
+  place_id: number;
+  meeting_date: string;
+  phone: string;
+  name?: string | null;
+  source?: "app" | "link";
+  opinion?: string | null;
+}): Promise<{ person: AttendancePerson; total: number; already: boolean }> {
+  const digits = str(input.phone).replace(/\D/g, "");
+  if (digits.length < 10) throw new Error("invalid phone");
+  const phone = digits.length === 10 ? `91${digits}` : digits;
+  const now = nowIso();
+  const db = await getDb();
+
+  const existing = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ? AND phone = ?`,
+    args: [input.place_id, input.meeting_date, phone],
+  });
+  if (existing.rows[0]) {
+    const total = await countAttendancePeople(input.place_id, input.meeting_date);
+    return { person: asAttendancePerson(existing.rows[0]), total, already: true };
+  }
+
+  await db.execute({
+    sql: `INSERT INTO attendance_people (
+        place_id, meeting_date, phone, name, source, opinion, checked_in_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      input.place_id,
+      input.meeting_date,
+      phone,
+      input.name?.trim() || null,
+      input.source || "app",
+      input.opinion?.trim() || null,
+      now,
+    ],
+  });
+
+  const total = await countAttendancePeople(input.place_id, input.meeting_date);
+  // Auto headcount: store total in men (legacy aggregate field used by reports)
+  await upsertMeeting({
+    place_id: input.place_id,
+    meeting_date: input.meeting_date,
+    men: total,
+    women: 0,
+    children: 0,
+    checkin_phone: phone,
+    checkin_at: now,
+    checkin_ok: true,
+  });
+
+  const rows = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ? AND phone = ?`,
+    args: [input.place_id, input.meeting_date, phone],
+  });
+  return { person: asAttendancePerson(rows.rows[0]!), total, already: false };
+}
+
+export type JoinLink = {
+  id: number;
+  token: string;
+  place_id: number;
+  meeting_date: string;
+  created_by_phone: string | null;
+  created_at: string;
+};
+
+function asJoinLink(row: Row): JoinLink {
+  return {
+    id: num(row.id),
+    token: str(row.token),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    created_by_phone: strOrNull(row.created_by_phone),
+    created_at: str(row.created_at),
+  };
+}
+
+export async function createJoinLink(input: {
+  token: string;
+  place_id: number;
+  meeting_date: string;
+  created_by_phone?: string | null;
+}): Promise<JoinLink> {
+  const db = await getDb();
+  const now = nowIso();
+  await db.execute({
+    sql: `INSERT INTO join_links (token, place_id, meeting_date, created_by_phone, created_at)
+      VALUES (?, ?, ?, ?, ?)`,
+    args: [
+      input.token,
+      input.place_id,
+      input.meeting_date,
+      input.created_by_phone || null,
+      now,
+    ],
+  });
+  const saved = await getJoinLinkByToken(input.token);
+  if (!saved) throw new Error("Failed to create join link");
+  return saved;
+}
+
+export async function getJoinLinkByToken(token: string): Promise<JoinLink | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM join_links WHERE token = ?",
+    args: [token],
+  });
+  return rs.rows[0] ? asJoinLink(rs.rows[0]) : undefined;
+}
+
+/** Previous Thursday duty for soft rotate nudge. */
+export async function getPreviousDutySamePlace(
+  placeId: number,
+  beforeDate: string,
+): Promise<PlaceDuty | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM place_duties
+      WHERE place_id = ? AND meeting_date < ?
+      ORDER BY meeting_date DESC LIMIT 1`,
+    args: [placeId, beforeDate],
+  });
+  return rs.rows[0] ? asPlaceDuty(rs.rows[0]) : undefined;
+}
+

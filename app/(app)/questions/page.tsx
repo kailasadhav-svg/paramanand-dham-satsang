@@ -28,9 +28,21 @@ export default function QuestionsPage() {
   const week = useMemo(() => weekFromThursday(date), [date]);
 
   useEffect(() => {
-    void api<{ places: Place[] }>("/api/places").then((data) => {
+    void api<{
+      places: Place[];
+      default_place_id: number | null;
+    }>("/api/places").then((data) => {
       setPlaces(data.places);
-      setPlaceId((id) => (id === "" && data.places[0] ? data.places[0].id : id));
+      setPlaceId((id) => {
+        if (id !== "" && data.places.some((p) => p.id === id)) return id;
+        if (
+          data.default_place_id != null &&
+          data.places.some((p) => p.id === data.default_place_id)
+        ) {
+          return data.default_place_id;
+        }
+        return data.places[0]?.id ?? "";
+      });
     });
   }, []);
 

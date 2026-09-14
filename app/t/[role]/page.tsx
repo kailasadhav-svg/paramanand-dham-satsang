@@ -7,10 +7,11 @@ import { defaultHomePath, detectStaffRole } from "@/lib/roles";
 
 /** One-tap test entry: sets phone role then opens PIN login. */
 const ROLE_PHONES: Record<string, { phone: string; label: string }> = {
+  software: { phone: "9225118811", label: "संचालक · कैलास" },
   guru: { phone: "9850120960", label: "संवादक · मधुसुदनदास" },
-  software: { phone: "9225118811", label: "सॉफ्टवेअर · कैलास" },
   charansevak: { phone: "9423078811", label: "चरणसेवक · कैलास" },
   madhu: { phone: "9136443333", label: "चरणसेवक · मधुसुदनदास" },
+  satsangi: { phone: "9000000001", label: "सत्संगी चरणसेवक · डेमो" },
 };
 
 export default function TestRolePage() {
