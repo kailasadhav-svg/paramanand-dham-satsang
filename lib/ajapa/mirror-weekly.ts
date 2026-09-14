@@ -2,7 +2,7 @@ import { getDb, getPlace, getSatsangiByPhone } from "@/lib/db";
 import { detectStaffRole, roleLabelMarathi } from "@/lib/roles";
 import { generateAjapaAiAnswer } from "./ai";
 import { normalizePhone } from "./phone";
-import { createAjapaQuestion, findAjapaByQuestionText } from "./store";
+import { createAjapaQuestion, findAjapaBySeekerAndQuestion } from "./store";
 import type { AjapaQuestion } from "./types";
 
 function ymdDaysAgo(days: number): string {
@@ -16,12 +16,12 @@ async function seekerDisplayName(phone: string): Promise<string> {
     const member = await getSatsangiByPhone(phone);
     if (member?.name?.trim()) return member.name.trim();
   } catch {
-    /* not a satsangi row */
+    /* table may be empty */
   }
   return roleLabelMarathi(detectStaffRole(phone));
 }
 
-/** Copy a weekly प्रश्नोत्तर row into अजपा संवाद (literature answer). */
+/** Copy a weekly प्रश्नोत्तर into अजपा संवाद for this seeker (literature / AI answer). */
 export async function mirrorWeeklyQuestionToAjapa(input: {
   question: string;
   place_id?: number | null;
@@ -33,11 +33,11 @@ export async function mirrorWeeklyQuestionToAjapa(input: {
   const text = input.question.trim();
   if (!text) return null;
 
-  const existing = await findAjapaByQuestionText(text);
-  if (existing) return existing;
-
   const phone = normalizePhone(input.seeker_phone);
   if (!phone) return null;
+
+  const existing = await findAjapaBySeekerAndQuestion(phone, text);
+  if (existing) return existing;
 
   let placeName = input.place_name ?? null;
   if (!placeName && input.place_id) {
@@ -48,6 +48,7 @@ export async function mirrorWeeklyQuestionToAjapa(input: {
   const name =
     input.seeker_name?.trim() || (await seekerDisplayName(phone));
 
+  // Knowledge fallback always works; LLM used when key is set (may be slow).
   const { answer } = await generateAjapaAiAnswer(text, {
     place_name: placeName,
     meeting_date: input.asked_on ?? null,
@@ -67,22 +68,38 @@ type WeeklyRow = {
   place_id: number | null;
   place_name: string | null;
   asked_on: string | null;
+  asked_by_phone: string | null;
 };
 
-async function listWeeklyMissingFromAjapa(from: string, limit: number): Promise<WeeklyRow[]> {
+/**
+ * Weekly rows for this seeker that are not yet in संवाद under their phone.
+ * Also includes recent rows with NULL asked_by (legacy) so first sync can claim them
+ * only when mirrorForOrphans is true (charansevak with empty list).
+ */
+async function listWeeklyMissingForSeeker(opts: {
+  from: string;
+  seeker: string;
+  limit: number;
+  includeNullAsker: boolean;
+}): Promise<WeeklyRow[]> {
   const db = await getDb();
+  const askerClause = opts.includeNullAsker
+    ? `(q.asked_by_phone = ? OR q.asked_by_phone IS NULL OR trim(q.asked_by_phone) = '')`
+    : `q.asked_by_phone = ?`;
   const rs = await db.execute({
-    sql: `SELECT q.id, q.question, q.place_id, q.asked_on, p.name AS place_name
+    sql: `SELECT q.id, q.question, q.place_id, q.asked_on, q.asked_by_phone, p.name AS place_name
       FROM questions q
       LEFT JOIN places p ON p.id = q.place_id
       WHERE q.asked_on >= ?
+        AND ${askerClause}
         AND NOT EXISTS (
           SELECT 1 FROM ajapa_questions a
-          WHERE lower(trim(a.question)) = lower(trim(q.question))
+          WHERE a.seeker_phone = ?
+            AND lower(trim(a.question)) = lower(trim(q.question))
         )
       ORDER BY q.created_at DESC, q.id DESC
       LIMIT ?`,
-    args: [from, limit],
+    args: [opts.from, opts.seeker, opts.seeker, opts.limit],
   });
   return rs.rows.map((row) => ({
     id: Number(row.id),
@@ -90,28 +107,36 @@ async function listWeeklyMissingFromAjapa(from: string, limit: number): Promise<
     place_id: row.place_id == null ? null : Number(row.place_id),
     place_name: row.place_name == null ? null : String(row.place_name),
     asked_on: row.asked_on == null ? null : String(row.asked_on),
+    asked_by_phone:
+      row.asked_by_phone == null ? null : String(row.asked_by_phone),
   }));
 }
 
 /**
- * Backfill: weekly questions from the last N days that are not yet in संवाद.
- * Cap per request so sync stays responsive.
+ * Backfill संवाद for one seeker. Prefer asked_by_phone match.
+ * includeNullAsker: claim legacy weekly questions that never got a seeker.
  */
 export async function mirrorRecentWeeklyQuestions(opts?: {
   days?: number;
   limit?: number;
   default_seeker_phone?: string;
+  include_null_asker?: boolean;
 }): Promise<number> {
-  const days = opts?.days ?? 21;
-  const limit = Math.min(Math.max(opts?.limit ?? 5, 1), 20);
-  const from = ymdDaysAgo(days);
-  const missing = await listWeeklyMissingFromAjapa(from, limit);
-  if (!missing.length) return 0;
-
-  const seeker =
-    (opts?.default_seeker_phone && normalizePhone(opts.default_seeker_phone)) ||
-    normalizePhone(process.env.NEXT_PUBLIC_SOFTWARE_PHONE || "9225118811");
+  const seeker = opts?.default_seeker_phone
+    ? normalizePhone(opts.default_seeker_phone)
+    : "";
   if (!seeker) return 0;
+
+  const days = opts?.days ?? 21;
+  const limit = Math.min(Math.max(opts?.limit ?? 8, 1), 20);
+  const from = ymdDaysAgo(days);
+  const missing = await listWeeklyMissingForSeeker({
+    from,
+    seeker,
+    limit,
+    includeNullAsker: Boolean(opts?.include_null_asker),
+  });
+  if (!missing.length) return 0;
 
   let created = 0;
   for (const q of missing) {
@@ -124,6 +149,18 @@ export async function mirrorRecentWeeklyQuestions(opts?: {
       asked_on: q.asked_on,
       seeker_phone: seeker,
     });
+    // Stamp asker if missing so later syncs stay correct.
+    if (!q.asked_by_phone) {
+      try {
+        const db = await getDb();
+        await db.execute({
+          sql: `UPDATE questions SET asked_by_phone = ? WHERE id = ? AND (asked_by_phone IS NULL OR trim(asked_by_phone) = '')`,
+          args: [seeker, q.id],
+        });
+      } catch {
+        /* non-fatal */
+      }
+    }
     created += 1;
   }
   return created;

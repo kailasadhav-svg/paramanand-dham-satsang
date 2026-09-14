@@ -56,6 +56,7 @@ export type Question = {
   answer: string | null;
   answered_by: "atmaprabha" | "madhusudandas" | null;
   asked_on: string;
+  asked_by_phone: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -135,6 +136,7 @@ function asQuestion(row: Row): Question {
     answer: strOrNull(row.answer),
     answered_by: answeredBy(row.answered_by),
     asked_on: str(row.asked_on),
+    asked_by_phone: strOrNull(row.asked_by_phone),
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
   };
@@ -278,8 +280,12 @@ async function migrate(db: Client) {
   await ensureColumn(db, "meetings", "checkin_phone", "TEXT");
   await ensureColumn(db, "meetings", "checkin_at", "TEXT");
   await ensureColumn(db, "satsangi_members", "home_place_id", "INTEGER");
+  await ensureColumn(db, "questions", "asked_by_phone", "TEXT");
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
+  );
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_questions_asked_by ON questions(asked_by_phone)",
   );
 
 
@@ -478,17 +484,19 @@ export async function createQuestion(input: {
   place_id?: number | null;
   meeting_id?: number | null;
   asked_on: string;
+  asked_by_phone?: string | null;
 }): Promise<Question> {
   const now = nowIso();
   const db = await getDb();
   const result = await db.execute({
-    sql: `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, created_at, updated_at)
-       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`,
+    sql: `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, asked_by_phone, created_at, updated_at)
+       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
     args: [
       input.meeting_id ?? null,
       input.place_id ?? null,
       input.question.trim(),
       input.asked_on,
+      input.asked_by_phone ?? null,
       now,
       now,
     ],

@@ -1,5 +1,5 @@
 /* Paramanand Dham — PWA installability without stale Next.js shells */
-const CACHE = "paramanand-shell-v4";
+const CACHE = "paramanand-shell-v5";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/manifests/samvadak.webmanifest",

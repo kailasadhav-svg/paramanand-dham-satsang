@@ -78,7 +78,10 @@ export default function QuestionsPage() {
     setError(null);
     setOkMsg(null);
     try {
-      await api("/api/questions", {
+      const res = await api<{
+        ajapa_id?: number | null;
+        ajapa_error?: string | null;
+      }>("/api/questions", {
         method: "POST",
         body: JSON.stringify({
           question: draft,
@@ -87,9 +90,16 @@ export default function QuestionsPage() {
         }),
       });
       setDraft("");
-      setOkMsg(
-        "प्रश्न जतन झाला — संवाद मध्येही दिसेल (सिंक दाबा). उत्तर आल्यावर येथेही दिसेल.",
-      );
+      if (res.ajapa_id) {
+        setOkMsg(
+          "प्रश्न जतन · संवाद मध्ये साहित्य उत्तर तयार. «संवाद» टॅब → सिंक दाबा. अधिक स्पष्टतेसाठी तेथे मधुसुदनदास विजयानंद यांच्याकडे पाठवता येईल.",
+        );
+      } else {
+        setOkMsg(
+          "प्रश्न जतन झाला. संवाद उत्तर नंतर सिंक वर तयार होईल." +
+            (res.ajapa_error ? ` (${res.ajapa_error})` : ""),
+        );
+      }
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "जतन अयशस्वी");
@@ -132,7 +142,7 @@ export default function QuestionsPage() {
         <p className="break-words text-xs text-temple-muted">
           {staff
             ? "संचालक / संवादक — प्रश्न व उत्तर"
-            : "सत्संगी / चरणसेवक — इथे प्रश्न विचारा; उत्तर आल्यावर दिसेल"}
+            : "सत्संगी — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
         </p>
       </div>
       <PlaceDateBar
