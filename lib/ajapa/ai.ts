@@ -41,12 +41,12 @@ function expandToMinWords(
   const topicLine = topicLabel(topic);
   const filler = `
 
-या उत्तराचा सारांश असा की आपला प्रश्न — «${question.trim()}» —${
-    topicLine ? ` आजच्या सत्संग विषयाशी (${topicLine}) संबंधित असून` : ""
-  } साधनेच्या मार्गावरचा एक नैसर्गिक टप्पा आहे. वर दिलेल्या पुस्तके/परंपरा-आधारित विवेचनाप्रमाणे अजपा जप, सत्संग आणि गुरुकृपा या तिन्हींचा समन्वय ठेवा. दररोज थोडा वेळ श्वासासोबत नामस्मरण करा, गुरुवारी सत्संगाला उपस्थित रहा, आणि सेवा स्वीकारा. उत्तर पूर्णपणे समजले नाही तर पुन्हा शांत मनाने वाचा; घाईने निर्णय घेऊ नका. कुटुंबातील कर्तव्ये आणि साधना विरोधी नाहीत — दोन्ही एकत्र जगता येतात. भीती किंवा संशय आला तरी नामस्मरण सोडू नका. इतर साधकांशी तुलना करू नका; आपली गती आपलीच आहे. जर मधुसुदनदास विजयानंद यांच्याकडून अधिक स्पष्टता हवी असेल तर WhatsApp वर दिलेल्या सूचनाप्रमाणे \`1\` दाबा. गुरुउत्तर आल्यावर ते आचरणात आणण्याचा प्रयत्न करा. ही दिशा पुस्तके आणि परंपरेवर आधारित प्रारंभिक मार्गदर्शन आहे; अंतिम निर्णय श्रद्धा आणि गुरुकृपेवर अवलंबून.
+या उत्तराचा विस्तार: साधकाचा प्रश्न — «${question.trim()}» —${
+    topicLine ? ` (आजचा सत्संग संदर्भ: ${topicLine})` : ""
+  } याला वर दिलेल्या परमानंद साहित्यानुसारच उत्तर द्यावे. प्रत्येक साधकाचा प्रश्न वेगळा असतो; जुने/सामान्य अजपा टेम्प्लेट कॉपी करू नका. श्रद्धेने वाचा, चिंतन करा; पूर्ण समजले नाही तर पुन्हा शांत मनाने वाचा. कुटुंबातील कर्तव्ये आणि साधना एकत्र जगता येतात. अधिक स्पष्टतेसाठी मधुसुदनदास विजयानंद यांच्याकडे जाऊ शकतो. ही दिशा परमानंद साहित्य व परंपरेवर आधारित प्रारंभिक मार्गदर्शन आहे.
 
-संदर्भ मजकूर (संक्षेप):
-${knowledge.slice(0, 1200)}
+संदर्भ साहित्य (संक्षेप):
+${knowledge.slice(0, 1400)}
 `;
 
   while (countWords(text) < MIN_WORDS) {
@@ -75,19 +75,23 @@ async function llmAnswer(
     },
     body: JSON.stringify({
       model,
-      temperature: 0.4,
+      temperature: 0.35,
       messages: [
         {
           role: "system",
-          content: `तू परमानंद धाम / अजपा परंपरेतील मराठी सहाय्यक आहेस. फक्त मराठीत उत्तर दे. उत्तर किमान ${MIN_WORDS} शब्दांचे असावे. पुस्तके/माहितीवर आधारित विवेचन दे; राजकीय किंवा वैद्यकीय सल्ला देऊ नको. ${
-            topicLine
-              ? `आजचा सत्संग विषय: ${topicLine}. प्रत्येक उत्तर या विषयाच्या संदर्भातच दे — विषयापासून दूर जाऊ नको.`
-              : ""
-          } शेवटी एक वाक्य: अधिक स्पष्टतेसाठी मधुसुदनदास विजयानंद यांच्याकडे जाऊ शकतो.`,
+          content: `तू परमानंद धाम परंपरेतील मराठी साहित्य-सहाय्यक आहेस.
+नियम:
+1) फक्त मराठीत उत्तर दे. किमान ${MIN_WORDS} शब्द.
+2) **सर्वात महत्त्वाचे:** साधकाच्या नेमक्या प्रश्नाला उत्तर दे. प्रत्येक साधक वेगळे विचारू शकतो — जुने/सामान्य अजपा उत्तर कॉपी करू नको.
+3) दिलेले «संदर्भ साहित्य» वापर: आरती विचारली तर आरतीचा पूर्ण पाठ व अर्थ दे; अजपा विचारला तर अजपा; इतर प्रश्न तर त्याप्रमाणे.
+4) सत्संग विषय फक्त पार्श्वभूमी आहे — विषयामुळे प्रश्नाचे उत्तर बदलू नको किंवा चुकीचे साहित्य लावू नको.
+5) संदर्भ साहित्यात जे नाही ते कल्पित करू नको; माहिती अपुरी असल्यास परंपरेनुसार थोडक्यात सांग व गुरुंकडे जाण्याचा सल्ला दे.
+6) राजकीय/वैद्यकीय सल्ला देऊ नको.
+7) शेवटी एक वाक्य: अधिक स्पष्टतेसाठी मधुसुदनदास विजयानंद यांच्याकडे जाऊ शकतो.`,
         },
         {
           role: "user",
-          content: `${topicLine ? `सत्संग विषय: ${topicLine}\n${topic?.notes ? `टिपणी: ${topic.notes}\n` : ""}\n` : ""}संदर्भ:\n${knowledge}\n\nप्रश्न:\n${question}`,
+          content: `${topicLine ? `सत्संग संदर्भ (फक्त पार्श्वभूमी): ${topicLine}\n${topic?.notes ? `टिपणी: ${topic.notes}\n` : ""}\n` : ""}संदर्भ साहित्य:\n${knowledge}\n\nसाधकाचा प्रश्न (यालाच उत्तर द्या):\n${question}`,
         },
       ],
     }),
@@ -104,7 +108,7 @@ async function llmAnswer(
   return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
-/** Generate Marathi answer ≥200 words from knowledge (+ optional LLM), grounded in सत्संग विषय. */
+/** Generate Marathi literature answer ≥200 words — question-first, unique per seeker. */
 export async function generateAjapaAiAnswer(
   question: string,
   topic?: AjapaTopicContext | null,
@@ -113,9 +117,7 @@ export async function generateAjapaAiAnswer(
   source: "llm" | "knowledge";
   wordCount: number;
 }> {
-  const knowledge = pickKnowledgeForQuestion(
-    [topic?.topic_title, question].filter(Boolean).join(" "),
-  );
+  const knowledge = pickKnowledgeForQuestion(question, topic?.topic_title);
   const llm = await llmAnswer(question, knowledge, topic);
   if (llm) {
     const answer = expandToMinWords(llm, question, knowledge, topic);
@@ -125,13 +127,13 @@ export async function generateAjapaAiAnswer(
   const topicLine = topicLabel(topic);
   const base = `जय श्री राम.
 
-${topicLine ? `आजचा सत्संग विषय: ${topicLine}.\n` : ""}आपल्या प्रश्नाबाबत («${question.trim()}») अजपा व सत्संग परंपरेनुसार${
-    topicLine ? ` या विषयाच्या संदर्भात` : ""
-  } खालील विवेचन आहे.
+आपल्या प्रश्नाबाबत («${question.trim()}») परमानंद साहित्यानुसार खालील विवेचन आहे.${
+    topicLine ? `\n(सत्संग संदर्भ: ${topicLine})` : ""
+  }
 
 ${knowledge}
 
-सारांश: श्वासासोबत नामस्मरण सुरू ठेवा, सत्संग व सेवा स्वीकारा, आणि आवश्यक वाटल्यास मधुसुदनदास विजयानंद यांच्याकडे \`1\` दाबून मार्गदर्शन मागा.`;
+सारांश: वरील साहित्य वाचा व चिंतन करा. आवश्यक वाटल्यास मधुसुदनदास विजयानंद यांच्याकडे \`1\` दाबून मार्गदर्शन मागा.`;
 
   const answer = expandToMinWords(base, question, knowledge, topic);
   return { answer, source: "knowledge", wordCount: countWords(answer) };

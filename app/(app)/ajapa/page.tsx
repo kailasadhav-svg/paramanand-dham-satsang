@@ -66,6 +66,7 @@ export default function AjapaPage() {
   const [otpValue, setOtpValue] = useState("");
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpHint, setOtpHint] = useState<string | null>(null);
+  const [regenId, setRegenId] = useState<number | null>(null);
 
   const [replyForId, setReplyForId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -278,6 +279,27 @@ export default function AjapaPage() {
     setReplyText("");
     setReplyAudioUrl(null);
     setError(null);
+  }
+
+  async function regenerateLiterature(q: AjapaQuestion) {
+    if (!scope) return;
+    setRegenId(q.id);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const data = await api<{ question: AjapaQuestion }>(
+        `/api/ajapa/questions/${q.id}/regenerate`,
+        { method: "POST", body: "{}" },
+      );
+      await upsertQuestions([data.question]);
+      setItems(await readLocalForDialogue(profile, scope));
+      setOkMsg("परमानंद साहित्य उत्तर प्रश्नानुसार पुन्हा तयार झाले");
+      void syncAndLoad();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "उत्तर पुन्हा तयार झाले नाही");
+    } finally {
+      setRegenId(null);
+    }
   }
 
   function stopRecording() {
@@ -642,11 +664,26 @@ export default function AjapaPage() {
             ) : null}
 
             {q.ai_answer ? (
-              <div className="rounded-xl bg-saffron-50/80 p-3 text-sm ring-1 ring-saffron-100">
-                <p className="mb-1 font-bold text-saffron-900">परमानंद साहित्य उत्तर</p>
+              <div className="space-y-2 rounded-xl bg-saffron-50/80 p-3 text-sm ring-1 ring-saffron-100">
+                <p className="font-bold text-saffron-900">परमानंद साहित्य उत्तर</p>
                 <p className="max-h-64 overflow-y-auto whitespace-pre-wrap text-temple-ink/90">
                   {q.ai_answer}
                 </p>
+                {q.status === "ai_answered" &&
+                (phonesEqual(profile.phone, q.seeker_phone) ||
+                  profile.role === "software" ||
+                  profile.role === "guru") ? (
+                  <button
+                    type="button"
+                    disabled={regenId === q.id}
+                    onClick={() => void regenerateLiterature(q)}
+                    className="w-full rounded-full bg-white py-2 text-xs font-bold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
+                  >
+                    {regenId === q.id
+                      ? "प्रश्नानुसार उत्तर तयार…"
+                      : "चुकीचे असल्यास · उत्तर पुन्हा तयार करा"}
+                  </button>
+                ) : null}
               </div>
             ) : (
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
