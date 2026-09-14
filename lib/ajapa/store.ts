@@ -29,6 +29,7 @@ function asStatus(value: unknown): AjapaStatus {
 function asState(value: unknown): AjapaSessionState {
   const ok: AjapaSessionState[] = [
     "idle",
+    "awaiting_question",
     "awaiting_escalate_choice",
     "guru_awaiting_mode",
     "guru_awaiting_text",

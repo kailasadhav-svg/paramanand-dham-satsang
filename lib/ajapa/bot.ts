@@ -1,5 +1,14 @@
 import { generateAjapaAiAnswer } from "./ai";
 import {
+  appPublicUrl,
+  askQuestionPrompt,
+  isGateKeywordOnly,
+  parseAnswerCommand,
+  parseQuestionCommand,
+  startsWithGateKeyword,
+  welcomeMessage,
+} from "./keywords";
+import {
   displayPhone,
   extractPhoneToken,
   guruPhones,
@@ -26,6 +35,7 @@ import {
   notifyGuruAnswerReady,
   notifyGuruNewQuestion,
   sendAudioById,
+  sendButtons,
   sendText,
 } from "./whatsapp";
 
@@ -35,7 +45,6 @@ export type BotResult = {
   questionId?: number;
 };
 
-/** Map button ids / labels to legacy 1/2 choices (numbers still work). */
 function normalizeChoice(raw: string): string {
   const t = raw.trim();
   const lower = t.toLowerCase();
@@ -56,23 +65,24 @@ function normalizeChoice(raw: string): string {
   if (lower === "ajapa_open_app" || /अ‍ॅप|app/i.test(t)) {
     return "app";
   }
+  if (lower === "ajapa_ask" || /प्रश्न|विचारा|ask/i.test(t)) {
+    return "ask";
+  }
+  if (lower === "ajapa_help" || /मदत|help|मेनू|menu/i.test(t)) {
+    return "help";
+  }
   return t;
 }
 
-function parseAjapaQ(text: string): string | null {
-  const m = text.trim().match(/^(?:अजपा|ajapa)\s*q\s*[:\-]?\s*(.+)$/i);
-  if (!m) return null;
-  const q = m[1].trim();
-  return q.length ? q : null;
+async function sendWelcome(to: string): Promise<void> {
+  await sendButtons(to, welcomeMessage(), [
+    { id: "ajapa_ask", title: "प्रश्न विचारा" },
+    { id: "ajapa_open_app", title: "अ‍ॅप उघडा" },
+    { id: "ajapa_help", title: "मदत" },
+  ]);
 }
 
-function parseAjapaA(text: string): string | null {
-  const m = text.trim().match(/^(?:अजपा|ajapa)\s*a\s*[:\-]?\s*(.+)$/i);
-  if (!m) return null;
-  return extractPhoneToken(m[1]);
-}
-
-async function handleAjapaQ(
+async function handleQuestion(
   from: string,
   question: string,
   name?: string,
@@ -105,12 +115,12 @@ async function handleAjapaQ(
   };
 }
 
-async function handleEscalateChoice(from: string): Promise<BotResult> {
+async function handleEscalate(from: string): Promise<BotResult> {
   const session = await getWaSession(from);
   if (!session?.ajapa_question_id) {
     await sendText(
       from,
-      "सध्या एस्केलेट करण्यासाठी प्रश्न सापडला नाही. `अजपा Q` ने नवीन प्रश्न विचारा.",
+      "सध्या एस्केलेट करण्यासाठी प्रश्न सापडला नाही. `अजपा Q` / `SOHAM Q` ने नवीन प्रश्न विचारा.",
     );
     return { handled: true, replies: ["no pending"] };
   }
@@ -139,11 +149,15 @@ async function handleEscalateChoice(from: string): Promise<BotResult> {
   return { handled: true, replies: ["escalated"], questionId: q.id };
 }
 
-async function handleAjapaA(guruPhone: string, seekerPhone: string): Promise<BotResult> {
+async function handleGuruLookup(guruPhone: string, seekerRaw: string): Promise<BotResult> {
   if (!isGuruPhone(guruPhone)) {
-    await sendText(guruPhone, "`अजपा A` फक्त मधुसुदनदास विजयानंद यांच्या नंबरवरून चालते.");
+    await sendText(
+      guruPhone,
+      "`अजपा A` / `SOHAM A` फक्त मधुसुदनदास विजयानंद यांच्या नंबरवरून चालते.",
+    );
     return { handled: true, replies: ["not guru"] };
   }
+  const seekerPhone = extractPhoneToken(seekerRaw) || normalizePhone(seekerRaw);
   await touchWaSession(guruPhone);
   const q = await latestEscalatedForSeeker(seekerPhone);
   if (!q) {
@@ -154,7 +168,7 @@ async function handleAjapaA(guruPhone: string, seekerPhone: string): Promise<Bot
     return { handled: true, replies: ["no escalated"] };
   }
 
-  const preview = `प्रश्न #${q.id} · सेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य —\n${(q.ai_answer || "").slice(0, 1500)}`;
+  const preview = `🙏 प्रश्न #${q.id} · सेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य —\n${(q.ai_answer || "").slice(0, 1500)}`;
   await sendText(guruPhone, preview.slice(0, 4000));
   const guruSession = await getWaSession(guruPhone);
   await askGuruReplyMode({
@@ -181,7 +195,7 @@ async function handleGuruMode(guruPhone: string, text: string): Promise<BotResul
   }
   if (choice === "cancel") {
     await setWaSessionState(guruPhone, "idle", null);
-    await sendText(guruPhone, "रद्द केले. पुन्हा `अजपा A` + मोबाइल वापरा.");
+    await sendText(guruPhone, "रद्द केले. पुन्हा `अजपा A` / `SOHAM A` + मोबाइल वापरा.");
     return { handled: true, replies: ["cancelled"] };
   }
   await sendText(guruPhone, "बटण निवडा: टाइप / व्हॉइस — किंवा `1` / `2` दाबा.");
@@ -216,7 +230,10 @@ async function finishGuruVoice(guruPhone: string, mediaId: string): Promise<BotR
     return { handled: true, replies: ["missing q"] };
   }
   const url = await fetchMediaUrl(mediaId);
-  const saved = await saveGuruVoiceAnswer(session.ajapa_question_id, { mediaId, url });
+  const saved = await saveGuruVoiceAnswer(session.ajapa_question_id, {
+    mediaId,
+    url,
+  });
   if (!saved) return { handled: true, replies: ["save fail"] };
 
   const seekerSession = await getWaSession(saved.seeker_phone);
@@ -232,35 +249,56 @@ async function finishGuruVoice(guruPhone: string, mediaId: string): Promise<BotR
   return { handled: true, replies: ["guru voice saved"], questionId: saved.id };
 }
 
-/** Core WhatsApp Ajapa state machine. */
+/**
+ * WhatsApp Ajapa / Soham bot.
+ * Keywords: अजपा · ajapa · ajpa · SOHAM · सोऽहं …
+ * 24h session = free text/buttons (Meta template approve नको).
+ */
 export async function processInboundMessage(msg: InboundWaMessage): Promise<BotResult> {
   const from = normalizePhone(msg.from);
   const text = (msg.text || "").trim();
   const sessionBefore = await getWaSession(from);
   await touchWaSession(from);
 
-  const qCmd = text ? parseAjapaQ(text) : null;
-  if (qCmd) return handleAjapaQ(from, qCmd, msg.profileName);
+  const qCmd = text ? parseQuestionCommand(text) : null;
+  if (qCmd) return handleQuestion(from, qCmd, msg.profileName);
 
-  const aPhone = text ? parseAjapaA(text) : null;
-  if (aPhone) return handleAjapaA(from, aPhone);
+  const aRaw = text ? parseAnswerCommand(text) : null;
+  if (aRaw) return handleGuruLookup(from, aRaw);
 
   const session = sessionBefore
     ? { ...sessionBefore, last_inbound_at: new Date().toISOString() }
     : await getWaSession(from);
 
+  if (session?.state === "awaiting_question" && text) {
+    const choice = normalizeChoice(text);
+    if (choice === "help" || isGateKeywordOnly(text)) {
+      await sendWelcome(from);
+      await setWaSessionState(from, "idle", null);
+      return { handled: true, replies: ["welcome"] };
+    }
+    if (choice === "app") {
+      await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
+      return { handled: true, replies: ["app link"] };
+    }
+    if (choice === "cancel") {
+      await setWaSessionState(from, "idle", null);
+      await sendText(from, "ठीक आहे. पुन्हा हवे असल्यास `अजपा` / `SOHAM` लिहा.");
+      return { handled: true, replies: ["cancelled ask"] };
+    }
+    return handleQuestion(from, text, msg.profileName);
+  }
+
   if (session?.state === "awaiting_escalate_choice") {
     const choice = normalizeChoice(text);
-    if (choice === "1") return handleEscalateChoice(from);
+    if (choice === "1") return handleEscalate(from);
     if (choice === "cancel") {
       await setWaSessionState(from, "idle", session.ajapa_question_id);
-      await sendText(from, "ठीक आहे. पुन्हा हवे असल्यास `अजपा Q` विचारा.");
+      await sendText(from, "ठीक आहे. पुन्हा हवे असल्यास `अजपा Q` / `SOHAM Q` विचारा.");
       return { handled: true, replies: ["enough"] };
     }
     if (choice === "app") {
-      const appUrl =
-        process.env.APP_PUBLIC_URL || "https://satsang.dhyeyapurti.in/ajapa";
-      await sendText(from, `अ‍ॅप: ${appUrl}`);
+      await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
       return { handled: true, replies: ["app link"] };
     }
   }
@@ -281,12 +319,40 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
     }
   }
 
-  if (/^(?:अजपा|ajapa)\b/i.test(text)) {
-    await sendText(
-      from,
-      "वापर:\n• चरणसेवक: `अजपा Q` आणि प्रश्न\n• संवादक: `अजपा A` आणि सेवकाचा मोबाइल",
-    );
+  if (text && isGateKeywordOnly(text)) {
+    await sendWelcome(from);
+    return { handled: true, replies: ["welcome"] };
+  }
+
+  if (text && startsWithGateKeyword(text)) {
+    const rest = text
+      .replace(/^(?:अजपा|अजापा|ajapa|ajpa|soham|सोहं|सोऽहं|सोहम्)\s*/i, "")
+      .trim();
+    const choice = normalizeChoice(rest || "help");
+    if (choice === "ask") {
+      await setWaSessionState(from, "awaiting_question", null);
+      await sendText(from, askQuestionPrompt());
+      return { handled: true, replies: ["ask prompt"] };
+    }
+    if (choice === "app") {
+      await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
+      return { handled: true, replies: ["app link"] };
+    }
+    await sendWelcome(from);
     return { handled: true, replies: ["help"] };
+  }
+
+  if (text) {
+    const choice = normalizeChoice(text);
+    if (choice === "ask") {
+      await setWaSessionState(from, "awaiting_question", null);
+      await sendText(from, askQuestionPrompt());
+      return { handled: true, replies: ["ask prompt"] };
+    }
+    if (choice === "help") {
+      await sendWelcome(from);
+      return { handled: true, replies: ["welcome"] };
+    }
   }
 
   return { handled: false, replies: [] };

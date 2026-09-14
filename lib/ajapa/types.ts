@@ -2,6 +2,7 @@ export type AjapaStatus = "ai_answered" | "escalated" | "guru_answered";
 
 export type AjapaSessionState =
   | "idle"
+  | "awaiting_question"
   | "awaiting_escalate_choice"
   | "guru_awaiting_mode"
   | "guru_awaiting_text"
