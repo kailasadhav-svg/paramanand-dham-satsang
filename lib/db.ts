@@ -56,6 +56,7 @@ export type Question = {
   answer: string | null;
   answered_by: "atmaprabha" | "madhusudandas" | null;
   asked_on: string;
+  asked_by_phone: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -135,6 +136,7 @@ function asQuestion(row: Row): Question {
     answer: strOrNull(row.answer),
     answered_by: answeredBy(row.answered_by),
     asked_on: str(row.asked_on),
+    asked_by_phone: strOrNull(row.asked_by_phone),
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
   };
@@ -273,6 +275,15 @@ async function migrate(db: Client) {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
+    `CREATE TABLE IF NOT EXISTS satsangi_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      appointed_by_phone TEXT,
+      home_place_id INTEGER,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_satsangi_phone ON satsangi_members(phone)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);
@@ -296,6 +307,14 @@ async function migrate(db: Client) {
   await ensureColumn(db, "meetings", "checkin_ok", "INTEGER");
   await ensureColumn(db, "meetings", "checkin_phone", "TEXT");
   await ensureColumn(db, "meetings", "checkin_at", "TEXT");
+  await ensureColumn(db, "satsangi_members", "home_place_id", "INTEGER");
+  await ensureColumn(db, "questions", "asked_by_phone", "TEXT");
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
+  );
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_questions_asked_by ON questions(asked_by_phone)",
+  );
 
 
   const insert = SEED_PLACES.map((name, i) => ({
@@ -493,17 +512,19 @@ export async function createQuestion(input: {
   place_id?: number | null;
   meeting_id?: number | null;
   asked_on: string;
+  asked_by_phone?: string | null;
 }): Promise<Question> {
   const now = nowIso();
   const db = await getDb();
   const result = await db.execute({
-    sql: `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, created_at, updated_at)
-       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`,
+    sql: `INSERT INTO questions (meeting_id, place_id, question, answer, answered_by, asked_on, asked_by_phone, created_at, updated_at)
+       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?)`,
     args: [
       input.meeting_id ?? null,
       input.place_id ?? null,
       input.question.trim(),
       input.asked_on,
+      input.asked_by_phone ?? null,
       now,
       now,
     ],
@@ -718,4 +739,79 @@ export async function clearDuty(placeId: number, date: string): Promise<boolean>
     args: [placeId, date],
   });
   return (result.rowsAffected ?? 0) > 0;
+}
+
+export type SatsangiMember = {
+  id: number;
+  phone: string;
+  name: string;
+  appointed_by_phone: string | null;
+  home_place_id: number | null;
+  created_at: string;
+};
+
+function asSatsangi(row: Row): SatsangiMember {
+  return {
+    id: num(row.id),
+    phone: str(row.phone),
+    name: str(row.name),
+    appointed_by_phone: strOrNull(row.appointed_by_phone),
+    home_place_id: row.home_place_id == null ? null : num(row.home_place_id),
+    created_at: str(row.created_at),
+  };
+}
+
+function normalizeMemberPhone(phone: string): string {
+  const digits = str(phone).replace(/\D/g, "");
+  if (digits.length < 10) throw new Error("invalid phone");
+  return digits.length === 10 ? `91${digits}` : digits;
+}
+
+export async function listSatsangiMembers(): Promise<SatsangiMember[]> {
+  const db = await getDb();
+  const rs = await db.execute(
+    "SELECT * FROM satsangi_members ORDER BY name COLLATE NOCASE, id",
+  );
+  return rs.rows.map(asSatsangi);
+}
+
+export async function getSatsangiByPhone(
+  phone: string,
+): Promise<SatsangiMember | undefined> {
+  const normalized = normalizeMemberPhone(phone);
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM satsangi_members WHERE phone = ?",
+    args: [normalized],
+  });
+  return rs.rows[0] ? asSatsangi(rs.rows[0]) : undefined;
+}
+
+export async function upsertSatsangiMember(input: {
+  phone: string;
+  name: string;
+  appointed_by_phone?: string | null;
+  home_place_id?: number | null;
+}): Promise<SatsangiMember> {
+  const phone = normalizeMemberPhone(input.phone);
+  const name = input.name.trim();
+  if (!name) throw new Error("name required");
+  const now = nowIso();
+  const homePlaceId =
+    input.home_place_id != null && Number.isFinite(Number(input.home_place_id))
+      ? Number(input.home_place_id)
+      : null;
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO satsangi_members (phone, name, appointed_by_phone, home_place_id, created_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(phone) DO UPDATE SET
+        name = excluded.name,
+        appointed_by_phone = COALESCE(excluded.appointed_by_phone, satsangi_members.appointed_by_phone),
+        home_place_id = COALESCE(excluded.home_place_id, satsangi_members.home_place_id)`,
+    args: [phone, name, input.appointed_by_phone || null, homePlaceId, now],
+  });
+  const saved = await getSatsangiByPhone(phone);
+  if (!saved) throw new Error("Failed to save member");
+  return saved;
 }

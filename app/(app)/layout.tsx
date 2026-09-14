@@ -14,7 +14,7 @@ export default async function AppGroupLayout({ children }: { children: React.Rea
   }
   return (
     <PhoneGate>
-      <div className="mx-auto min-h-dvh max-w-lg pb-24">
+      <div className="mx-auto min-h-dvh w-full max-w-lg md:max-w-3xl pb-24">
         <ManifestSwitcher />
         <AppHeader subtitle="गुरुवार रात्री ८:०० · नोंदी व अहवाल" />
         <main className="px-4 py-4">

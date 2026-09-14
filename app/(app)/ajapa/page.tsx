@@ -2,12 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
-import { api } from "@/lib/api";
-import {
-  literatureLooksMismatched,
-  literatureLooksTechy,
-} from "@/lib/ajapa/mismatch";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
+import { api } from "@/lib/api";
 import { searchLocal } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
@@ -21,7 +17,7 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
 const ROLE_LABEL = {
   charansevak: "चरणसेवक",
   guru: "संवादक",
-  software: "सॉफ्टवेअर",
+  software: "संचालक",
 } as const;
 
 export default function AjapaPage() {
@@ -34,8 +30,7 @@ export default function AjapaPage() {
   const [syncing, setSyncing] = useState(false);
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
-  const [regenId, setRegenId] = useState<number | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const syncAndLoad = useCallback(async () => {
     setSyncing(true);
@@ -45,10 +40,14 @@ export default function AjapaPage() {
       const result = await syncAjapaFromServer(profile);
       setItems(await readLocalForProfile(profile));
       setOffline(result.offline);
+      const extra =
+        result.mirrored && result.mirrored > 0
+          ? ` · नवीन उत्तर ${result.mirrored}`
+          : "";
       setSyncNote(
         result.offline
           ? "ऑफलाइन · लोकल यादी"
-          : `सिंक · +${result.pulled} · एकूण ${result.localCount}`,
+          : `सिंक · +${result.pulled} · एकूण ${result.localCount}${extra}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "लोड अयशस्वी");
@@ -62,55 +61,31 @@ export default function AjapaPage() {
     void syncAndLoad();
   }, [syncAndLoad]);
 
-  const regenerateLiterature = useCallback(
-    async (q: AjapaQuestion) => {
-      setRegenId(q.id);
-      setError(null);
-      setOkMsg(null);
-      try {
-        const data = await api<{ question: AjapaQuestion }>(
-          `/api/ajapa/questions/${q.id}/regenerate`,
-          { method: "POST", body: "{}" },
-        );
-        setItems((prev) =>
-          prev.map((row) => (row.id === q.id ? data.question : row)),
-        );
-        setOkMsg("परमानंद साहित्य उत्तर प्रश्नानुसार पुन्हा तयार झाले");
-        await syncAndLoad();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "पुन्हा तयार अयशस्वी");
-      } finally {
-        setRegenId(null);
-      }
-    },
-    [syncAndLoad],
-  );
-
-  // Auto-fix old tech / wrong literature answers already in local list
-  useEffect(() => {
-    if (loading || offline || syncing) return;
-    const stale = items.find(
-      (q) =>
-        q.status === "ai_answered" &&
-        (literatureLooksMismatched(q.question, q.ai_answer) ||
-          literatureLooksTechy(q.ai_answer)),
-    );
-    if (!stale || regenId != null) return;
-    void regenerateLiterature(stale);
-  }, [items, loading, offline, syncing, regenId, regenerateLiterature]);
-
   const visible = useMemo(() => {
     let list = items;
     if (filter !== "all") list = list.filter((q) => q.status === filter);
     return searchLocal(list, query);
   }, [items, filter, query]);
 
+  async function sendToGuru(id: number) {
+    setBusyId(id);
+    setError(null);
+    try {
+      await api(`/api/ajapa/questions/${id}/escalate`, { method: "POST" });
+      await syncAndLoad();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "पाठवता आले नाही");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const viewHint =
     profile.role === "software"
-      ? "सॉफ्टवेअर — सर्व प्रश्न"
+      ? "संचालक — सर्व प्रश्न"
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
-        : "तुमचे प्रश्न / काम";
+        : "तुमचे प्रश्न · साहित्य उत्तर · संवादकांकडे पाठवा";
 
   return (
     <div className="space-y-4">
@@ -124,9 +99,6 @@ export default function AjapaPage() {
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
           {syncNote ? (
             <p className="text-[11px] text-temple-muted">{syncNote}</p>
-          ) : null}
-          {okMsg ? (
-            <p className="text-[11px] text-saffron-800">{okMsg}</p>
           ) : null}
         </div>
         <button
@@ -175,64 +147,65 @@ export default function AjapaPage() {
       {loading ? <p className="text-sm text-temple-muted">लोड होत आहे…</p> : null}
 
       <ul className="space-y-3">
-        {visible.map((q) => {
-          const needsRefresh =
-            q.status === "ai_answered" &&
-            (literatureLooksMismatched(q.question, q.ai_answer) ||
-              literatureLooksTechy(q.ai_answer));
-          return (
-            <li key={q.id} className="card space-y-2 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold">{q.question}</p>
-                <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
-                  {STATUS_LABEL[q.status]}
-                </span>
-              </div>
-              {profile.role !== "charansevak" ? (
-                <p className="text-xs text-temple-muted">
-                  {q.seeker_name ? `${q.seeker_name} · ` : ""}
-                  {displayPhone(q.seeker_phone)}
+        {visible.map((q) => (
+          <li key={q.id} className="card space-y-2 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold">{q.question}</p>
+              <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
+                {STATUS_LABEL[q.status]}
+              </span>
+            </div>
+            {profile.role !== "charansevak" ? (
+              <p className="text-xs text-temple-muted">
+                {q.seeker_name ? `${q.seeker_name} · ` : ""}
+                {displayPhone(q.seeker_phone)}
+              </p>
+            ) : null}
+            {q.status === "ai_answered" ? (
+              <button
+                type="button"
+                disabled={busyId === q.id}
+                onClick={() => void sendToGuru(q.id)}
+                className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busyId === q.id
+                  ? "पाठवत आहे…"
+                  : "मधुसुदनदास विजयानंद यांच्याकडे पाठवा"}
+              </button>
+            ) : null}
+            {q.status === "escalated" ? (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+                संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
+              </p>
+            ) : null}
+            {q.ai_answer ? (
+              <details open={q.status === "ai_answered"} className="text-sm">
+                <summary className="cursor-pointer font-medium text-saffron-800">
+                  परमानंद साहित्य उत्तर
+                </summary>
+                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
+                  {q.ai_answer}
                 </p>
-              ) : null}
-              {q.ai_answer ? (
-                <details className="text-sm" open={needsRefresh || undefined}>
-                  <summary className="cursor-pointer font-medium text-saffron-800">
-                    परमानंद साहित्य
-                  </summary>
-                  <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
-                    {q.ai_answer}
-                  </p>
-                </details>
-              ) : null}
-              {needsRefresh ? (
-                <button
-                  type="button"
-                  disabled={regenId === q.id || offline}
-                  onClick={() => void regenerateLiterature(q)}
-                  className="w-full rounded-xl bg-saffron-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {regenId === q.id
-                    ? "साहित्य पुन्हा तयार…"
-                    : "चुकीचे / जुने उत्तर — साहित्य पुन्हा तयार करा"}
-                </button>
-              ) : null}
-              {q.guru_answer_text ? (
-                <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                  <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
-                  <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
-                </div>
-              ) : null}
-              {q.guru_answer_audio_url ? (
-                <audio controls src={q.guru_answer_audio_url} className="w-full" />
-              ) : null}
-            </li>
-          );
-        })}
+              </details>
+            ) : null}
+            {q.guru_answer_text ? (
+              <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
+                <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
+                <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+              </div>
+            ) : null}
+            {q.guru_answer_audio_url ? (
+              <audio controls src={q.guru_answer_audio_url} className="w-full" />
+            ) : null}
+          </li>
+        ))}
       </ul>
 
       {!loading && visible.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          {query ? "शोध रिक्त" : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
+          {query
+            ? "शोध रिक्त"
+            : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा (किंवा प्रश्न टॅबवर नवीन प्रश्न विचारा)"}
         </p>
       ) : null}
     </div>

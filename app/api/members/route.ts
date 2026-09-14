@@ -5,6 +5,7 @@ import { countLoginCollisions, listMembers, publicMember } from "@/lib/members";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Registered चरणसेवक members (login-code system from main). */
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;

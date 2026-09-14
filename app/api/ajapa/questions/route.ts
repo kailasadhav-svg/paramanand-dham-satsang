@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { generateAjapaAiAnswer } from "@/lib/ajapa/ai";
+import { healAjapaAnswers } from "@/lib/ajapa/heal";
+import { mirrorRecentWeeklyQuestions } from "@/lib/ajapa/mirror-weekly";
 import {
   literatureLooksMismatched,
   literatureLooksTechy,
 } from "@/lib/ajapa/mismatch";
+import { normalizePhone } from "@/lib/ajapa/phone";
 import {
   listAjapaQuestions,
   updateAjapaAiAnswer,
@@ -49,9 +52,11 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as AjapaStatus | null;
-  const seeker = searchParams.get("seeker_phone") || undefined;
+  const seekerRaw = searchParams.get("seeker_phone") || undefined;
+  const seeker = seekerRaw ? normalizePhone(seekerRaw) : undefined;
   const since = searchParams.get("since") || undefined;
   const limit = searchParams.get("limit");
+  const claimOrphans = searchParams.get("claim_orphans") === "1";
   const heal = searchParams.get("heal") !== "0";
 
   const valid: AjapaStatus[] = ["ai_answered", "escalated", "guru_answered"];
@@ -59,19 +64,38 @@ export async function GET(request: Request) {
     return await jsonError("Invalid status", 400);
   }
 
+  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const mirrorFor = seeker || actor;
+
+  let mirrored = 0;
+  if (mirrorFor) {
+    try {
+      mirrored = await mirrorRecentWeeklyQuestions({
+        days: 21,
+        limit: 8,
+        default_seeker_phone: mirrorFor,
+        include_null_asker: claimOrphans,
+      });
+    } catch (err) {
+      console.error("weekly→ajapa backfill failed", err);
+    }
+  }
+
   let questions = await listAjapaQuestions({
     status: status || undefined,
     seeker_phone: seeker,
-    since,
+    since: mirrored > 0 ? undefined : since,
     limit: limit ? Number(limit) : 100,
   });
 
+  questions = await healAjapaAnswers(questions);
   if (heal) {
     questions = await healStaleAnswers(questions);
   }
 
   return NextResponse.json({
     questions,
+    mirrored,
     server_time: new Date().toISOString(),
   });
 }

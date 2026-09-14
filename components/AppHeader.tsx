@@ -24,16 +24,18 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-saffron-200/70 bg-white/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
-      <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
-        <div>
+      <div className="mx-auto flex w-full max-w-lg items-start justify-between gap-3 md:max-w-3xl">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold tracking-wide text-saffron-700">परमानंद धाम</p>
-          <h1 className="font-display text-2xl leading-tight text-saffron-900">{title}</h1>
+          <h1 className="font-display break-words text-2xl leading-tight text-saffron-900">
+            {title}
+          </h1>
           <ProfileChip />
           {subtitle && profile && profile.role !== "charansevak" ? (
-            <p className="mt-0.5 text-sm text-temple-muted">{subtitle}</p>
+            <p className="mt-0.5 break-words text-sm text-temple-muted">{subtitle}</p>
           ) : null}
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1">
           <button
             type="button"
             onClick={() => void logout()}

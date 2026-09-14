@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
+import { normalizePhone } from "@/lib/ajapa/phone";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();
@@ -35,14 +38,42 @@ export async function POST(request: Request) {
   if (!body.question || !body.question.trim()) {
     return jsonError("प्रश्न लिहा", 400);
   }
-  const askedOn = body.asked_on && /^\d{4}-\d{2}-\d{2}$/.test(body.asked_on)
-    ? body.asked_on
-    : ymdInIndia();
+  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  if (!actor) {
+    return jsonError("मोबाइल प्रोफाइल आवश्यक — पुन्हा लॉगिन करा", 400);
+  }
+
+  const askedOn =
+    body.asked_on && /^\d{4}-\d{2}-\d{2}$/.test(body.asked_on)
+      ? body.asked_on
+      : ymdInIndia();
   const question = await createQuestion({
     question: body.question,
     place_id: body.place_id ?? null,
     meeting_id: body.meeting_id ?? null,
     asked_on: askedOn,
+    asked_by_phone: actor,
   });
-  return NextResponse.json({ question }, { status: 201 });
+
+  // संवाद: literature / AI उत्तर (knowledge fallback if no API key)
+  let ajapa_id: number | null = null;
+  let ajapa_error: string | null = null;
+  try {
+    const ajapa = await mirrorWeeklyQuestionToAjapa({
+      question: question.question,
+      place_id: question.place_id,
+      asked_on: askedOn,
+      seeker_phone: actor,
+    });
+    ajapa_id = ajapa?.id ?? null;
+    if (!ajapa_id) ajapa_error = "संवाद तयार झाले नाही";
+  } catch (err) {
+    console.error("mirror weekly → ajapa failed", err);
+    ajapa_error = err instanceof Error ? err.message : "संवाद त्रुटी";
+  }
+
+  return NextResponse.json(
+    { question, ajapa_id, ajapa_error },
+    { status: 201 },
+  );
 }

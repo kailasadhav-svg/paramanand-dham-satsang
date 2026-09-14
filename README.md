@@ -123,7 +123,7 @@ COOKIE_SECURE=false
    | `TURSO_DATABASE_URL` | `libsql://…` from `turso db show --url` |
    | `TURSO_AUTH_TOKEN` | token from `turso db tokens create` |
 
-4. Redeploy after saving env vars. Turn **Deployment Protection** off so phones can open the URL without a Vercel login.
+4. Redeploy after saving env vars. On Vercel, allow phone browsers to open the URL without an extra login gate.
 5. Short aliases on the production host: `/a` → attendance, `/t` → topic, `/q` → questions, `/j` → ajapa, `/r` → report.
 
 `GET /api/health` returns `{ ok, db: { store: "turso" | "file" } }` when the store is reachable.
@@ -136,4 +136,4 @@ COOKIE_SECURE=false
 
 ## License
 
-Private operational tool for परमानंद धाम satsang coordinators.
+Operational tool for परमानंद धाम satsang coordinators — not for redistribution.
