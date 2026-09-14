@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { clearProfile, saveProfile } from "@/lib/offline/profile";
@@ -21,6 +21,7 @@ export default function InstallSlotPage() {
   const slotKey = String(params.slot || "").toLowerCase();
   const cfg = isInstallSlot(slotKey) ? INSTALL_SLOTS[slotKey] : null;
   const [standalone, setStandalone] = useState(false);
+  const [step, setStep] = useState(1);
 
   useEffect(() => {
     setStandalone(isStandalone());
@@ -50,7 +51,7 @@ export default function InstallSlotPage() {
     ensureMeta("mobile-web-app-capable", "yes");
     ensureMeta("apple-mobile-web-app-title", cfg.shortName);
     ensureMeta("theme-color", cfg.theme);
-    document.title = cfg.name;
+    document.title = cfg.shortName;
 
     let apple = document.querySelector(
       'link[rel="apple-touch-icon"]',
@@ -72,22 +73,12 @@ export default function InstallSlotPage() {
     router.replace(`/login?next=${encodeURIComponent(home)}&role=${cfg.testRole}`);
   }, [cfg, standalone, router]);
 
-  const steps = useMemo(
-    () => [
-      "खालील Share बटण (□↑) दाबा",
-      "«Add to Home Screen» / «होम स्क्रीनवर जोडा» निवडा",
-      "नाव तपासा → Add / जोडा",
-      "होम स्क्रीनवरील नवीन आयकॉन उघडा — वरचा पत्ता दिसणार नाही",
-    ],
-    [],
-  );
-
   if (!cfg) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <p className="font-semibold text-saffron-900">अज्ञात आयकॉन</p>
         <Link href="/i" className="mt-3 inline-block text-sm text-saffron-700 underline">
-          तिन्ही आयकॉन यादी
+          ← तिन्ही आयकॉन
         </Link>
       </div>
     );
@@ -97,9 +88,9 @@ export default function InstallSlotPage() {
     return (
       <div className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center px-6 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={cfg.icon} alt="" className="h-20 w-20 rounded-3xl" />
-        <p className="mt-4 font-display text-2xl text-saffron-900">{cfg.name}</p>
-        <p className="mt-1 text-sm text-temple-muted">अ‍ॅप उघडत आहे…</p>
+        <img src={cfg.icon} alt="" className="h-24 w-24 rounded-3xl shadow" />
+        <p className="mt-4 font-display text-3xl text-saffron-900">{cfg.shortName}</p>
+        <p className="mt-2 text-sm text-temple-muted">अ‍ॅप उघडत आहे…</p>
       </div>
     );
   }
@@ -111,52 +102,59 @@ export default function InstallSlotPage() {
         <img
           src={cfg.icon}
           alt=""
-          className="mx-auto h-24 w-24 rounded-[1.75rem] shadow-md ring-1 ring-black/5"
+          className="mx-auto h-28 w-28 rounded-[1.75rem] shadow-lg ring-1 ring-black/5"
         />
         <p className="mt-4 text-sm font-semibold text-saffron-700">परमानंद धाम</p>
-        <h1 className="font-display text-3xl text-saffron-900">{cfg.name}</h1>
+        <h1 className="font-display text-4xl text-saffron-900">{cfg.shortName}</h1>
         <p className="mt-1 text-sm text-temple-muted">{cfg.forWhom}</p>
-        <p className="mt-1 text-xs text-temple-muted">मोबाइल {cfg.phone}</p>
       </div>
 
-      <div className="mt-6 space-y-3 rounded-2xl bg-white p-4 ring-1 ring-saffron-200">
-        <p className="text-sm font-bold text-saffron-900">होम स्क्रीनवर आयकॉन बसवा</p>
-        <p className="text-xs leading-relaxed text-temple-muted">
-          साधारण लोकांसाठी: फक्त खालील ४ पावले. ब्राउझरचा वरचा पत्ता अ‍ॅपमध्ये दिसणार
-          नाही.
-        </p>
-        <ol className="space-y-2 text-sm text-temple-ink">
-          {steps.map((s, i) => (
-            <li key={s} className="flex gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-saffron-700 text-xs font-bold text-white">
+      <div className="mt-6 rounded-2xl bg-saffron-700 p-4 text-white">
+        <p className="text-center text-lg font-bold">आता हे करा (Safari)</p>
+        <div className="mt-3 space-y-2">
+          {[
+            "खालील Share बटण (□↑) दाबा",
+            "«Add to Home Screen» निवडा",
+            "Add / जोडा दाबा",
+            "होम स्क्रीनवरील नवीन आयकॉन उघडा",
+          ].map((text, i) => (
+            <button
+              key={text}
+              type="button"
+              onClick={() => setStep(i + 1)}
+              className={`flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-sm ${
+                step === i + 1 ? "bg-white/20" : "bg-white/5"
+              }`}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-saffron-800">
                 {i + 1}
               </span>
-              <span>{s}</span>
-            </li>
+              <span className="pt-0.5 font-semibold">{text}</span>
+            </button>
           ))}
-        </ol>
+        </div>
       </div>
+
+      <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm font-semibold leading-relaxed text-amber-950 ring-1 ring-amber-200">
+        आयकॉन उघडल्यावर वरचा लिंक दिसणार नाही.
+        <br />
+        सामान्य लोकांना फक्त अ‍ॅप दिसेल.
+      </p>
 
       <div className="mt-4 space-y-2">
         <a
           href={`/t/${cfg.testRole}`}
-          className="block w-full rounded-2xl bg-saffron-700 py-3.5 text-center text-base font-semibold text-white"
+          className="block w-full rounded-2xl bg-saffron-700 py-4 text-center text-base font-bold text-white"
         >
           आयकॉन बसवल्यानंतर सुरू करा
         </a>
         <Link
           href="/i"
-          className="block w-full rounded-2xl bg-saffron-50 py-3 text-center text-sm font-semibold text-saffron-900 ring-1 ring-saffron-200"
+          className="block w-full rounded-2xl bg-white py-3 text-center text-sm font-semibold text-saffron-900 ring-1 ring-saffron-200"
         >
-          ← तिन्ही आयकॉन
+          ← पुढचा आयकॉन बसवा
         </Link>
       </div>
-
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-temple-muted">
-        Android: मेनू ⋮ → «Install app» / «होम स्क्रीनवर जोडा»
-        <br />
-        iPhone: Safari Share → Add to Home Screen
-      </p>
     </div>
   );
 }
