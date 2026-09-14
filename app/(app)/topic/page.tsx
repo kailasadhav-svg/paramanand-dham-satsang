@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
+import { WeeklyTopics } from "@/components/WeeklyTopics";
+import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
+import { canSeeStaffScreens } from "@/lib/roles";
 
 type Meeting = {
   topic_kind: "atmaprabha" | "upadesh" | null;
@@ -14,6 +17,9 @@ type Meeting = {
 };
 
 export default function TopicPage() {
+  const profile = useProfile();
+  const canEdit = canSeeStaffScreens(profile.role);
+
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
   const [date, setDate] = useState(defaultThursdayYmd());
@@ -28,7 +34,11 @@ export default function TopicPage() {
   useEffect(() => {
     void api<{ places: Place[] }>("/api/places").then((data) => {
       setPlaces(data.places);
-      setPlaceId((id) => (id === "" && data.places[0] ? data.places[0].id : id));
+      setPlaceId((id) => {
+        if (id !== "" && data.places.some((p) => p.id === id)) return id;
+        const nashik = data.places.find((p) => p.name === "नाशिक");
+        return nashik?.id ?? data.places[0]?.id ?? "";
+      });
     });
   }, []);
 
@@ -46,7 +56,7 @@ export default function TopicPage() {
   }, [placeId, date]);
 
   async function save() {
-    if (!placeId) return;
+    if (!placeId || !canEdit) return;
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -73,14 +83,16 @@ export default function TopicPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold">विषय व संचालक</h2>
-      <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 ring-1 ring-amber-100">
-        हा <strong>सत्संग विषय</strong> अहवाल / उपस्थितीसाठी जतन होतो.
-        अजपा प्रश्न–उत्तर इथे दिसत नाही — ते खालील मेनूमधील{" "}
-        <Link href="/ajapa" className="font-bold underline">
-          अजपा
-        </Link>{" "}
-        मध्ये «नवीन प्रश्न टाका» वापरा.
+      <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs leading-relaxed text-emerald-950 ring-1 ring-emerald-100">
+        नाशिकसह <strong>सर्व स्थळांचे विषय</strong> प्रत्येक लॉगिनला दिसतात (उपस्थिती /
+        विषय / अजपा).
+        {canEdit
+          ? " संचालक / संवादक जतन करू शकतात."
+          : " तुम्ही फक्त पाहू शकता — जतन संचालक / संवादक करतील."}
       </p>
+
+      <WeeklyTopics date={date} highlightPlaceId={placeId} />
+
       <PlaceDateBar
         places={places}
         placeId={placeId}
@@ -91,8 +103,9 @@ export default function TopicPage() {
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
+          disabled={!canEdit}
           onClick={() => setKind("atmaprabha")}
-          className={`rounded-2xl py-3 font-semibold ring-1 ${
+          className={`rounded-2xl py-3 font-semibold ring-1 disabled:opacity-70 ${
             kind === "atmaprabha"
               ? "bg-saffron-700 text-white ring-saffron-700"
               : "bg-white ring-saffron-200"
@@ -102,8 +115,9 @@ export default function TopicPage() {
         </button>
         <button
           type="button"
+          disabled={!canEdit}
           onClick={() => setKind("upadesh")}
-          className={`rounded-2xl py-3 font-semibold ring-1 ${
+          className={`rounded-2xl py-3 font-semibold ring-1 disabled:opacity-70 ${
             kind === "upadesh"
               ? "bg-saffron-700 text-white ring-saffron-700"
               : "bg-white ring-saffron-200"
@@ -116,8 +130,9 @@ export default function TopicPage() {
         विषय शीर्षक
         <input
           value={title}
+          readOnly={!canEdit}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
+          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200 read-only:bg-saffron-50"
           placeholder="उदा. भगवद्गीता / सत्संग कथा"
         />
       </label>
@@ -125,8 +140,9 @@ export default function TopicPage() {
         संचालक
         <input
           value={conductor}
+          readOnly={!canEdit}
           onChange={(e) => setConductor(e.target.value)}
-          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
+          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200 read-only:bg-saffron-50"
           placeholder="नाव"
         />
       </label>
@@ -134,15 +150,22 @@ export default function TopicPage() {
         टिपणी
         <textarea
           value={notes}
+          readOnly={!canEdit}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
+          className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200 read-only:bg-saffron-50"
         />
       </label>
-      <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
+      {canEdit ? (
+        <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
+      ) : (
+        <p className="text-center text-xs text-temple-muted">
+          फक्त वाचन · जतन नाही
+        </p>
+      )}
       {saved ? (
         <p className="text-center text-xs text-emerald-800">
-          विषय जतन · अहवाल मेनूमध्ये दिसेल · अजपा प्रश्नासाठी{" "}
+          विषय जतन · नाशिक / सर्व स्थळांना उपस्थिती व अजपा वर दिसेल · अजपा प्रश्नासाठी{" "}
           <Link href="/ajapa" className="font-semibold underline">
             अजपा
           </Link>{" "}

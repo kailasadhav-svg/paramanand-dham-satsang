@@ -3,6 +3,8 @@ import { jsonError, requireApiSession } from "@/lib/api-guard";
 import {
   getMeeting,
   getPlace,
+  listMeetingsOnDate,
+  listPlaces,
   upsertMeeting,
   type MeetingPatch,
 } from "@/lib/db";
@@ -26,9 +28,31 @@ export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
   const { searchParams } = new URL(request.url);
-  const placeId = Number(searchParams.get("place_id"));
+  const placeIdRaw = searchParams.get("place_id");
   const date = searchParams.get("date");
-  if (!placeId || !date) return jsonError("place_id आणि date आवश्यक", 400);
+  if (!date) return jsonError("date आवश्यक", 400);
+
+  // All places' topics for the day — every logged-in role can read (नाशिक सर्वांना).
+  if (!placeIdRaw) {
+    const places = await listPlaces();
+    const meetings = await listMeetingsOnDate(date);
+    const byPlace = new Map(meetings.map((m) => [m.place_id, m]));
+    const topics = places.map((p) => {
+      const m = byPlace.get(p.id);
+      return {
+        place_id: p.id,
+        place_name: p.name,
+        topic_kind: m?.topic_kind ?? null,
+        topic_title: m?.topic_title ?? null,
+        conductor: m?.conductor ?? null,
+        notes: m?.notes ?? null,
+      };
+    });
+    return NextResponse.json({ date, topics });
+  }
+
+  const placeId = Number(placeIdRaw);
+  if (!placeId) return jsonError("place_id आणि date आवश्यक", 400);
   const meeting = await getMeeting(placeId, date);
   const place = await getPlace(placeId);
   return NextResponse.json({
@@ -75,6 +99,15 @@ export async function PUT(request: Request) {
   const kind = body.topic_kind;
   if (kind && kind !== "atmaprabha" && kind !== "upadesh") {
     return jsonError("अवैध विषय प्रकार", 400);
+  }
+
+  const wantsTopic =
+    body.topic_kind !== undefined ||
+    body.topic_title !== undefined ||
+    body.conductor !== undefined ||
+    body.notes !== undefined;
+  if (wantsTopic && !staff) {
+    return jsonError("विषय फक्त संचालक / संवादक जतन करू शकतात", 403);
   }
 
   const place = await getPlace(Number(body.place_id));

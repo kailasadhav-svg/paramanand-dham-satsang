@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
+import { WeeklyTopics } from "@/components/WeeklyTopics";
 import { api } from "@/lib/api";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
+import { defaultThursdayYmd } from "@/lib/dates";
 import { searchLocal, upsertQuestions } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
@@ -181,8 +183,8 @@ export default function AjapaPage() {
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
           {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
           <p className="mt-1 text-[11px] leading-snug text-temple-muted">
-            «विषय» मेनू = सत्संग शीर्षक (अहवाल). इथे फक्त अजपा{" "}
-            <strong>प्रश्न–उत्तर</strong> दिसतात.
+            «विषय» = सत्संग शीर्षक (नाशिकसह सर्वांना). इथे फक्त अजपा{" "}
+            <strong>प्रश्न–उत्तर</strong>.
           </p>
         </div>
         <button
@@ -194,6 +196,8 @@ export default function AjapaPage() {
           {syncing ? "सिंक…" : "सिंक"}
         </button>
       </div>
+
+      <WeeklyTopics date={defaultThursdayYmd()} compact />
 
       {canAsk ? (
         <form

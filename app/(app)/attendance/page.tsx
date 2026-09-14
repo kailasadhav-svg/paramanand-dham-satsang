@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
+import { WeeklyTopics } from "@/components/WeeklyTopics";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
@@ -224,9 +225,11 @@ export default function AttendancePage() {
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-bold">उपस्थिती</h2>
+        <WeeklyTopics date={date} />
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
           या गुरुवारी तुमच्या नावावर स्थळ नेमलेले नाही. संचालक / संवादक / चरणसेवक
-          नेमणूक करतील — किंवा त्यांनी दिलेली लिंक वापरा.
+          नेमणूक करतील — किंवा त्यांनी दिलेली लिंक वापरा. वरचे विषय तरीही सर्वांना
+          दिसतात (नाशिकसह).
         </p>
       </div>
     );
@@ -241,6 +244,8 @@ export default function AttendancePage() {
           नाही · आकडा आपोआप वाढेल
         </p>
       </div>
+
+      <WeeklyTopics date={date} highlightPlaceId={placeId} />
 
       {canAppoint ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">

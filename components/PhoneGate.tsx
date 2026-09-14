@@ -52,10 +52,10 @@ export function PhoneGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !profile) return;
-    // चरणसेवक: विषय / प्रश्न / अहवाल बंद; उपस्थिती नेमणुकीनुसार खुली
+    // चरणसेवक / सत्संगी: प्रश्न / अहवाल बंद; विषय सर्वांना (वाचण्यासाठी)
     if (
       (profile.role === "charansevak" || profile.role === "satsangi") &&
-      ["/topic", "/questions", "/report"].some((p) => pathname.startsWith(p))
+      ["/questions", "/report"].some((p) => pathname.startsWith(p))
     ) {
       router.replace("/attendance");
     }
