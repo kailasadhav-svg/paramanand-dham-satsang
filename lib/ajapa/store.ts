@@ -290,6 +290,39 @@ export async function saveGuruVoiceAnswer(
   return getAjapaQuestion(id);
 }
 
+/** In-app संवादक उत्तर — text and/or voice (data URL). */
+export async function saveGuruInAppAnswer(
+  id: number,
+  opts: {
+    text?: string | null;
+    audioUrl?: string | null;
+    audioMediaId?: string | null;
+  },
+): Promise<AjapaQuestion | undefined> {
+  const text = opts.text?.trim() || null;
+  const audioUrl = opts.audioUrl || null;
+  const audioMediaId = opts.audioMediaId || null;
+  if (!text && !audioUrl && !audioMediaId) return undefined;
+
+  const now = nowIso();
+  const db = await getDb();
+  const existing = await getAjapaQuestion(id);
+  if (!existing || existing.status !== "escalated") return undefined;
+
+  await db.execute({
+    sql: `UPDATE ajapa_questions
+      SET status = 'guru_answered',
+          guru_answer_text = COALESCE(?, guru_answer_text),
+          guru_answer_audio_url = COALESCE(?, guru_answer_audio_url),
+          guru_answer_audio_media_id = COALESCE(?, guru_answer_audio_media_id),
+          answered_at = ?,
+          updated_at = ?
+      WHERE id = ? AND status = 'escalated'`,
+    args: [text, audioUrl, audioMediaId, now, now, id],
+  });
+  return getAjapaQuestion(id);
+}
+
 export async function listAjapaQuestions(opts?: {
   status?: AjapaStatus;
   seeker_phone?: string;
