@@ -20,9 +20,13 @@ export const GURU_PHONES = (
   .map((p) => normalizePhone(p.trim()))
   .filter(Boolean);
 
-/** कैलास आढाव as चरणसेवक (no software rights on this number). */
+/**
+ * चरणसेवक demo phones (no software UI):
+ * - 9423078811 कैलास आढाव
+ * - 9136443333 मधुसुदनदास (भेद नसेल म्हणून स्वतःही चरणसेवक)
+ */
 export const SEEKER_DEMO_PHONES = (
-  process.env.NEXT_PUBLIC_SEEKER_PHONES || "9423078811"
+  process.env.NEXT_PUBLIC_SEEKER_PHONES || "9423078811,9136443333"
 )
   .split(",")
   .map((p) => normalizePhone(p.trim()))

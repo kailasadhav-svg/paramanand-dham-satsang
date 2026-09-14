@@ -123,6 +123,9 @@ export function PhoneGate({ children }: { children: ReactNode }) {
             <li>
               · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सॉफ्टवेअर नाही)
             </li>
+            <li>
+              · <strong>9136443333</strong> — चरणसेवक मधुसुदनदास (भेद नसेल · फक्त स्वतःचे काम)
+            </li>
           </ul>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <button

@@ -5,6 +5,7 @@ import { NumberStepper, PlaceDateBar, SaveBar, type Place } from "@/components/F
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { DEFAULT_MEETING_TIME, defaultThursdayYmd } from "@/lib/dates";
+import { ATTENDANCE_GEO_MAX_METERS, OFF_SITE_WARNING } from "@/lib/geo";
 import { canSeeStaffScreens } from "@/lib/roles";
 
 type Meeting = {
@@ -14,6 +15,8 @@ type Meeting = {
   men: number;
   women: number;
   children: number;
+  checkin_ok?: boolean | null;
+  checkin_distance_m?: number | null;
 };
 
 type DutyRow = {
@@ -26,6 +29,25 @@ type DutyRow = {
 };
 
 type DutyDraft = { phone: string; name: string };
+type GeoPos = { latitude: number; longitude: number; accuracy_m: number | null };
+
+async function readGps(): Promise<GeoPos> {
+  if (!navigator.geolocation) {
+    throw new Error("या उपकरणावर GPS उपलब्ध नाही");
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy_m: pos.coords.accuracy ?? null,
+        }),
+      () => reject(new Error("स्थान परवानगी द्या (Location)")),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+    );
+  });
+}
 
 export default function AttendancePage() {
   const profile = useProfile();
@@ -47,12 +69,18 @@ export default function AttendancePage() {
   const [drafts, setDrafts] = useState<Record<number, DutyDraft>>({});
   const [dutyMsg, setDutyMsg] = useState<string | null>(null);
   const [dutyBusy, setDutyBusy] = useState<number | null>(null);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [lastCheckin, setLastCheckin] = useState<string | null>(null);
+
+  const selectedPlace = useMemo(
+    () => places.find((p) => p.id === placeId) || null,
+    [places, placeId],
+  );
 
   const loadDuties = useCallback(async (ymd: string) => {
-    const data = await api<{
-      can_assign: boolean;
-      rows: DutyRow[];
-    }>(`/api/duties?date=${ymd}`);
+    const data = await api<{ can_assign: boolean; rows: DutyRow[] }>(
+      `/api/duties?date=${ymd}`,
+    );
     setCanAssign(data.can_assign);
     setDutyRows(data.rows);
     const next: Record<number, DutyDraft> = {};
@@ -63,12 +91,11 @@ export default function AttendancePage() {
       };
     }
     setDrafts(next);
-
-    const visiblePlaces = data.rows.map((r) => r.place);
-    setPlaces(visiblePlaces);
+    const visible = data.rows.map((r) => r.place);
+    setPlaces(visible);
     setPlaceId((id) => {
-      if (id !== "" && visiblePlaces.some((p) => p.id === id)) return id;
-      return visiblePlaces[0]?.id ?? "";
+      if (id !== "" && visible.some((p) => p.id === id)) return id;
+      return visible[0]?.id ?? "";
     });
   }, []);
 
@@ -87,9 +114,41 @@ export default function AttendancePage() {
         setWomen(data.meeting.women || 0);
         setChildren(data.meeting.children || 0);
         setTime(data.meeting.meeting_time || DEFAULT_MEETING_TIME);
+        if (data.meeting.checkin_ok != null) {
+          setLastCheckin(
+            data.meeting.checkin_ok
+              ? `✓ स्थळावर (${data.meeting.checkin_distance_m ?? "?"} मी)`
+              : `✗ बाहेर (${data.meeting.checkin_distance_m ?? "?"} मी)`,
+          );
+        } else {
+          setLastCheckin(null);
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "अपलोड अयशस्वी"));
   }, [placeId, date]);
+
+  async function pinPlaceHere() {
+    if (!placeId || !staff) return;
+    setPinBusy(true);
+    setError(null);
+    try {
+      const geo = await readGps();
+      await api("/api/places", {
+        method: "PUT",
+        body: JSON.stringify({
+          place_id: placeId,
+          latitude: geo.latitude,
+          longitude: geo.longitude,
+        }),
+      });
+      await loadDuties(date);
+      setDutyMsg("स्थळ GPS जतन — आता २० मी आत उपस्थिती चालेल");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "GPS जतन अयशस्वी");
+    } finally {
+      setPinBusy(false);
+    }
+  }
 
   async function saveAttendance() {
     if (!placeId) return;
@@ -97,6 +156,17 @@ export default function AttendancePage() {
     setError(null);
     setSaved(false);
     try {
+      let geo: GeoPos | null = null;
+      if (!staff) {
+        geo = await readGps();
+      } else {
+        try {
+          geo = await readGps();
+        } catch {
+          geo = null;
+        }
+      }
+
       await api("/api/meetings", {
         method: "PUT",
         body: JSON.stringify({
@@ -106,11 +176,19 @@ export default function AttendancePage() {
           men,
           women,
           children,
+          ...(geo
+            ? {
+                latitude: geo.latitude,
+                longitude: geo.longitude,
+                accuracy_m: geo.accuracy_m,
+              }
+            : {}),
         }),
       });
       setSaved(true);
+      setLastCheckin(geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "जतन अयशस्वी");
+      setError(e instanceof Error ? e.message : OFF_SITE_WARNING);
     } finally {
       setSaving(false);
     }
@@ -153,11 +231,12 @@ export default function AttendancePage() {
   const assignedLabel = useMemo(() => {
     const row = dutyRows.find((r) => r.place.id === placeId);
     if (!row?.duty) return null;
-    const who = row.duty.charansevak_name || row.duty.charansevak_phone_display;
-    return who;
+    return row.duty.charansevak_name || row.duty.charansevak_phone_display;
   }, [dutyRows, placeId]);
 
   const total = men + women + children;
+  const placeHasGps =
+    selectedPlace?.latitude != null && selectedPlace?.longitude != null;
 
   if (!staff && places.length === 0) {
     return (
@@ -178,8 +257,8 @@ export default function AttendancePage() {
         <h2 className="text-lg font-bold">उपस्थिती</h2>
         <p className="text-xs text-temple-muted">
           {staff
-            ? "प्रत्येक ठिकाणी चरणसेवक — फक्त गुरु / सॉफ्टवेअर ठरवतील"
-            : "तुमची नेमणूक — फक्त तुमचे ठिकाण / काम"}
+            ? "नेमणूक + स्थळ GPS · चरणसेवक ≤२० मी आत नोंद करतील"
+            : `तुमची नेमणूक · सत्संग स्थळापासून ${ATTENDANCE_GEO_MAX_METERS} मी आत`}
         </p>
       </div>
 
@@ -189,7 +268,7 @@ export default function AttendancePage() {
             गुरुवारी चरणसेवक नेमणूक
           </h3>
           <p className="text-[11px] text-temple-muted">
-            9850120960 व 9225118811 ठरवतील · प्रत्येकाला काम वाटेल
+            9850120960 व 9225118811 ठरवतील · 9136443333 / 9423078811 स्वतः चरणसेवक
           </p>
           {dutyRows.map((row) => {
             const draft = drafts[row.place.id] || { phone: "", name: "" };
@@ -251,6 +330,36 @@ export default function AttendancePage() {
 
       {assignedLabel ? (
         <p className="text-xs text-temple-muted">चरणसेवक: {assignedLabel}</p>
+      ) : null}
+
+      {staff && placeId ? (
+        <div className="rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+          <p className="text-xs text-temple-muted">
+            स्थळ GPS:{" "}
+            {placeHasGps
+              ? `${selectedPlace?.latitude?.toFixed(5)}, ${selectedPlace?.longitude?.toFixed(5)}`
+              : "अजून सेट नाही"}
+          </p>
+          <button
+            type="button"
+            disabled={pinBusy}
+            onClick={() => void pinPlaceHere()}
+            className="mt-2 rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {pinBusy ? "GPS…" : "इथेच स्थळ चिन्हांकित करा"}
+          </button>
+        </div>
+      ) : null}
+
+      {!staff ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+          उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
+          मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
+        </p>
+      ) : null}
+
+      {lastCheckin ? (
+        <p className="text-xs font-semibold text-saffron-800">{lastCheckin}</p>
       ) : null}
 
       <label className="block text-xs font-semibold text-temple-muted">

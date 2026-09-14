@@ -18,7 +18,13 @@ type GlobalDb = {
   satsangMigrate?: Promise<void>;
 };
 
-export type Place = { id: number; name: string; sort_order: number };
+export type Place = {
+  id: number;
+  name: string;
+  sort_order: number;
+  latitude: number | null;
+  longitude: number | null;
+};
 
 export type Meeting = {
   id: number;
@@ -32,6 +38,13 @@ export type Meeting = {
   topic_title: string | null;
   conductor: string | null;
   notes: string | null;
+  checkin_lat: number | null;
+  checkin_lng: number | null;
+  checkin_accuracy_m: number | null;
+  checkin_distance_m: number | null;
+  checkin_ok: boolean | null;
+  checkin_phone: string | null;
+  checkin_at: string | null;
   updated_at: string;
 };
 
@@ -80,6 +93,8 @@ function asPlace(row: Row): Place {
     id: num(row.id),
     name: str(row.name),
     sort_order: num(row.sort_order),
+    latitude: row.latitude == null ? null : num(row.latitude),
+    longitude: row.longitude == null ? null : num(row.longitude),
   };
 }
 
@@ -96,6 +111,13 @@ function asMeeting(row: Row): Meeting {
     topic_title: strOrNull(row.topic_title),
     conductor: strOrNull(row.conductor),
     notes: strOrNull(row.notes),
+    checkin_lat: row.checkin_lat == null ? null : num(row.checkin_lat),
+    checkin_lng: row.checkin_lng == null ? null : num(row.checkin_lng),
+    checkin_accuracy_m: row.checkin_accuracy_m == null ? null : num(row.checkin_accuracy_m),
+    checkin_distance_m: row.checkin_distance_m == null ? null : num(row.checkin_distance_m),
+    checkin_ok: row.checkin_ok == null ? null : num(row.checkin_ok) === 1,
+    checkin_phone: strOrNull(row.checkin_phone),
+    checkin_at: strOrNull(row.checkin_at),
     updated_at: str(row.updated_at),
   };
 }
@@ -140,6 +162,14 @@ function createDbClient(): Client {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const fileUrl = `file:${DB_PATH.split(path.sep).join("/")}`;
   return createClient({ url: fileUrl });
+}
+
+
+async function ensureColumn(db: Client, table: string, column: string, typeSql: string) {
+  const cols = await db.execute(`PRAGMA table_info(${table})`);
+  if (!cols.rows.some((c) => c.name === column)) {
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${typeSql}`);
+  }
 }
 
 async function migrate(db: Client) {
@@ -229,6 +259,17 @@ async function migrate(db: Client) {
   }
   await db.execute("CREATE INDEX IF NOT EXISTS idx_questions_asked_on ON questions(asked_on)");
 
+  await ensureColumn(db, "places", "latitude", "REAL");
+  await ensureColumn(db, "places", "longitude", "REAL");
+  await ensureColumn(db, "meetings", "checkin_lat", "REAL");
+  await ensureColumn(db, "meetings", "checkin_lng", "REAL");
+  await ensureColumn(db, "meetings", "checkin_accuracy_m", "REAL");
+  await ensureColumn(db, "meetings", "checkin_distance_m", "REAL");
+  await ensureColumn(db, "meetings", "checkin_ok", "INTEGER");
+  await ensureColumn(db, "meetings", "checkin_phone", "TEXT");
+  await ensureColumn(db, "meetings", "checkin_at", "TEXT");
+
+
   const insert = SEED_PLACES.map((name, i) => ({
     sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",
     args: [name, i + 1] as (string | number)[],
@@ -256,14 +297,14 @@ export async function pingDb(): Promise<{ ok: true; store: "turso" | "file" }> {
 
 export async function listPlaces(): Promise<Place[]> {
   const db = await getDb();
-  const rs = await db.execute("SELECT id, name, sort_order FROM places ORDER BY sort_order, id");
+  const rs = await db.execute("SELECT id, name, sort_order, latitude, longitude FROM places ORDER BY sort_order, id");
   return rs.rows.map(asPlace);
 }
 
 export async function getPlace(id: number): Promise<Place | undefined> {
   const db = await getDb();
   const rs = await db.execute({
-    sql: "SELECT id, name, sort_order FROM places WHERE id = ?",
+    sql: "SELECT id, name, sort_order, latitude, longitude FROM places WHERE id = ?",
     args: [id],
   });
   return rs.rows[0] ? asPlace(rs.rows[0]) : undefined;
@@ -293,6 +334,13 @@ export type MeetingPatch = {
   topic_title?: string | null;
   conductor?: string | null;
   notes?: string | null;
+  checkin_lat?: number | null;
+  checkin_lng?: number | null;
+  checkin_accuracy_m?: number | null;
+  checkin_distance_m?: number | null;
+  checkin_ok?: boolean | null;
+  checkin_phone?: string | null;
+  checkin_at?: string | null;
 };
 
 export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
@@ -311,6 +359,26 @@ export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
     conductor:
       patch.conductor !== undefined ? patch.conductor : (existing?.conductor ?? null),
     notes: patch.notes !== undefined ? patch.notes : (existing?.notes ?? null),
+    checkin_lat:
+      patch.checkin_lat !== undefined ? patch.checkin_lat : (existing?.checkin_lat ?? null),
+    checkin_lng:
+      patch.checkin_lng !== undefined ? patch.checkin_lng : (existing?.checkin_lng ?? null),
+    checkin_accuracy_m:
+      patch.checkin_accuracy_m !== undefined
+        ? patch.checkin_accuracy_m
+        : (existing?.checkin_accuracy_m ?? null),
+    checkin_distance_m:
+      patch.checkin_distance_m !== undefined
+        ? patch.checkin_distance_m
+        : (existing?.checkin_distance_m ?? null),
+    checkin_ok:
+      patch.checkin_ok !== undefined ? patch.checkin_ok : (existing?.checkin_ok ?? null),
+    checkin_phone:
+      patch.checkin_phone !== undefined
+        ? patch.checkin_phone
+        : (existing?.checkin_phone ?? null),
+    checkin_at:
+      patch.checkin_at !== undefined ? patch.checkin_at : (existing?.checkin_at ?? null),
     updated_at: nowIso(),
   };
 
@@ -318,8 +386,10 @@ export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
   await db.execute({
     sql: `INSERT INTO meetings (
         place_id, meeting_date, meeting_time, men, women, children,
-        topic_kind, topic_title, conductor, notes, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        topic_kind, topic_title, conductor, notes,
+        checkin_lat, checkin_lng, checkin_accuracy_m, checkin_distance_m,
+        checkin_ok, checkin_phone, checkin_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(place_id, meeting_date) DO UPDATE SET
         meeting_time = excluded.meeting_time,
         men = excluded.men,
@@ -329,6 +399,13 @@ export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
         topic_title = excluded.topic_title,
         conductor = excluded.conductor,
         notes = excluded.notes,
+        checkin_lat = excluded.checkin_lat,
+        checkin_lng = excluded.checkin_lng,
+        checkin_accuracy_m = excluded.checkin_accuracy_m,
+        checkin_distance_m = excluded.checkin_distance_m,
+        checkin_ok = excluded.checkin_ok,
+        checkin_phone = excluded.checkin_phone,
+        checkin_at = excluded.checkin_at,
         updated_at = excluded.updated_at`,
     args: [
       merged.place_id,
@@ -341,6 +418,13 @@ export async function upsertMeeting(patch: MeetingPatch): Promise<Meeting> {
       merged.topic_title,
       merged.conductor,
       merged.notes,
+      merged.checkin_lat,
+      merged.checkin_lng,
+      merged.checkin_accuracy_m,
+      merged.checkin_distance_m,
+      merged.checkin_ok == null ? null : merged.checkin_ok ? 1 : 0,
+      merged.checkin_phone,
+      merged.checkin_at,
       merged.updated_at,
     ],
   });
@@ -491,6 +575,20 @@ export async function listQuestions(opts: {
     args: params,
   });
   return rs.rows.map(asQuestionWithPlace);
+}
+
+
+export async function updatePlaceCoords(
+  placeId: number,
+  latitude: number,
+  longitude: number,
+): Promise<Place | undefined> {
+  const db = await getDb();
+  await db.execute({
+    sql: "UPDATE places SET latitude = ?, longitude = ? WHERE id = ?",
+    args: [latitude, longitude, placeId],
+  });
+  return getPlace(placeId);
 }
 
 export function attendanceTotal(m: Pick<Meeting, "men" | "women" | "children">): number {

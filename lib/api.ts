@@ -14,7 +14,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers,
   });
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+  const data = (await res.json().catch(() => ({}))) as T & {
+    error?: string;
+    off_site?: boolean;
+  };
   if (!res.ok) {
     throw new Error(data.error || `त्रुटी ${res.status}`);
   }

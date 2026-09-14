@@ -2,7 +2,7 @@
 
 import { addDaysYmd, defaultThursdayYmd, formatMarathiDate } from "@/lib/dates";
 
-export type Place = { id: number; name: string; sort_order: number };
+export type Place = { id: number; name: string; sort_order: number; latitude?: number | null; longitude?: number | null };
 
 export function PlaceDateBar({
   places,

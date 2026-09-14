@@ -58,6 +58,14 @@ export async function buildWeeklyReport(thursdayYmd: string) {
         displayPhone(row.duty.charansevak_phone);
       lines.push(`🙏 चरणसेवक: ${who} (${displayPhone(row.duty.charansevak_phone)})`);
     }
+    if (row.meeting?.checkin_ok != null) {
+      const d = row.meeting.checkin_distance_m;
+      lines.push(
+        row.meeting.checkin_ok
+          ? `📍 स्थळ-तपास: OK${d != null ? ` (${d} मी)` : ""}`
+          : `⚠️ स्थळ-तपास: बाहेर${d != null ? ` (${d} मी)` : ""}`,
+      );
+    }
     if (!row.meeting) {
       lines.push("नोंद नाही");
     } else {
