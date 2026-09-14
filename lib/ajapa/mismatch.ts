@@ -35,9 +35,6 @@ export function literatureLooksMismatched(
     return true;
   }
 
-  const asksAjapa = /अजपा|ajapa/i.test(q) && !asksAarti;
-  if (asksAjapa && answerHasAarti && !/अजपा/.test(a)) return true;
-
   return false;
 }
 
