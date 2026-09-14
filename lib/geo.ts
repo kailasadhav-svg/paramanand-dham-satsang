@@ -20,3 +20,7 @@ export const ATTENDANCE_GEO_MAX_METERS = 20;
 
 export const OFF_SITE_WARNING =
   "आता आपण सत्संग स्थळावर नाहीत आपण साधक आहात असे स्वतःला फसवू नका हरी ओम परमानंद ..!";
+
+/** Shown after attendance is saved within ATTENDANCE_GEO_MAX_METERS. */
+export const ON_SITE_BLESSING =
+  "अभिनंदन... आपण आपण परमानंद कृपेस पात्र आहात..! हरी ओम परमानंद ..!";
