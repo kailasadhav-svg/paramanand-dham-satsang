@@ -207,6 +207,25 @@ export async function escalateAjapaQuestion(id: number): Promise<AjapaQuestion |
   return getAjapaQuestion(id);
 }
 
+/** या गुरुवार-आठवड्यात मधुसुदनदास यांना आधीच प्रश्न गेला का? */
+export async function hasMadhusudanAskThisWeek(opts: {
+  seeker_phone: string;
+  weekStart: string;
+  weekEnd: string;
+}): Promise<boolean> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT id FROM ajapa_questions
+      WHERE seeker_phone = ?
+        AND status IN ('escalated', 'guru_answered')
+        AND substr(COALESCE(escalated_at, created_at), 1, 10) >= ?
+        AND substr(COALESCE(escalated_at, created_at), 1, 10) <= ?
+      LIMIT 1`,
+    args: [opts.seeker_phone, opts.weekStart, opts.weekEnd],
+  });
+  return rs.rows.length > 0;
+}
+
 /** चुकीचे/जुने साहित्य उत्तर पुन्हा तयार — फक्त ai_answered. */
 export async function updateAjapaAiAnswer(
   id: number,

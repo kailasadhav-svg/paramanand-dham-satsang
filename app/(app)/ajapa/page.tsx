@@ -5,7 +5,7 @@ import { useProfile } from "@/components/PhoneGate";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { api } from "@/lib/api";
 import { searchLocal } from "@/lib/offline/idb";
-import { displayPhone } from "@/lib/offline/phone";
+import { displayPhone, phonesEqual } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
@@ -26,11 +26,15 @@ export default function AjapaPage() {
   const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [otpForId, setOtpForId] = useState<number | null>(null);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
 
   const syncAndLoad = useCallback(async () => {
     setSyncing(true);
@@ -67,16 +71,51 @@ export default function AjapaPage() {
     return searchLocal(list, query);
   }, [items, filter, query]);
 
-  async function sendToGuru(id: number) {
-    setBusyId(id);
+  async function requestOtp(q: AjapaQuestion) {
+    setOtpBusy(true);
+    setError(null);
+    setOkMsg(null);
+    setOtpHint(null);
+    try {
+      const data = await api<{
+        message?: string;
+        debug_otp?: string;
+        sent_to?: string;
+      }>(`/api/ajapa/questions/${q.id}/request-otp`, { method: "POST" });
+      setOtpForId(q.id);
+      setOtpValue(data.debug_otp || "");
+      setOtpHint(
+        data.message ||
+          `Meta WhatsApp OTP · ${data.sent_to || displayPhone(profile.phone)} वर तपासा`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "OTP अयशस्वी");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
+
+  async function verifyOtp(q: AjapaQuestion) {
+    setOtpBusy(true);
     setError(null);
     try {
-      await api(`/api/ajapa/questions/${id}/escalate`, { method: "POST" });
+      const data = await api<{ message?: string }>(
+        `/api/ajapa/questions/${q.id}/verify-otp`,
+        {
+          method: "POST",
+          body: JSON.stringify({ otp: otpValue }),
+        },
+      );
+      setOkMsg(data.message || "OTP खात्री · संवादकांकडे पाठवले");
+      setOtpForId(null);
+      setOtpValue("");
+      setOtpHint(null);
+      setFilter("escalated");
       await syncAndLoad();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "पाठवता आले नाही");
+      setError(e instanceof Error ? e.message : "OTP चुकीचा");
     } finally {
-      setBusyId(null);
+      setOtpBusy(false);
     }
   }
 
@@ -85,7 +124,7 @@ export default function AjapaPage() {
       ? "सेवक — सर्व प्रश्न"
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
-        : "तुमचे प्रश्न · साहित्य उत्तर · संवादकांकडे पाठवा";
+        : "तुमचे प्रश्न · साहित्य · Meta WhatsApp OTP → संवादक";
 
   return (
     <div className="space-y-4">
@@ -99,6 +138,9 @@ export default function AjapaPage() {
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
           {syncNote ? (
             <p className="text-[11px] text-temple-muted">{syncNote}</p>
+          ) : null}
+          {okMsg ? (
+            <p className="text-[11px] font-semibold text-emerald-800">{okMsg}</p>
           ) : null}
         </div>
         <button
@@ -147,58 +189,106 @@ export default function AjapaPage() {
       {loading ? <p className="text-sm text-temple-muted">लोड होत आहे…</p> : null}
 
       <ul className="space-y-3">
-        {visible.map((q) => (
-          <li key={q.id} className="card space-y-2 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold">{q.question}</p>
-              <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
-                {STATUS_LABEL[q.status]}
-              </span>
-            </div>
-            {profile.role !== "charansevak" ? (
-              <p className="text-xs text-temple-muted">
-                {q.seeker_name ? `${q.seeker_name} · ` : ""}
-                {displayPhone(q.seeker_phone)}
-              </p>
-            ) : null}
-            {q.status === "ai_answered" ? (
-              <button
-                type="button"
-                disabled={busyId === q.id}
-                onClick={() => void sendToGuru(q.id)}
-                className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {busyId === q.id
-                  ? "पाठवत आहे…"
-                  : "मधुसुदनदास विजयानंद यांच्याकडे पाठवा"}
-              </button>
-            ) : null}
-            {q.status === "escalated" ? (
-              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-                संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
-              </p>
-            ) : null}
-            {q.ai_answer ? (
-              <details open={q.status === "ai_answered"} className="text-sm">
-                <summary className="cursor-pointer font-medium text-saffron-800">
-                  परमानंद साहित्य उत्तर
-                </summary>
-                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
-                  {q.ai_answer}
-                </p>
-              </details>
-            ) : null}
-            {q.guru_answer_text ? (
-              <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
-                <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+        {visible.map((q) => {
+          const isOwner = phonesEqual(profile.phone, q.seeker_phone);
+          return (
+            <li key={q.id} className="card space-y-2 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">{q.question}</p>
+                <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
+                  {STATUS_LABEL[q.status]}
+                </span>
               </div>
-            ) : null}
-            {q.guru_answer_audio_url ? (
-              <audio controls src={q.guru_answer_audio_url} className="w-full" />
-            ) : null}
-          </li>
-        ))}
+              {profile.role !== "charansevak" ? (
+                <p className="text-xs text-temple-muted">
+                  {q.seeker_name ? `${q.seeker_name} · ` : ""}
+                  {displayPhone(q.seeker_phone)}
+                </p>
+              ) : null}
+
+              {q.status === "ai_answered" && isOwner ? (
+                otpForId === q.id ? (
+                  <div className="space-y-2 rounded-xl bg-saffron-50/80 p-3 ring-1 ring-saffron-200">
+                    <p className="text-xs font-semibold text-saffron-900">
+                      {otpHint ||
+                        `Meta WhatsApp OTP · ${displayPhone(profile.phone)} वर तपासा`}
+                    </p>
+                    <input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(e) =>
+                        setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      placeholder="६ अंकी OTP"
+                      className="w-full rounded-xl bg-white px-3 py-2 text-center text-lg tracking-widest ring-1 ring-saffron-300"
+                    />
+                    <button
+                      type="button"
+                      disabled={otpBusy || otpValue.length !== 6}
+                      onClick={() => void verifyOtp(q)}
+                      className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      {otpBusy ? "तपास…" : "OTP खात्री · संवादकांकडे पाठवा"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={otpBusy}
+                      onClick={() => void requestOtp(q)}
+                      className="w-full rounded-xl bg-white py-2 text-xs font-semibold text-saffron-800 ring-1 ring-saffron-300 disabled:opacity-50"
+                    >
+                      OTP पुन्हा पाठवा
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={otpBusy}
+                    onClick={() => void requestOtp(q)}
+                    className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {otpBusy
+                      ? "OTP पाठवत…"
+                      : "मधुसुदनदास उत्तर · Meta WhatsApp OTP"}
+                  </button>
+                )
+              ) : null}
+
+              {q.status === "ai_answered" && !isOwner ? (
+                <p className="text-xs text-temple-muted">
+                  संवादकांकडे पाठवण्यासाठी प्रश्नकर्त्याने Meta WhatsApp OTP
+                  खात्री करावी
+                </p>
+              ) : null}
+
+              {q.status === "escalated" ? (
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+                  संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
+                </p>
+              ) : null}
+              {q.ai_answer ? (
+                <details open={q.status === "ai_answered"} className="text-sm">
+                  <summary className="cursor-pointer font-medium text-saffron-800">
+                    परमानंद साहित्य उत्तर
+                  </summary>
+                  <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
+                    {q.ai_answer}
+                  </p>
+                </details>
+              ) : null}
+              {q.guru_answer_text ? (
+                <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
+                  <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
+                  <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+                </div>
+              ) : null}
+              {q.guru_answer_audio_url ? (
+                <audio controls src={q.guru_answer_audio_url} className="w-full" />
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
 
       {!loading && visible.length === 0 ? (
