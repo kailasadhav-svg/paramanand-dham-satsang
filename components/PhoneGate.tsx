@@ -85,7 +85,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
           <h1 className="font-display text-3xl text-saffron-900">मोबाइल निवडा</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            क्रमांकानुसार स्क्रीन — सॉफ्टवेअर / संवादक / चरणसेवक
+            क्रमांकानुसार स्क्रीन — संचालक / संवादक / चरणसेवक
           </p>
         </div>
         <form
