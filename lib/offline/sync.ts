@@ -34,14 +34,13 @@ export async function readLocalForProfile(profile: LocalProfile): Promise<AjapaQ
 /** Pull deltas since last sync — keeps server load low. */
 export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncResult> {
   const since = (await getMeta(sinceKey(profile))) || undefined;
-  const localBefore = await readLocalForProfile(profile);
   const base = new URLSearchParams();
   base.set("limit", "200");
   if (since) base.set("since", since);
   if (profile.role === "charansevak") {
     base.set("seeker_phone", profile.phone);
-    // Claim legacy weekly questions that never got asked_by_phone (e.g. first satsangi Q).
-    if (localBefore.length === 0) base.set("claim_orphans", "1");
+    // First / legacy weekly questions often lack asked_by_phone — claim them.
+    base.set("claim_orphans", "1");
   }
 
   try {

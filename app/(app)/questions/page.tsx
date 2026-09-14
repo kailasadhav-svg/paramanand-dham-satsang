@@ -135,6 +135,27 @@ export default function QuestionsPage() {
     await load();
   }
 
+  async function sendToSanwad(id: number) {
+    setSavingId(id);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const res = await api<{ ajapa_id?: number | null }>(
+        `/api/questions/${id}/to-ajapa`,
+        { method: "POST" },
+      );
+      setOkMsg(
+        res.ajapa_id
+          ? "संवाद मध्ये उत्तर तयार — «संवाद» टॅब → सिंक दाबा"
+          : "संवाद तयार होत आहे — सिंक पुन्हा दाबा",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "संवाद अयशस्वी");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -261,7 +282,19 @@ export default function QuestionsPage() {
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-temple-muted">उत्तर प्रलंबित…</p>
+              <div className="space-y-2">
+                <p className="text-xs text-temple-muted">उत्तर प्रलंबित…</p>
+                <button
+                  type="button"
+                  disabled={savingId === q.id}
+                  onClick={() => void sendToSanwad(q.id)}
+                  className="w-full rounded-xl bg-saffron-700 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {savingId === q.id
+                    ? "तयार करत आहे…"
+                    : "संवादात साहित्य उत्तर घ्या"}
+                </button>
+              </div>
             )}
           </li>
         ))}
