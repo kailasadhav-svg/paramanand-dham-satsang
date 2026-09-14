@@ -75,6 +75,7 @@ export default function AttendancePage() {
   const [dutyBusy, setDutyBusy] = useState<number | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
   const [lastCheckin, setLastCheckin] = useState<string | null>(null);
+  const [onSite, setOnSite] = useState(false);
 
   const selectedPlace = useMemo(
     () => places.find((p) => p.id === placeId) || null,
@@ -119,12 +120,16 @@ export default function AttendancePage() {
         setChildren(data.meeting.children || 0);
         setTime(data.meeting.meeting_time || DEFAULT_MEETING_TIME);
         if (data.meeting.checkin_ok != null) {
+          const ok = Boolean(data.meeting.checkin_ok);
+          setOnSite(ok);
           setLastCheckin(
-            data.meeting.checkin_ok
+            ok
               ? `✓ स्थळावर (${data.meeting.checkin_distance_m ?? "?"} मी)`
               : `✗ बाहेर (${data.meeting.checkin_distance_m ?? "?"} मी)`,
           );
+          if (ok && !staff) setSaved(true);
         } else {
+          setOnSite(false);
           setLastCheckin(null);
         }
       })
@@ -190,8 +195,14 @@ export default function AttendancePage() {
         }),
       });
       setSaved(true);
-      setLastCheckin(geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : null);
+      setOnSite(true);
+      setLastCheckin(
+        geo
+          ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)`
+          : "✓ नोंद जतन",
+      );
     } catch (e) {
+      setOnSite(false);
       setError(e instanceof Error ? e.message : OFF_SITE_WARNING);
     } finally {
       setSaving(false);
@@ -370,10 +381,16 @@ export default function AttendancePage() {
       ) : null}
 
       {!staff ? (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-          उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
-          मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
-        </p>
+        onSite ? (
+          <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold leading-relaxed text-emerald-900">
+            {ON_SITE_BLESSING}
+          </p>
+        ) : (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+            उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
+            मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
+          </p>
+        )
       ) : null}
 
       {lastCheckin ? (
