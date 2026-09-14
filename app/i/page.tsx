@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { BrowserInstallGuide } from "@/components/BrowserInstallGuide";
 import { INSTALL_SLOTS, type InstallSlot } from "@/lib/installSlots";
 
 const ORDER: InstallSlot[] = ["samvadak", "software", "charansevak"];
@@ -13,24 +16,20 @@ export default function InstallHubPage() {
           वरचा लिंक / पत्ता अ‍ॅपमध्ये दिसणार नाही
         </p>
         <p className="mt-2 text-sm leading-relaxed text-temple-muted">
-          साधारण लोकांसाठी: खालील <strong>३ बटणे</strong> दाबा.
-          प्रत्येक वेळी Share → <strong>Add to Home Screen</strong> करा.
+          वेगवेगळ्या ठिकाणी Chrome, Safari, Samsung किंवा इतर ब्राउझर असू शकतो.
+          खालील सूचना <strong>तुमच्या ब्राउझरनुसार</strong> दिसतात.
         </p>
       </div>
 
-      <div className="mt-5 rounded-2xl bg-amber-50 p-3 text-sm leading-relaxed text-amber-950 ring-1 ring-amber-200">
-        <p className="font-bold">फक्त Safari वापरा (Chrome नाही)</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>खालील १ ला बटण दाबा</li>
-          <li>खाली Share (□↑) दाबा</li>
-          <li>
-            <strong>Add to Home Screen</strong> / होम स्क्रीनवर जोडा
-          </li>
-          <li>Add → मग २ आणि ३ साठी परत</li>
-        </ol>
+      <div className="mt-5">
+        <BrowserInstallGuide compact />
       </div>
 
-      <ol className="mt-6 space-y-3">
+      <p className="mt-5 text-center text-sm font-bold text-saffron-900">
+        आता तिन्ही आयकॉन बसवा ↓
+      </p>
+
+      <ol className="mt-3 space-y-3">
         {ORDER.map((slot, idx) => {
           const cfg = INSTALL_SLOTS[slot];
           return (
@@ -63,11 +62,23 @@ export default function InstallHubPage() {
         })}
       </ol>
 
-      <p className="mt-6 text-center text-xs leading-relaxed text-temple-muted">
-        आयकॉन बसवल्यानंतर होम स्क्रीनवरील नवीन चिन्ह उघडा.
-        <br />
-        Safari टॅब नाही — म्हणजे वरचा पत्ता दिसणार नाही.
-      </p>
+      <div className="mt-6 space-y-2 rounded-2xl bg-white p-3 text-xs leading-relaxed text-temple-muted ring-1 ring-saffron-100">
+        <p className="font-semibold text-saffron-900">इतर ठिकाणी लक्षात ठेवा</p>
+        <ul className="list-disc space-y-1 pl-4">
+          <li>
+            <strong>iPhone:</strong> Safari वापरा (Chrome असल्यास «Open in Safari»)
+          </li>
+          <li>
+            <strong>Android Chrome:</strong> ⋮ → Install app / Add to Home screen
+          </li>
+          <li>
+            <strong>Samsung:</strong> मेनू → Add page to → Home screen
+          </li>
+        </ul>
+        <p>
+          आयकॉन बसवल्यानंतर होम स्क्रीनवरील चिन्ह उघडा — ब्राउझर टॅब नाही.
+        </p>
+      </div>
     </div>
   );
 }

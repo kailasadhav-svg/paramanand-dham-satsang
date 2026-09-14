@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { BrowserInstallGuide } from "@/components/BrowserInstallGuide";
 import { clearProfile, saveProfile } from "@/lib/offline/profile";
 import { defaultHomePath } from "@/lib/roles";
 import { INSTALL_SLOTS, isInstallSlot } from "@/lib/installSlots";
@@ -21,7 +22,6 @@ export default function InstallSlotPage() {
   const slotKey = String(params.slot || "").toLowerCase();
   const cfg = isInstallSlot(slotKey) ? INSTALL_SLOTS[slotKey] : null;
   const [standalone, setStandalone] = useState(false);
-  const [step, setStep] = useState(1);
 
   useEffect(() => {
     setStandalone(isStandalone());
@@ -109,36 +109,14 @@ export default function InstallSlotPage() {
         <p className="mt-1 text-sm text-temple-muted">{cfg.forWhom}</p>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-saffron-700 p-4 text-white">
-        <p className="text-center text-lg font-bold">आता हे करा (Safari)</p>
-        <div className="mt-3 space-y-2">
-          {[
-            "खालील Share बटण (□↑) दाबा",
-            "«Add to Home Screen» निवडा",
-            "Add / जोडा दाबा",
-            "होम स्क्रीनवरील नवीन आयकॉन उघडा",
-          ].map((text, i) => (
-            <button
-              key={text}
-              type="button"
-              onClick={() => setStep(i + 1)}
-              className={`flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left text-sm ${
-                step === i + 1 ? "bg-white/20" : "bg-white/5"
-              }`}
-            >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-saffron-800">
-                {i + 1}
-              </span>
-              <span className="pt-0.5 font-semibold">{text}</span>
-            </button>
-          ))}
-        </div>
+      <div className="mt-6">
+        <BrowserInstallGuide />
       </div>
 
       <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm font-semibold leading-relaxed text-amber-950 ring-1 ring-amber-200">
         आयकॉन उघडल्यावर वरचा लिंक दिसणार नाही.
         <br />
-        सामान्य लोकांना फक्त अ‍ॅप दिसेल.
+        सामान्य लोकांना फक्त अ‍ॅप दिसेल — ब्राउझर नाही.
       </p>
 
       <div className="mt-4 space-y-2">
