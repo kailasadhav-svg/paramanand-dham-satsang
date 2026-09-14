@@ -115,13 +115,13 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           </label>
           <ul className="space-y-1 text-xs text-temple-muted">
             <li>
-              · <strong>9225118811</strong> — सॉफ्टवेअर (कैलास · सर्व स्क्रीन)
+              · <strong>9225118811</strong> — संचालक (कैलास · सर्व स्क्रीन)
             </li>
             <li>
               · <strong>9850120960</strong> — संवादक (उपस्थिती · अहवाल · संवाद)
             </li>
             <li>
-              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सॉफ्टवेअर नाही)
+              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · संचालक नाही)
             </li>
             <li>
               · <strong>9136443333</strong> — चरणसेवक मधुसुदनदास (भेद नसेल · फक्त स्वतःचे काम)
