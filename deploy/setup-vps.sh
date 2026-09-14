@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Deploy परमानंद धाम सत्संग on Hostinger VPS at https://satsang.dhyeyapurti.in
-# Run ON THE SERVER as root (or sudo):
-#   curl -fsSL https://raw.githubusercontent.com/kailasadhav-svg/paramanand-dham-satsang/main/deploy/setup-vps.sh | bash
+# Run ON THE SERVER as root (or sudo).
+#
+# Until this lands on main, prefer the branch copy:
+#   curl -fsSL https://raw.githubusercontent.com/kailasadhav-svg/paramanand-dham-satsang/cursor/satsang-dhyeyapurti-vps-179d/deploy/setup-vps.sh | sudo bash
+# After merge to main:
+#   curl -fsSL https://raw.githubusercontent.com/kailasadhav-svg/paramanand-dham-satsang/main/deploy/setup-vps.sh | sudo bash
 # Or from a clone:
 #   sudo bash deploy/setup-vps.sh
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/satsang}"
 REPO_URL="${REPO_URL:-https://github.com/kailasadhav-svg/paramanand-dham-satsang.git}"
+REPO_BRANCH="${REPO_BRANCH:-cursor/satsang-dhyeyapurti-vps-179d}"
 DOMAIN="${DOMAIN:-satsang.dhyeyapurti.in}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
 
@@ -29,10 +34,10 @@ fi
 mkdir -p "$APP_DIR"
 if [[ -d "$APP_DIR/.git" ]]; then
   git -C "$APP_DIR" fetch origin
-  git -C "$APP_DIR" checkout main
-  git -C "$APP_DIR" pull --ff-only origin main
+  git -C "$APP_DIR" checkout "$REPO_BRANCH"
+  git -C "$APP_DIR" pull --ff-only origin "$REPO_BRANCH"
 else
-  git clone "$REPO_URL" "$APP_DIR"
+  git clone --branch "$REPO_BRANCH" "$REPO_URL" "$APP_DIR"
 fi
 
 cd "$APP_DIR"

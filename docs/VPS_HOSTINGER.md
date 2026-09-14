@@ -32,8 +32,10 @@ dig +short satsang.dhyeyapurti.in
 SSH into the server (from your PC or ChatGPT with server access), then:
 
 ```bash
-sudo bash -c 'curl -fsSL https://raw.githubusercontent.com/kailasadhav-svg/paramanand-dham-satsang/main/deploy/setup-vps.sh -o /tmp/setup-vps.sh && bash /tmp/setup-vps.sh'
+sudo bash -c 'curl -fsSL https://raw.githubusercontent.com/kailasadhav-svg/paramanand-dham-satsang/cursor/satsang-dhyeyapurti-vps-179d/deploy/setup-vps.sh -o /tmp/setup-vps.sh && bash /tmp/setup-vps.sh'
 ```
+
+(After merge to `main`, switch the URL path from `cursor/satsang-dhyeyapurti-vps-179d` to `main`, or set `REPO_BRANCH=main`.)
 
 Or clone first, then:
 
