@@ -1,4 +1,4 @@
-import { getDb, getPlace, getSatsangiByPhone } from "@/lib/db";
+import { getDb, getPlace } from "@/lib/db";
 import { detectStaffRole, roleLabelMarathi } from "@/lib/roles";
 import { generateAjapaAiAnswer } from "./ai";
 import { normalizePhone } from "./phone";
@@ -11,13 +11,7 @@ function ymdDaysAgo(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function seekerDisplayName(phone: string): Promise<string> {
-  try {
-    const member = await getSatsangiByPhone(phone);
-    if (member?.name?.trim()) return member.name.trim();
-  } catch {
-    /* not a satsangi row */
-  }
+function seekerDisplayName(phone: string): string {
   return roleLabelMarathi(detectStaffRole(phone));
 }
 
@@ -45,8 +39,7 @@ export async function mirrorWeeklyQuestionToAjapa(input: {
     placeName = place?.name ?? null;
   }
 
-  const name =
-    input.seeker_name?.trim() || (await seekerDisplayName(phone));
+  const name = input.seeker_name?.trim() || seekerDisplayName(phone);
 
   const { answer } = await generateAjapaAiAnswer(text, {
     place_name: placeName,
