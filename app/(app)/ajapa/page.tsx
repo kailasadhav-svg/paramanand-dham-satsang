@@ -602,13 +602,30 @@ export default function AjapaPage() {
                 {q.place_name ? ` · ${q.place_name}` : ""}
               </p>
             ) : null}
-            {q.seeker_name || profile.role === "software" || profile.role === "guru" ? (
-              <p className="text-xs text-temple-muted">
-                {q.seeker_name ? `${q.seeker_name}` : "सत्संगी"}
-                {profile.role === "software" || profile.role === "guru"
-                  ? ` · ${displayPhone(q.seeker_phone)}`
-                  : ""}
-              </p>
+            {profile.role === "software" ||
+            profile.role === "guru" ||
+            phonesEqual(profile.phone, q.seeker_phone) ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-saffron-50/70 px-3 py-2 ring-1 ring-saffron-100">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-temple-ink">
+                    {q.seeker_name?.trim() || "सत्संगी"}
+                  </p>
+                  <p className="text-sm font-bold tabular-nums text-saffron-900">
+                    {displayPhone(q.seeker_phone)}
+                  </p>
+                </div>
+                <a
+                  href={`tel:+${
+                    (() => {
+                      const d = q.seeker_phone.replace(/\D/g, "");
+                      return d.length === 10 ? `91${d}` : d;
+                    })()
+                  }`}
+                  className="shrink-0 rounded-full bg-saffron-700 px-3.5 py-2 text-xs font-bold text-white"
+                >
+                  कॉल
+                </a>
+              </div>
             ) : null}
 
             {q.ai_answer ? (

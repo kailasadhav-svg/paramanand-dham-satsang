@@ -40,6 +40,7 @@ export function useClearProfile(): () => void {
 export function PhoneGate({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const router = useRouter();
@@ -96,12 +97,25 @@ export function PhoneGate({ children }: { children: ReactNode }) {
               setError("१० अंकी मोबाइल टाका");
               return;
             }
-            const next = saveProfile({ phone });
+            const next = saveProfile({
+              phone,
+              name: name.trim() || undefined,
+            });
             setProfile(next);
             setError(null);
             router.replace(defaultHomePath(next.role));
           }}
         >
+          <label className="block text-sm font-semibold">
+            नाव (सत्संगी)
+            <input
+              type="text"
+              className="mt-1 w-full rounded-xl border border-saffron-200 px-3 py-2 text-base"
+              placeholder="उदा. कैलास आढाव"
+              value={name}
+              onChange={(ev) => setName(ev.target.value)}
+            />
+          </label>
           <label className="block text-sm font-semibold">
             WhatsApp मोबाइल
             <input

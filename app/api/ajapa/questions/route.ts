@@ -8,10 +8,10 @@ import {
 } from "@/lib/ajapa/store";
 import type { AjapaStatus, AjapaVisibility } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
-import { getMeeting, getPlace } from "@/lib/db";
+import { getMeeting, getPlace, getSatsangiByPhone, upsertSatsangiMember } from "@/lib/db";
 import { defaultThursdayYmd } from "@/lib/dates";
 import { normalizePhone } from "@/lib/offline/phone";
-import { detectStaffRole } from "@/lib/roles";
+import { detectStaffRole, roleLabelMarathi } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +54,18 @@ export async function GET(request: Request) {
     limit: limit ? Number(limit) : 200,
   });
 
-  const questions = raw.filter((q) => canViewAjapaQuestion(q, actor, role));
+  const questions = [];
+  for (const q of raw) {
+    if (!canViewAjapaQuestion(q, actor, role)) continue;
+    if (!q.seeker_name) {
+      const member = await getSatsangiByPhone(q.seeker_phone);
+      if (member?.name) {
+        questions.push({ ...q, seeker_name: member.name });
+        continue;
+      }
+    }
+    questions.push(q);
+  }
 
   return NextResponse.json({
     questions,
@@ -118,10 +129,25 @@ export async function POST(request: Request) {
     notes: meeting?.notes ?? null,
   };
 
+  let seekerName = body.seeker_name?.trim() || null;
+  if (!seekerName) {
+    const member = await getSatsangiByPhone(actor);
+    seekerName = member?.name?.trim() || null;
+  }
+  if (!seekerName) {
+    seekerName = roleLabelMarathi(detectStaffRole(actor));
+  } else if (body.seeker_name?.trim()) {
+    await upsertSatsangiMember({
+      phone: actor,
+      name: seekerName,
+      appointed_by_phone: actor,
+    }).catch(() => undefined);
+  }
+
   const { answer } = await generateAjapaAiAnswer(question, topic);
   const row = await createAjapaQuestion({
     seeker_phone: actor,
-    seeker_name: body.seeker_name?.trim() || null,
+    seeker_name: seekerName,
     question,
     ai_answer: answer,
     visibility,
