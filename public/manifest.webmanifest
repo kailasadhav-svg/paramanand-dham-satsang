@@ -1,7 +1,7 @@
 {
-  "name": "परमानंद धाम सत्संग",
-  "short_name": "परमानंद धाम",
-  "description": "सत्संग उपस्थिती, अजपा प्रश्नोत्तर — Add to Home Screen",
+  "name": "अजपा संवाद",
+  "short_name": "अजपा संवाद",
+  "description": "अजपा प्रश्नोत्तर — चरणसेवक व गुरु संवाद · Add to Home Screen",
   "start_url": "/ajapa",
   "scope": "/",
   "display": "standalone",

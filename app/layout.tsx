@@ -3,9 +3,12 @@ import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "परमानंद धाम सत्संग",
-  description: "सत्संग उपस्थिती, अजपा प्रश्नोत्तर — Add to Home Screen",
-  applicationName: "परमानंद धाम सत्संग",
+  title: {
+    default: "अजपा संवाद",
+    template: "%s · अजपा संवाद",
+  },
+  description: "अजपा प्रश्नोत्तर — चरणसेवक व गुरु संवाद · Add to Home Screen",
+  applicationName: "अजपा संवाद",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -16,7 +19,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "परमानंद धाम",
+    title: "अजपा संवाद",
     statusBarStyle: "default",
   },
 };

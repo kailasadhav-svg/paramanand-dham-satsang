@@ -92,7 +92,7 @@ export default function AjapaPage() {
       <div className="space-y-4">
         <InstallBanner />
         <div>
-          <h2 className="text-lg font-bold">अजपा · लोकल अ‍ॅप</h2>
+          <h2 className="text-lg font-bold">अजपा संवाद</h2>
           <p className="text-sm text-temple-muted">
             मोबाइल टाका — फक्त तुमचे प्रश्न फोनवर सेव्ह + लोकल शोध
           </p>
@@ -130,7 +130,7 @@ export default function AjapaPage() {
 
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-bold">अजपा प्रश्नोत्तर</h2>
+          <h2 className="text-lg font-bold">अजपा संवाद</h2>
           <p className="text-xs text-temple-muted">
             {ROLE_LABEL[profile.role]} · {displayPhone(profile.phone)}
             {offline ? " · ऑफलाइन" : ""}
@@ -229,7 +229,7 @@ export default function AjapaPage() {
 
       {!loading && visible.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          {query ? "शोध रिक्त" : "अजपा प्रश्न नाहीत — सिंक करा"}
+          {query ? "शोध रिक्त" : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
         </p>
       ) : null}
     </div>

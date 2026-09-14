@@ -35,15 +35,15 @@ App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Role names ab
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
 | विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
 | प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
-| अजपा | `/ajapa` | WhatsApp Ajapa Q→AI→guru · **local-first PWA** (Add to Home Screen) |
+| संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→AI→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
 
 Short aliases: `/a` `/t` `/q` `/j` `/r`.
 
-## PWA / Add to Home Screen
+## अजपा संवाद (PWA)
 
-Install from browser → **Add to Home Screen**.  
-Ajapa list/search runs from **IndexedDB on the phone**; server sync is only for new Q/answers.  
+Home-screen app name: **अजपा संवाद**.  
+Install → **Add to Home Screen**. List/search on phone (IndexedDB); server only for sync.  
 See [`docs/LOCAL_FIRST_PWA.md`](docs/LOCAL_FIRST_PWA.md).
 
 ## Locked product: अजपा WhatsApp Q&A

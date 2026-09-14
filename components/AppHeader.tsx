@@ -16,7 +16,7 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
       <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-wide text-saffron-700">परमानंद धाम</p>
-          <h1 className="font-display text-2xl leading-tight text-saffron-900">सत्संग</h1>
+          <h1 className="font-display text-2xl leading-tight text-saffron-900">अजपा संवाद</h1>
           {subtitle ? <p className="mt-0.5 text-sm text-temple-muted">{subtitle}</p> : null}
         </div>
         <button

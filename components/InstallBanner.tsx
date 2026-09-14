@@ -51,7 +51,7 @@ export function InstallBanner() {
 
   return (
     <div className="card mb-3 space-y-2 border-saffron-200 bg-saffron-50/80 p-3">
-      <p className="text-sm font-semibold text-saffron-900">होम स्क्रीनवर अ‍ॅड करा</p>
+      <p className="text-sm font-semibold text-saffron-900">अजपा संवाद · होम स्क्रीनवर अ‍ॅड करा</p>
       {iosHint ? (
         <p className="text-xs leading-relaxed text-temple-muted">
           Safari → Share (□↑) → <strong>Add to Home Screen</strong>

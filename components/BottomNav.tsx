@@ -7,7 +7,7 @@ const ITEMS = [
   { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
   { href: "/topic", label: "विषय", icon: BookIcon },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
-  { href: "/ajapa", label: "अजपा", icon: AjapaIcon },
+  { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
   { href: "/report", label: "अहवाल", icon: ReportIcon },
 ];
 

@@ -1,10 +1,11 @@
-# लोकल-फर्स्ट अ‍ॅप architecture (LOCKED direction)
+# अजपा संवाद — लोकल-फर्स्ट PWA
 
+**नाव:** अजपा संवाद  
 **Status:** Implemented — PWA + IndexedDB + role views  
 **Install:** Add to Home Screen (Android Chrome / iOS Safari Share → Add to Home Screen)
 
 ```
-चरणसेवक / गुरु अ‍ॅप (PWA)
+अजपा संवाद (PWA)
         │
    IndexedDB + localStorage   ← शोध / यादी (सर्व्हर नाही)
         │
@@ -22,7 +23,7 @@
 6. भविष्यात: लाइव्ह / व्हॉइस-व्हिडिओ — नंतर
 
 ## फाइल्स
-- `public/manifest.webmanifest`, `public/sw.js`, `public/icons/*`
+- `public/manifest.webmanifest` (नाव: अजपा संवाद), `public/sw.js`, `public/icons/*`
 - `lib/offline/*` — profile, idb, sync
 - `app/(app)/ajapa/page.tsx` — लोकल-फर्स्ट UI
 - `components/InstallBanner.tsx`, `PwaRegister.tsx`
