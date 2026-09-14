@@ -2,7 +2,12 @@
  * Smoke test for Ajapa state machine (WhatsApp dry-run).
  * Run: WHATSAPP_DRY_RUN=1 npx tsx scripts/ajapa-smoke.ts
  */
-import { countWords, generateAjapaAiAnswer } from "../lib/ajapa/ai";
+import {
+  AJAPA_AI_MAX_CHARS_TEXT,
+  AJAPA_AI_MAX_WORDS,
+  AJAPA_AI_MIN_WORDS,
+  generateAjapaAiAnswer,
+} from "../lib/ajapa/ai";
 import { processInboundMessage } from "../lib/ajapa/bot";
 import { listAjapaQuestions } from "../lib/ajapa/store";
 import { normalizePhone } from "../lib/ajapa/phone";
@@ -15,10 +20,18 @@ async function main() {
   const guru = normalizePhone("9850120960");
 
   const ai = await generateAjapaAiAnswer("अजपा जप कसा करावा?");
-  if (ai.wordCount < 200) {
+  if (ai.wordCount < AJAPA_AI_MIN_WORDS) {
     throw new Error(`AI answer too short: ${ai.wordCount} words`);
   }
-  console.log("AI words:", ai.wordCount, "source:", ai.source);
+  if (ai.wordCount > AJAPA_AI_MAX_WORDS) {
+    throw new Error(`AI answer too long: ${ai.wordCount} words (max ${AJAPA_AI_MAX_WORDS})`);
+  }
+  if (ai.answer.length > AJAPA_AI_MAX_CHARS_TEXT) {
+    throw new Error(
+      `AI answer exceeds Meta text budget: ${ai.answer.length} > ${AJAPA_AI_MAX_CHARS_TEXT}`,
+    );
+  }
+  console.log("AI words:", ai.wordCount, "chars:", ai.answer.length, "source:", ai.source);
 
   const q1 = await processInboundMessage({
     from: seeker,

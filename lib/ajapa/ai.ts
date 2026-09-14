@@ -1,7 +1,14 @@
 import { pickKnowledgeForQuestion } from "./knowledge";
 import { formatLiteratureForSeeker } from "./literature";
 
-const MIN_WORDS = 200;
+/** Meta WhatsApp Cloud API — keep AI answers inside these bounds. */
+export const AJAPA_AI_MIN_WORDS = 200;
+/** Soft max so Marathi answers stay well under 4096-char text messages. */
+export const AJAPA_AI_MAX_WORDS = 450;
+/** Body before footer; footer + body must stay ≤ 4096. */
+export const AJAPA_AI_MAX_CHARS_TEXT = 4000;
+/** Template variable / interactive body Meta cap. */
+export const AJAPA_AI_MAX_CHARS_PARAM = 1024;
 
 export type AjapaTopicContext = {
   place_name?: string | null;
@@ -16,6 +23,36 @@ export function countWords(text: string): number {
     .trim()
     .split(/\s+/)
     .filter(Boolean).length;
+}
+
+/** Trim to max words without cutting mid-Devanagari awkwardly. */
+export function clampWords(text: string, maxWords: number): string {
+  const parts = text.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= maxWords) return text.trim();
+  return `${parts.slice(0, maxWords).join(" ")}…`;
+}
+
+/** Hard character cap (Meta text / template param). */
+export function clampChars(text: string, maxChars: number): string {
+  const t = text.trim();
+  if (t.length <= maxChars) return t;
+  return `${t.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`;
+}
+
+/**
+ * Final Meta-safe AI answer for WhatsApp text send.
+ * Word window 200–450, then ≤4000 chars (footer added at send time).
+ */
+export function clampAjapaAiAnswer(text: string): string {
+  let out = text.trim();
+  out = clampWords(out, AJAPA_AI_MAX_WORDS);
+  out = clampChars(out, AJAPA_AI_MAX_CHARS_TEXT);
+  return out;
+}
+
+/** Short form for template {{n}} / interactive (≤1024). */
+export function clampAjapaAiParam(text: string): string {
+  return clampChars(text.replace(/\s+/g, " ").trim(), AJAPA_AI_MAX_CHARS_PARAM);
 }
 
 function topicLabel(topic?: AjapaTopicContext | null): string {
@@ -33,7 +70,7 @@ function topicLabel(topic?: AjapaTopicContext | null): string {
 /** Soft spiritual padding — never meta/tech instructions. */
 function expandToMinWords(base: string, literature: string): string {
   let text = base.trim();
-  if (countWords(text) >= MIN_WORDS) return text;
+  if (countWords(text) >= AJAPA_AI_MIN_WORDS) return text;
 
   const filler = `
 
@@ -42,9 +79,9 @@ function expandToMinWords(base: string, literature: string): string {
 ${literature.slice(0, 2500)}
 `;
 
-  while (countWords(text) < MIN_WORDS) {
+  while (countWords(text) < AJAPA_AI_MIN_WORDS) {
     text = `${text}\n${filler}`.trim();
-    if (countWords(text) > MIN_WORDS + 80) break;
+    if (countWords(text) > AJAPA_AI_MIN_WORDS + 80) break;
   }
   return text;
 }
@@ -91,14 +128,15 @@ async function llmAnswer(
           role: "system",
           content: `तू परमानंद धाम परंपरेतील मराठी साहित्य-सहाय्यक आहेस.
 नियम:
-1) फक्त मराठीत उत्तर दे. किमान ${MIN_WORDS} शब्द.
+1) फक्त मराठीत उत्तर दे. किमान ${AJAPA_AI_MIN_WORDS} शब्द, कमाल ${AJAPA_AI_MAX_WORDS} शब्द (Meta/WhatsApp मर्यादा).
 2) साधकाच्या नेमक्या प्रश्नाला उत्तर दे. प्रत्येक साधक वेगळे विचारू शकतो.
 3) फक्त दिलेल्या «संदर्भ साहित्य» मधून उत्तर दे. जे साहित्यात नाही ते कल्पित करू नको.
 4) आरती विचारली तर पूर्ण पाठ ओळींनी दे; अर्थ विचारला तर उपलब्ध अर्थही दे.
 5) उत्तर साध्या साहित्यासारखे लिहा — 【】, ##, AI, टेम्प्लेट, बटण, \`1\`, कोड किंवा तंत्रशब्द वापरू नको.
 6) सत्संग विषय फक्त पार्श्वभूमी; उत्तरात «सत्संग संदर्भ» अशी ओळ लिहू नको.
 7) राजकीय/वैद्यकीय सल्ला देऊ नको.
-8) शेवटी एक साधे वाक्य: अधिक स्पष्टतेसाठी मधुसुदनदास विजयानंद यांच्याकडे जाऊ शकतो.`,
+8) एकूण उत्तर ${AJAPA_AI_MAX_CHARS_TEXT} अक्षरांपेक्षा मोठे करू नको.
+9) शेवटी एक साधे वाक्य: अधिक स्पष्टतेसाठी मधुसुदनदास विजयानंद यांच्याकडे जाऊ शकतो.`,
         },
         {
           role: "user",
@@ -119,7 +157,7 @@ async function llmAnswer(
   return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
-/** Generate Marathi literature answer ≥200 words — question-first, seeker-facing. */
+/** Generate Marathi literature answer 200–450 words, Meta text-safe. */
 export async function generateAjapaAiAnswer(
   question: string,
   topic?: AjapaTopicContext | null,
@@ -132,7 +170,9 @@ export async function generateAjapaAiAnswer(
   const literature = formatLiteratureForSeeker(knowledgeRaw);
   const llm = await llmAnswer(question, literature, topic);
   if (llm) {
-    const answer = scrubTechFromAnswer(expandToMinWords(llm, literature));
+    const answer = clampAjapaAiAnswer(
+      scrubTechFromAnswer(expandToMinWords(llm, literature)),
+    );
     return { answer, source: "llm", wordCount: countWords(answer) };
   }
 
@@ -151,6 +191,8 @@ ${literature}
 
 वरील परमानंद साहित्य वाचा व चिंतन करा. आवश्यक वाटल्यास मधुसुदनदास विजयानंद यांच्याकडे मार्गदर्शन मागा.`;
 
-  const answer = scrubTechFromAnswer(expandToMinWords(base, literature));
+  const answer = clampAjapaAiAnswer(
+    scrubTechFromAnswer(expandToMinWords(base, literature)),
+  );
   return { answer, source: "knowledge", wordCount: countWords(answer) };
 }

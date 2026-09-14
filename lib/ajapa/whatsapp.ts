@@ -1,3 +1,4 @@
+import { clampAjapaAiAnswer, clampAjapaAiParam } from "./ai";
 import type { AjapaQuestion } from "./types";
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v21.0";
@@ -158,11 +159,15 @@ export async function notifyAiAnswer(opts: {
   question: AjapaQuestion;
 }): Promise<void> {
   const q = truncateParam(opts.question.question, 120);
-  const full = opts.question.ai_answer || "";
+  const full = clampAjapaAiAnswer(opts.question.ai_answer || "");
   if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
     await sendText(opts.to, full);
   } else {
-    await sendTemplate(opts.to, "ajapa_ai_answer", [q]);
+    // Template vars ≤1024 — full answer stays in app / session text only
+    await sendTemplate(opts.to, "ajapa_ai_answer", [
+      q,
+      clampAjapaAiParam(full),
+    ]);
   }
 }
 
@@ -226,7 +231,7 @@ export async function notifyGuruNewQuestion(opts: {
 ${opts.question}
 
 परमानंद साहित्य (संक्षेप):
-${truncateParam(opts.aiAnswer, 800)}
+${clampAjapaAiParam(opts.aiAnswer)}
 
 उत्तर देण्यासाठी लिहा:
 अजपा A ${opts.seekerPhone}`;
