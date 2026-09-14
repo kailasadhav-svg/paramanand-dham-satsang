@@ -45,7 +45,6 @@ export async function createEscalateOtp(opts: {
   const ttl = opts.ttlMinutes ?? 10;
   const expires = new Date(Date.now() + ttl * 60 * 1000).toISOString();
   const db = await getDb();
-  // Invalidate prior unused OTPs for this question+phone
   await db.execute({
     sql: `UPDATE ajapa_otps SET used_at = ? WHERE question_id = ? AND phone = ? AND used_at IS NULL`,
     args: [nowIso(), opts.questionId, phone],
