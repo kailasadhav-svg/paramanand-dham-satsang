@@ -158,6 +158,23 @@ export async function getAjapaQuestion(id: number): Promise<AjapaQuestion | unde
   return rs.rows[0] ? asAjapa(rs.rows[0]) : undefined;
 }
 
+/** Dedup helper — same प्रश्न text already in संवाद? */
+export async function findAjapaByQuestionText(
+  question: string,
+): Promise<AjapaQuestion | undefined> {
+  const text = question.trim();
+  if (!text) return undefined;
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM ajapa_questions
+      WHERE lower(trim(question)) = lower(trim(?))
+      ORDER BY id DESC
+      LIMIT 1`,
+    args: [text],
+  });
+  return rs.rows[0] ? asAjapa(rs.rows[0]) : undefined;
+}
+
 export async function escalateAjapaQuestion(id: number): Promise<AjapaQuestion | undefined> {
   const now = nowIso();
   const db = await getDb();

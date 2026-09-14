@@ -24,6 +24,7 @@ export default function QuestionsPage() {
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | "new" | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
 
   const week = useMemo(() => weekFromThursday(date), [date]);
 
@@ -52,12 +53,16 @@ export default function QuestionsPage() {
     if (!draft.trim() || !placeId) return;
     setSavingId("new");
     setError(null);
+    setOkMsg(null);
     try {
       await api("/api/questions", {
         method: "POST",
         body: JSON.stringify({ question: draft, place_id: placeId, asked_on: date }),
       });
       setDraft("");
+      setOkMsg(
+        "प्रश्न जतन झाला — संवाद मध्येही दिसेल (सिंक दाबा). उत्तर आल्यावर येथेही दिसेल.",
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "जतन अयशस्वी");
@@ -126,6 +131,7 @@ export default function QuestionsPage() {
           प्रश्न जोडा
         </button>
       </div>
+      {okMsg ? <p className="text-sm text-emerald-800">{okMsg}</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <ul className="space-y-3">
         {items.map((q) => (

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { mirrorRecentWeeklyQuestions } from "@/lib/ajapa/mirror-weekly";
+import { normalizePhone } from "@/lib/ajapa/phone";
 import { listAjapaQuestions } from "@/lib/ajapa/store";
 import type { AjapaStatus } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
@@ -19,6 +21,17 @@ export async function GET(request: Request) {
   const valid: AjapaStatus[] = ["ai_answered", "escalated", "guru_answered"];
   if (status && !valid.includes(status)) {
     return await jsonError("Invalid status", 400);
+  }
+
+  // Pull recent weekly प्रश्न into संवाद if they were never mirrored.
+  try {
+    const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+    await mirrorRecentWeeklyQuestions({
+      days: 21,
+      default_seeker_phone: actor || seeker || undefined,
+    });
+  } catch (err) {
+    console.error("weekly→ajapa backfill failed", err);
   }
 
   const questions = await listAjapaQuestions({
