@@ -1,31 +1,170 @@
 /**
- * Seed knowledge for Ajapa answers (no LLM) and as grounding when LLM is used.
+ * Paramanand literature knowledge for अजपा answers.
+ * Corpus = data/literature/*.md (आत्मप्रभा + आरत्या + चौदा रत्ने).
+ * No invented text — pick from saved literature only.
  */
-export const AJAPA_KNOWLEDGE: { title: string; body: string }[] = [
+import { loadLiteratureCorpus } from "./literature";
+
+export type KnowledgeEntry = {
+  title: string;
+  keywords: string[];
+  body: string;
+};
+
+/** Small app-flow seeds (not full books) — merged after corpus. */
+const APP_SEEDS: KnowledgeEntry[] = [
   {
-    title: "अजपा जप",
-    body: `अजपा म्हणजे श्वासासोबत चालणारा निरंतर नामस्मरण. बाह्य जपाप्रमाणे माला फिरवणे अनिवार्य नसते; अंतःकरणात हरिनामाचा लहानसा प्रवाह सतत जागा ठेवणे हे अजपाचे सार आहे. श्वास घेताना आणि सोडताना मन भगवंताच्या नामाकडे वळल्यास दिनचर्याच साधन बनते. या साधनेत हळूहळू चंचलता कमी होते आणि शांती वाढते. सत्संग, सेवा आणि साधे जीवन अजपाला आधार देतात. प्रश्न येणे स्वाभाविक आहे; ते भीतीने लपवू नयेत तर श्रद्धेने मांडावेत. गुरुकृपा आणि साधना या दोन्हींनी उत्तरे उलगडतात. अजपात यश म्हणजे मोजकी मिनिटे नाही तर दिवसभर नामस्मरणाची सवय. चुका झाल्या तरी पुन्हा श्वासाकडे यावे. क्रोध, घाई किंवा तुलना साधनेला अडथळा ठरतात; क्षमा आणि धीर मदत करतात. घरातील कर्तव्ये टाकून फक्त एकांत शोधणे आवश्यक नाही; कर्तव्यातच स्मरण जपता येते. बालके, वृद्ध आणि गृहस्थ सर्वांसाठी अजपा सुलभ आहे कारण तो श्वासाशी जोडलेला आहे. नियमित आत्मनिरीक्षणाने प्रगती दिसते. साधकाने स्वतःला शिक्षा करू नये; प्रेमाने पुन्हा प्रारंभ करावा. परमानंद धामच्या परंपरेत मधुसुदनदास विजयानंद यांचे मार्गदर्शन याच भावाने समजले जाते — प्रश्न विचारणे ही सेवाच आहे.`,
+    title: "सत्संग आणि प्रश्न (अ‍ॅप)",
+    keywords: ["सत्संग", "गुरुवार", "उपस्थिती", "विषय", "प्रश्न", "सेवा", "अजपा"],
+    body: `गुरुवारी सत्संग म्हणजे एकत्र श्रवण, चिंतन आणि सेवा. उपस्थिती नोंदवणे, विषय समजून घेणे आणि प्रश्न लिहिणे ही साधना व्यवस्थित ठेवण्याची पद्धत आहे. प्रश्नाचे उत्तर परमानंद साहित्य (आत्मप्रभा / आरत्या / उपदेश रत्ने) किंवा गुरुंकडून येऊ शकते. साहित्य-आधारित उत्तर प्रारंभिक दिशा देते; अंतिम निर्णयासाठी गुरुकृपा महत्त्वाची.`,
   },
   {
-    title: "सत्संग आणि प्रश्न",
-    body: `गुरुवारी सत्संग म्हणजे एकत्र श्रवण, चिंतन आणि सेवा. उपस्थिती नोंदवणे, विषय समजून घेणे आणि प्रश्न लिहिणे ही साधना व्यवस्थित ठेवण्याची पद्धत आहे. प्रश्नाचे उत्तर पुस्तकातून, आत्मप्रभेतून किंवा गुरुंकडून येऊ शकते. AI किंवा पुस्तकाधारित उत्तर प्रारंभिक दिशा देते; अंतिम निर्णयासाठी गुरुकृपा महत्त्वाची. उत्तर मिळाले नाही तरी प्रतीक्षा श्रद्धेचा भाग आहे. इतरांच्या प्रश्नांवर हसणे किंवा टीका करणे साधनाविरोधी आहे. स्वतःच्या अनुभवावर आधारित प्रश्न स्पष्ट आणि थोडक्यात लिहावेत. मोबाइलवर अजपा Q लिहून प्रश्न पाठवणे म्हणजे साधना डिजिटल स्वरूपात सुरू ठेवणे. उत्तर आल्यावर वाचा, चिंतन करा आणि आचरणात आणा. फक्त गोळा करू नका. सेवा — स्थळ स्वच्छता, उपस्थिती मदत, नवागतांचे स्वागत — ही देखील अजपाची साथी आहे. भीती, संशय किंवा कठीण परिस्थितीतही नामस्मरण सोडू नये. साधकांनी एकमेकांना प्रोत्साहन द्यावे. परमानंद धामची स्थळे एकाच भावाने जोडलेली आहेत.`,
-  },
-  {
-    title: "गुरुकृपा",
-    body: `मधुसुदनदास विजयानंद यांच्याकडे प्रश्न पाठवणे म्हणजे श्रद्धेने मार्गदर्शन मागणे. गुरु उत्तर टाइप किंवा व्हॉइसने देऊ शकतात. उत्तर आल्यावर कृतज्ञतेने स्वीकारा आणि शंका असल्यास पुन्हा विनयाने विचारा. गुरुंचे उत्तर पुस्तकी ज्ञानापेक्षा अनुभवाधारित असू शकते. तुलना करू नका; आपल्या प्रश्नाचे उत्तर आपल्या पात्रतेनुसार येते. प्रतीक्षेत रागावणे साधना कमी करते. दैनंदिन जप, सेवा आणि सत्संग हे गुरुकृपेचे पात्र बनवतात. मोठ्या अपेक्षा ठेवून निराश होण्याऐवजी छोटे छोटे बदल पाहा. कुटुंब, आरोग्य, आर्थिक चिंता — सर्व विषयांवर नामस्मरण लागू होते. उत्तर मिळाले की अ‍ॅप किंवा WhatsApp वर पाहा आणि जतन करा. इतरांशी वाटताना गोपनीयता आणि सन्मान राखा. साधना वैयक्तिक आहे पण संघात बळ मिळते. चुकीचे समज झाले तर दुरुस्ती स्वीकारा. अजपा म्हणजे शेवट नाही तर प्रारंभ — प्रत्येक श्वास नवा अवसर आहे.`,
+    title: "गुरुकृपा (अ‍ॅप)",
+    keywords: ["गुरु", "गुरुकृपा", "मधुसुदन", "मधुसूदन", "विजयानंद", "मार्गदर्शन"],
+    body: `मधुसुदनदास विजयानंद यांच्याकडे प्रश्न पाठवणे म्हणजे श्रद्धेने मार्गदर्शन मागणे. गुरु उत्तर टाइप किंवा व्हॉइसने देऊ शकतात. उत्तर आल्यावर कृतज्ञतेने स्वीकारा. तुलना करू नका; आपल्या प्रश्नाचे उत्तर आपल्या पात्रतेनुसार येते.`,
   },
 ];
 
-export function pickKnowledgeForQuestion(question: string): string {
-  const q = question.toLowerCase();
-  const scored = AJAPA_KNOWLEDGE.map((k) => {
-    const hay = `${k.title} ${k.body}`.toLowerCase();
-    let score = 0;
-    for (const token of q.split(/\s+/).filter((t) => t.length > 2)) {
-      if (hay.includes(token)) score += 1;
+function allKnowledge(): KnowledgeEntry[] {
+  return [...loadLiteratureCorpus(), ...APP_SEEDS];
+}
+
+/** @deprecated use allKnowledge via pick — kept for tests/debug */
+export function getAjapaKnowledge(): KnowledgeEntry[] {
+  return allKnowledge();
+}
+
+export const AJAPA_KNOWLEDGE: KnowledgeEntry[] = APP_SEEDS;
+
+function normalizeForMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFC")
+    .replace(/[\u093c\u0901\u0902]/g, "")
+    .replace(/[ऽ']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokensOf(text: string): string[] {
+  return normalizeForMatch(text)
+    .split(/[\s|,.;:?!«»""''()【】\[\]\/\\-]+/)
+    .filter((t) => t.length > 1);
+}
+
+function scoreEntry(
+  k: KnowledgeEntry,
+  qNorm: string,
+  qTokens: string[],
+  topicTokens: string[],
+): number {
+  const hay = normalizeForMatch(
+    `${k.title} ${k.keywords.join(" ")} ${k.body}`,
+  );
+  let score = 0;
+  for (const kw of k.keywords) {
+    const n = normalizeForMatch(kw);
+    if (n.length > 1 && qNorm.includes(n)) score += 4;
+  }
+  const titleNorm = normalizeForMatch(k.title);
+  for (const token of qTokens) {
+    if (token.length < 2) continue;
+    if (titleNorm.includes(token)) score += 5;
+    else if (hay.includes(token)) score += 2;
+  }
+  for (const token of topicTokens) {
+    if (token.length < 3) continue;
+    if (titleNorm.includes(token)) score += 1;
+    else if (hay.includes(token)) score += 0.25;
+  }
+  return score;
+}
+
+/**
+ * Pick literature by the seeker's question primarily.
+ * Never return unrelated seeds when score is 0.
+ */
+export function pickKnowledgeForQuestion(
+  question: string,
+  topicTitle?: string | null,
+): string {
+  const qNorm = normalizeForMatch(question);
+  const qTokens = tokensOf(question);
+  const topicTokens = topicTitle ? tokensOf(topicTitle) : [];
+  const corpus = allKnowledge();
+
+  const scored = corpus
+    .map((k) => ({ k, score: scoreEntry(k, qNorm, qTokens, topicTokens) }))
+    .sort((a, b) => b.score - a.score);
+
+  const asksAarti = /आरती|आरति|aarti|arti|भूपाळी|भुपाळी/i.test(question);
+  const asksRatne = /रत्न|उपदेश|चौदा/i.test(question);
+  const asksAtma = /आत्मप्रभा|मी कोण|सोहं|सोऽहं|अजपा/i.test(question);
+
+  if (asksAarti) {
+    const aarti = scored
+      .filter(
+        (s) =>
+          /आरती|परमहंस|भूपाळी|भुपाळी|स्तुति|स्तुती/i.test(s.k.title) ||
+          /॥\s*आरती|नारायण सरस्वती|तू एक परमहंस|॥\s*भुपाळी|॥\s*भूपाळी/i.test(
+            s.k.body.slice(0, 400),
+          ),
+      )
+      .sort((a, b) => {
+        // Prefer exact «आरती परमानंदा» when question mentions परमानंद आरती
+        const qWantsParamananda =
+          /परमानंद/.test(question) && /आरती/.test(question);
+        const aBoost =
+          qWantsParamananda && /आरती परमानंदा/.test(a.k.title + a.k.body.slice(0, 80))
+            ? 20
+            : 0;
+        const bBoost =
+          qWantsParamananda && /आरती परमानंदा/.test(b.k.title + b.k.body.slice(0, 80))
+            ? 20
+            : 0;
+        return b.score + bBoost - (a.score + aBoost);
+      })
+      .slice(0, 3);
+    if (aarti.length) {
+      return aarti.map((s) => `【${s.k.title}】\n${s.k.body}`).join("\n\n");
     }
-    return { k, score };
-  }).sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, 2).map((s) => s.k);
-  return top.map((k) => `【${k.title}】\n${k.body}`).join("\n\n");
+  }
+
+  if (asksRatne) {
+    const allRatne = scored.filter((s) => /^रत्न\s*\d+/i.test(s.k.title));
+    if (/चौदा|सर्व|पूर्ण|रत्ने/i.test(question) && allRatne.length) {
+      // Full set of 14, stable by number
+      const ordered = allRatne
+        .slice()
+        .sort((a, b) => {
+          const na = Number((a.k.title.match(/\d+/) || ["0"])[0]);
+          const nb = Number((b.k.title.match(/\d+/) || ["0"])[0]);
+          return na - nb;
+        });
+      return ordered.map((s) => `【${s.k.title}】\n${s.k.body}`).join("\n\n");
+    }
+    const ratne = scored
+      .filter((s) => s.score >= 2 && /रत्न|उपदेश/i.test(s.k.title))
+      .slice(0, 5);
+    if (ratne.length) {
+      return ratne.map((s) => `【${s.k.title}】\n${s.k.body}`).join("\n\n");
+    }
+  }
+
+  // Prefer आत्मप्रभा chunks when topic/question matches
+  if (asksAtma || (topicTitle && /मी कोण|आत्मप्रभा|सोहं/i.test(topicTitle))) {
+    const atma = scored
+      .filter((s) => s.score >= 3 && /आत्मप्रभा|विभाग/i.test(s.k.title))
+      .slice(0, 2);
+    if (atma.length) {
+      return atma.map((s) => `【${s.k.title}】\n${s.k.body}`).join("\n\n");
+    }
+  }
+
+  const relevant = scored.filter((s) => s.score >= 3).slice(0, 3);
+  if (relevant.length === 0) {
+    return `【सामान्य परमानंद साहित्य】\nप्रश्नाशी थेट जुळणारा जतन झालेला मजकूर यावेळी सापडला नाही. फक्त दिलेल्या आत्मप्रभा / आरती / उपदेश रत्ने साहित्यातून उत्तर द्या — अजपा जप टेम्प्लेट किंवा कल्पित मजकूर देऊ नका. आवश्यक असल्यास मधुसुदनदास विजयानंद यांच्याकडे मार्गदर्शन मागा.`;
+  }
+
+  return relevant.map((s) => `【${s.k.title}】\n${s.k.body}`).join("\n\n");
 }

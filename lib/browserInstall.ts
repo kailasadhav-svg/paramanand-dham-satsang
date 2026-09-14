@@ -58,7 +58,7 @@ export function getInstallGuide(kind: BrowserKind = detectKind()): InstallGuide 
           "Add / जोडा दाबा",
           "होम स्क्रीनवरील नवीन आयकॉन उघडा",
         ],
-        tip: "आयकॉनमधून उघडल्यावर वरचा लिंक दिसणार नाही.",
+        tip: "आयकॉनमधून उघडल्यावर वरचा लिंक दिसणार नाही. सामान्य लोकांना फक्त अ‍ॅप दिसेल.",
         canNativeInstall: false,
       };
     case "ios-other":
