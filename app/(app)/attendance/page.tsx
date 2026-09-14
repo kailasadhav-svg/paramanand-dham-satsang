@@ -92,10 +92,22 @@ export default function AttendancePage() {
   const [newPhone, setNewPhone] = useState("");
   const [appointBusy, setAppointBusy] = useState(false);
   const [appointMsg, setAppointMsg] = useState<string | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<number | "">("");
 
   const selectedPlace = useMemo(
     () => places.find((p) => p.id === placeId) || null,
     [places, placeId],
+  );
+
+  const placeMembers = useMemo(
+    () =>
+      members.filter((m) => placeId !== "" && m.home_place_id === placeId),
+    [members, placeId],
+  );
+
+  const selectedMember = useMemo(
+    () => placeMembers.find((m) => m.id === selectedMemberId) || null,
+    [placeMembers, selectedMemberId],
   );
 
   const loadDuties = useCallback(async (ymd: string) => {
@@ -136,6 +148,7 @@ export default function AttendancePage() {
   useEffect(() => {
     if (!placeId || !date) return;
     setSaved(false);
+    setSelectedMemberId("");
     void api<{ meeting: Meeting }>(`/api/meetings?place_id=${placeId}&date=${date}`)
       .then((data) => {
         setMen(data.meeting.men || 0);
@@ -203,6 +216,7 @@ export default function AttendancePage() {
       setNewName("");
       setNewPhone("");
       await loadMembers();
+      setSelectedMemberId(data.member.id);
       setAppointMsg(
         `सत्संगी जोडला: ${data.member.name} · ${data.member.phone_display} · ${
           data.member.home_place_name || selectedPlace?.name || ""
@@ -346,10 +360,10 @@ export default function AttendancePage() {
 
       {canAppoint ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-          <h3 className="text-sm font-bold text-saffron-900">
+          <h3 className="break-words text-sm font-bold text-saffron-900">
             नवीन सत्संगी जोडा
           </h3>
-          <p className="text-[11px] text-temple-muted">
+          <p className="break-words text-[11px] text-temple-muted">
             संचालक / संवादक / चरणसेवक · नाव + मोबाइल · स्थळ{" "}
             <strong>{selectedPlace?.name || "—"}</strong>
           </p>
@@ -358,7 +372,7 @@ export default function AttendancePage() {
             placeholder="नाव — उदा. मधुकर आढाव"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+            className="w-full min-w-0 rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
           />
           <input
             type="tel"
@@ -366,7 +380,7 @@ export default function AttendancePage() {
             placeholder="मोबाइल — उदा. 9021555060"
             value={newPhone}
             onChange={(e) => setNewPhone(e.target.value)}
-            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+            className="w-full min-w-0 rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
           />
           <button
             type="button"
@@ -377,33 +391,54 @@ export default function AttendancePage() {
             {appointBusy ? "जोडत आहे…" : "सत्संगी जोडा"}
           </button>
           {appointMsg ? (
-            <p className="text-xs font-semibold text-emerald-800">{appointMsg}</p>
+            <p className="break-words text-xs font-semibold text-emerald-800">
+              {appointMsg}
+            </p>
           ) : null}
-          {members.length ? (
-            <ul className="space-y-2 border-t border-saffron-100 pt-2">
-              {members
-                .filter((m) => !placeId || m.home_place_id === placeId)
-                .map((m) => (
-                  <li
-                    key={m.id}
-                    className="flex items-center justify-between gap-2 text-sm"
-                  >
-                    <div>
-                      <p className="font-bold text-saffron-900">{m.name}</p>
-                      <p className="text-xs text-temple-muted">{m.phone_display}</p>
-                    </div>
-                    <a
-                      href={`tel:${displayPhone(m.phone)}`}
-                      className="shrink-0 rounded-full bg-saffron-50 px-3 py-1 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200"
-                    >
-                      कॉल
-                    </a>
-                  </li>
-                ))}
-            </ul>
-          ) : (
-            <p className="text-[11px] text-temple-muted">अजून सत्संगी यादी रिकामी</p>
-          )}
+
+          <div className="space-y-2 border-t border-saffron-100 pt-3">
+            <label className="block text-xs font-semibold text-temple-muted">
+              या स्थळाचे सत्संगी (ड्रॉपडाउन)
+            </label>
+            <select
+              value={selectedMemberId === "" ? "" : String(selectedMemberId)}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                setSelectedMemberId(Number.isFinite(id) ? id : "");
+              }}
+              className="w-full min-w-0 rounded-xl bg-saffron-50 px-3 py-2.5 text-sm font-semibold ring-1 ring-saffron-200"
+              aria-label="सत्संगी निवडा"
+            >
+              <option value="">
+                {placeMembers.length
+                  ? `निवडा… (${placeMembers.length})`
+                  : "या स्थळावर अजून सत्संगी नाही"}
+              </option>
+              {placeMembers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} · {m.phone_display}
+                </option>
+              ))}
+            </select>
+            {selectedMember ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-saffron-50/70 px-3 py-2 ring-1 ring-saffron-100">
+                <div className="min-w-0">
+                  <p className="break-words font-bold text-saffron-900">
+                    {selectedMember.name}
+                  </p>
+                  <p className="text-xs text-temple-muted">
+                    {selectedMember.phone_display}
+                  </p>
+                </div>
+                <a
+                  href={`tel:${displayPhone(selectedMember.phone)}`}
+                  className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200"
+                >
+                  कॉल
+                </a>
+              </div>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
