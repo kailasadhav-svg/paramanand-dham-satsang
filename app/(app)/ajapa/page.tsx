@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { InstallBanner } from "@/components/InstallBanner";
 import { useProfile } from "@/components/PhoneGate";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { searchLocal } from "@/lib/offline/idb";
@@ -71,7 +70,6 @@ export default function AjapaPage() {
 
   return (
     <div className="space-y-4">
-      <InstallBanner />
 
       <div className="flex items-start justify-between gap-2">
         <div>

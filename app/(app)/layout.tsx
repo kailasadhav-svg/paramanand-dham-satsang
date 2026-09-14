@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { PhoneGate } from "@/components/PhoneGate";
 import { ManifestSwitcher } from "@/components/ManifestSwitcher";
+import { InstallBanner } from "@/components/InstallBanner";
 import { SESSION_COOKIE, isSessionToken } from "@/lib/auth";
 
 export default async function AppGroupLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +17,10 @@ export default async function AppGroupLayout({ children }: { children: React.Rea
       <div className="mx-auto min-h-dvh max-w-lg pb-24">
         <ManifestSwitcher />
         <AppHeader subtitle="गुरुवार रात्री ८:०० · नोंदी व अहवाल" />
-        <main className="px-4 py-4">{children}</main>
+        <main className="px-4 py-4">
+          <InstallBanner />
+          {children}
+        </main>
         <BottomNav />
       </div>
     </PhoneGate>

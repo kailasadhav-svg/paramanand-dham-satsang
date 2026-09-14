@@ -1,0 +1,19 @@
+{
+  "id": "/i/software",
+  "name": "परमानंद सॉफ्टवेअर",
+  "short_name": "सॉफ्टवेअर",
+  "description": "परमानंद धाम · सॉफ्टवेअर नोंदी",
+  "start_url": "/i/software?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fff8f1",
+  "theme_color": "#9a3412",
+  "lang": "mr",
+  "icons": [
+    { "src": "/icons/software/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/software/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/software/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

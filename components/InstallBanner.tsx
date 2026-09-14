@@ -1,17 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useProfileOptional } from "@/components/PhoneGate";
 import { profileAppName } from "@/lib/offline/profile";
+import { INSTALL_SLOTS, type InstallSlot } from "@/lib/installSlots";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+function slotForRole(role: string | undefined): InstallSlot {
+  if (role === "software") return "software";
+  if (role === "charansevak") return "charansevak";
+  return "samvadak";
+}
+
 export function InstallBanner() {
   const profile = useProfileOptional();
   const appName = profileAppName(profile);
+  const slot = slotForRole(profile?.role);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [hidden, setHidden] = useState(true);
   const [iosHint, setIosHint] = useState(false);
@@ -35,6 +44,7 @@ export function InstallBanner() {
       setHidden(false);
     };
     window.addEventListener("beforeinstallprompt", onBip);
+    setHidden(false);
     return () => window.removeEventListener("beforeinstallprompt", onBip);
   }, []);
 
@@ -54,20 +64,32 @@ export function InstallBanner() {
   }
 
   return (
-    <div className="card mb-3 space-y-2 border-saffron-200 bg-saffron-50/80 p-3">
+    <div className="mb-3 space-y-2 rounded-2xl border border-saffron-200 bg-saffron-50/90 p-3">
       <p className="text-sm font-semibold text-saffron-900">
-        {appName} · होम स्क्रीनवर अ‍ॅड करा
+        {appName} · फोनवर अ‍ॅप आयकॉन बसवा
       </p>
       {iosHint ? (
         <p className="text-xs leading-relaxed text-temple-muted">
-          Safari → Share (□↑) → <strong>Add to Home Screen</strong>
+          वरचा Safari पत्ता अ‍ॅपमध्ये दिसू नये म्हणून: Share (□↑) →{" "}
+          <strong>Add to Home Screen</strong> → Add. तिन्ही आयकॉनसाठी{" "}
+          <Link href="/i" className="font-semibold text-saffron-800 underline">
+            येथे जा
+          </Link>
+          .
         </p>
       ) : (
-        <p className="text-xs text-temple-muted">
-          अ‍ॅपसारखे उघडा · ऑफलाइन यादी/शोध · सर्व्हर फक्त सिंकसाठी
+        <p className="text-xs leading-relaxed text-temple-muted">
+          अ‍ॅपसारखे उघडा (वरचा पत्ता दिसणार नाही). तिन्ही आयकॉन:{" "}
+          <Link href="/i" className="font-semibold text-saffron-800 underline">
+            /i
+          </Link>{" "}
+          · हा आयकॉन:{" "}
+          <Link href={`/i/${slot}`} className="font-semibold text-saffron-800 underline">
+            {INSTALL_SLOTS[slot].shortName}
+          </Link>
         </p>
       )}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {deferred ? (
           <button
             type="button"
@@ -76,7 +98,20 @@ export function InstallBanner() {
           >
             इंस्टॉल
           </button>
-        ) : null}
+        ) : (
+          <Link
+            href={`/i/${slot}`}
+            className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            आयकॉन बसवा
+          </Link>
+        )}
+        <Link
+          href="/i"
+          className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold ring-1 ring-saffron-200"
+        >
+          तिन्ही आयकॉन
+        </Link>
         <button
           type="button"
           onClick={dismiss}

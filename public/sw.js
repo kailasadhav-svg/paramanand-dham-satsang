@@ -1,6 +1,22 @@
 /* Paramanand Dham — minimal SW for installability + shell cache */
-const CACHE = "paramanand-shell-v1";
-const PRECACHE = ["/", "/ajapa", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE = "paramanand-shell-v2";
+const PRECACHE = [
+  "/",
+  "/i",
+  "/i/samvadak",
+  "/i/software",
+  "/i/charansevak",
+  "/ajapa",
+  "/manifest.webmanifest",
+  "/manifests/samvadak.webmanifest",
+  "/manifests/software.webmanifest",
+  "/manifests/charansevak.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/samvadak/icon-192.png",
+  "/icons/software/icon-192.png",
+  "/icons/charansevak/icon-192.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
