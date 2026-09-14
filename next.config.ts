@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client"],
+  // Ensure literature markdown is available on Vercel serverless
+  outputFileTracingIncludes: {
+    "/api/ajapa/questions": ["./data/literature/**/*"],
+    "/api/whatsapp/webhook": ["./data/literature/**/*"],
+  },
   async redirects() {
     return [
       { source: "/a", destination: "/attendance", permanent: false },
