@@ -52,6 +52,7 @@ export async function POST(request: Request, ctx: Ctx) {
     phone,
     name: body.name,
     appointed_by_phone: link.created_by_phone,
+    home_place_id: link.place_id,
   });
 
   const result = await checkInPerson({

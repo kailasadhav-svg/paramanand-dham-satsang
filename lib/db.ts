@@ -305,8 +305,12 @@ async function migrate(db: Client) {
   await ensureColumn(db, "ajapa_questions", "topic_kind", "TEXT");
   await ensureColumn(db, "ajapa_questions", "topic_title", "TEXT");
   await ensureColumn(db, "ajapa_questions", "visibility", "TEXT DEFAULT 'private'");
+  await ensureColumn(db, "satsangi_members", "home_place_id", "INTEGER");
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_ajapa_place_date ON ajapa_questions(place_id, meeting_date)",
+  );
+  await db.execute(
+    "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
   );
   await db.execute(
     `UPDATE ajapa_questions SET visibility = 'private' WHERE visibility IS NULL OR visibility = ''`,
@@ -739,6 +743,8 @@ export type SatsangiMember = {
   phone: string;
   name: string;
   appointed_by_phone: string | null;
+  /** स्थळ जिथे नेमला / लिंकने नोंद — सत्संगीला फक्त हेच स्थळ default */
+  home_place_id: number | null;
   created_at: string;
 };
 
@@ -748,6 +754,7 @@ function asSatsangi(row: Row): SatsangiMember {
     phone: str(row.phone),
     name: str(row.name),
     appointed_by_phone: strOrNull(row.appointed_by_phone),
+    home_place_id: row.home_place_id == null ? null : num(row.home_place_id),
     created_at: str(row.created_at),
   };
 }
@@ -775,6 +782,7 @@ export async function upsertSatsangiMember(input: {
   phone: string;
   name: string;
   appointed_by_phone?: string | null;
+  home_place_id?: number | null;
 }): Promise<SatsangiMember> {
   const digits = str(input.phone).replace(/\D/g, "");
   if (digits.length < 10) throw new Error("invalid phone");
@@ -782,18 +790,133 @@ export async function upsertSatsangiMember(input: {
   const name = input.name.trim();
   if (!name) throw new Error("name required");
   const now = nowIso();
+  const homePlaceId =
+    input.home_place_id != null && Number.isFinite(Number(input.home_place_id))
+      ? Number(input.home_place_id)
+      : null;
   const db = await getDb();
   await db.execute({
-    sql: `INSERT INTO satsangi_members (phone, name, appointed_by_phone, created_at)
-      VALUES (?, ?, ?, ?)
+    sql: `INSERT INTO satsangi_members (phone, name, appointed_by_phone, home_place_id, created_at)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(phone) DO UPDATE SET
         name = excluded.name,
-        appointed_by_phone = COALESCE(excluded.appointed_by_phone, satsangi_members.appointed_by_phone)`,
-    args: [phone, name, input.appointed_by_phone || null, now],
+        appointed_by_phone = COALESCE(excluded.appointed_by_phone, satsangi_members.appointed_by_phone),
+        home_place_id = COALESCE(excluded.home_place_id, satsangi_members.home_place_id)`,
+    args: [phone, name, input.appointed_by_phone || null, homePlaceId, now],
   });
   const saved = await getSatsangiByPhone(phone);
   if (!saved) throw new Error("Failed to save member");
   return saved;
+}
+
+/**
+ * Infer home place for older members: explicit home_place_id, else last attendance, else last duty.
+ */
+export async function resolveSatsangiHomePlaceId(
+  phone: string,
+): Promise<number | null> {
+  const member = await getSatsangiByPhone(phone);
+  if (member?.home_place_id) return member.home_place_id;
+
+  const digits = str(phone).replace(/\D/g, "");
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  const db = await getDb();
+
+  const att = await db.execute({
+    sql: `SELECT place_id FROM attendance_people
+      WHERE phone = ? ORDER BY checked_in_at DESC LIMIT 1`,
+    args: [normalized],
+  });
+  if (att.rows[0]?.place_id != null) {
+    const pid = num(att.rows[0].place_id);
+    if (member) {
+      await upsertSatsangiMember({
+        phone: normalized,
+        name: member.name,
+        home_place_id: pid,
+      });
+    }
+    return pid;
+  }
+
+  const duty = await db.execute({
+    sql: `SELECT place_id FROM place_duties
+      WHERE charansevak_phone = ? ORDER BY meeting_date DESC LIMIT 1`,
+    args: [normalized],
+  });
+  if (duty.rows[0]?.place_id != null) {
+    const pid = num(duty.rows[0].place_id);
+    if (member) {
+      await upsertSatsangiMember({
+        phone: normalized,
+        name: member.name,
+        home_place_id: pid,
+      });
+    }
+    return pid;
+  }
+
+  return null;
+}
+
+/** Places a role may use in UI / APIs. Satsangi → only home place. */
+export async function listPlacesForActor(opts: {
+  phone: string;
+  role: string;
+}): Promise<{ places: Place[]; default_place_id: number | null; place_locked: boolean }> {
+  const all = await listPlaces();
+  const staff =
+    opts.role === "software" ||
+    opts.role === "guru" ||
+    opts.role === "charansevak";
+
+  if (staff) {
+    const nashik = all.find((p) => p.name === "नाशिक");
+    return {
+      places: all,
+      default_place_id: nashik?.id ?? all[0]?.id ?? null,
+      place_locked: false,
+    };
+  }
+
+  const homeId = await resolveSatsangiHomePlaceId(opts.phone);
+  if (!homeId) {
+    return { places: [], default_place_id: null, place_locked: true };
+  }
+  const home = all.find((p) => p.id === homeId);
+  if (!home) {
+    return { places: [], default_place_id: null, place_locked: true };
+  }
+  return {
+    places: [home],
+    default_place_id: home.id,
+    place_locked: true,
+  };
+}
+
+export async function assertSatsangiMayUsePlace(
+  phone: string,
+  role: string,
+  placeId: number,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (role === "software" || role === "guru" || role === "charansevak") {
+    return { ok: true };
+  }
+  const homeId = await resolveSatsangiHomePlaceId(phone);
+  if (!homeId) {
+    return {
+      ok: false,
+      message: "तुमचे स्थळ नोंदलेले नाही — लिंकने / नेमणूकीने प्रथम नोंद करा",
+    };
+  }
+  if (Number(placeId) !== Number(homeId)) {
+    const home = await getPlace(homeId);
+    return {
+      ok: false,
+      message: `फक्त तुमचे स्थळ (${home?.name || "नोंदलेले"}) निवडता येईल`,
+    };
+  }
+  return { ok: true };
 }
 
 export type AttendancePerson = {

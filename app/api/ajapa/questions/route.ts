@@ -8,7 +8,7 @@ import {
 } from "@/lib/ajapa/store";
 import type { AjapaStatus, AjapaVisibility } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
-import { getMeeting, getPlace, getSatsangiByPhone, upsertSatsangiMember } from "@/lib/db";
+import { getMeeting, getPlace, getSatsangiByPhone, upsertSatsangiMember, assertSatsangiMayUsePlace } from "@/lib/db";
 import { defaultThursdayYmd } from "@/lib/dates";
 import { normalizePhone } from "@/lib/offline/phone";
 import { detectStaffRole, roleLabelMarathi } from "@/lib/roles";
@@ -112,6 +112,10 @@ export async function POST(request: Request) {
   const place = await getPlace(placeId);
   if (!place) return jsonError("स्थान सापडले नाही", 404);
 
+  const role = detectStaffRole(actor);
+  const allowed = await assertSatsangiMayUsePlace(actor, role, placeId);
+  if (!allowed.ok) return jsonError(allowed.message, 403);
+
   const meeting = await getMeeting(placeId, meetingDate);
   const topicTitle = meeting?.topic_title?.trim() || "";
   if (!topicTitle) {
@@ -135,7 +139,7 @@ export async function POST(request: Request) {
     seekerName = member?.name?.trim() || null;
   }
   if (!seekerName) {
-    seekerName = roleLabelMarathi(detectStaffRole(actor));
+    seekerName = roleLabelMarathi(role);
   } else if (body.seeker_name?.trim()) {
     await upsertSatsangiMember({
       phone: actor,

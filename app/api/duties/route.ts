@@ -6,6 +6,7 @@ import {
   getSatsangiByPhone,
   listDutiesOnDate,
   listPlaces,
+  listPlacesForActor,
   listSatsangiMembers,
   upsertDuty,
   upsertSatsangiMember,
@@ -71,7 +72,27 @@ export async function GET(request: Request) {
     });
   }
 
-  const visible = canAssign ? rows : rows.filter((r) => r.duty != null);
+  let visible = canAssign ? rows : rows.filter((r) => r.duty != null);
+  let placeLocked = false;
+  let defaultPlaceId: number | null = null;
+
+  // सत्संगी: फक्त घरचे स्थळ — संचालन नसले तरी तेच default
+  if (!canAssign && actor && role === "satsangi") {
+    const scoped = await listPlacesForActor({ phone: actor, role });
+    placeLocked = scoped.place_locked;
+    defaultPlaceId = scoped.default_place_id;
+    if (scoped.places.length) {
+      const homeIds = new Set(scoped.places.map((p) => p.id));
+      visible = rows.filter((r) => homeIds.has(r.place.id));
+      for (const p of scoped.places) {
+        if (!visible.some((r) => r.place.id === p.id)) {
+          visible.push({ place: p, duty: null });
+        }
+      }
+    } else {
+      visible = [];
+    }
+  }
 
   return NextResponse.json({
     date,
@@ -79,6 +100,8 @@ export async function GET(request: Request) {
     can_assign: canAssign,
     can_appoint: canAppoint,
     can_full_staff: canSeeStaffScreens(role),
+    place_locked: placeLocked,
+    default_place_id: defaultPlaceId,
     rows: visible,
   });
 }
@@ -120,15 +143,23 @@ export async function PUT(request: Request) {
   }
 
   const phone = normalizePhone(body.charansevak_phone);
+  const placeId = Number(body.place_id);
   let name = body.charansevak_name?.trim() || null;
   const existing = await getSatsangiByPhone(phone);
   if (existing) {
     name = name || existing.name;
+    await upsertSatsangiMember({
+      phone,
+      name,
+      appointed_by_phone: actor,
+      home_place_id: placeId,
+    });
   } else if (name) {
     await upsertSatsangiMember({
       phone,
       name,
       appointed_by_phone: actor,
+      home_place_id: placeId,
     });
   } else {
     return jsonError(
@@ -138,17 +169,14 @@ export async function PUT(request: Request) {
   }
 
   const duty = await upsertDuty({
-    place_id: Number(body.place_id),
+    place_id: placeId,
     meeting_date: String(body.meeting_date),
     charansevak_phone: phone,
     charansevak_name: name,
     assigned_by_phone: actor,
   });
 
-  const prev = await getPreviousDutySamePlace(
-    Number(body.place_id),
-    String(body.meeting_date),
-  );
+  const prev = await getPreviousDutySamePlace(placeId, String(body.meeting_date));
   const sameAsLast =
     prev != null && phonesEqual(prev.charansevak_phone, duty.charansevak_phone);
 

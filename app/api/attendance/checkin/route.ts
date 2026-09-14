@@ -5,6 +5,7 @@ import {
   getDuty,
   getPlace,
   getSatsangiByPhone,
+  assertSatsangiMayUsePlace,
   listAttendancePeople,
 } from "@/lib/db";
 import { displayPhone, normalizePhone } from "@/lib/offline/phone";
@@ -60,6 +61,13 @@ export async function POST(request: Request) {
   if (!place) return jsonError("स्थळ सापडले नाही", 404);
 
   const role = detectStaffRole(actor);
+  const allowed = await assertSatsangiMayUsePlace(
+    actor,
+    role,
+    Number(body.place_id),
+  );
+  if (!allowed.ok) return jsonError(allowed.message, 403);
+
   // Staff may check themselves in too; satsangi must exist or provide name once
   let name = body.name?.trim() || null;
   if (!canAppointSatsangi(role)) {

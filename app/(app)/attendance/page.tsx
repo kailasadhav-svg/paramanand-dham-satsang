@@ -48,6 +48,7 @@ export default function AttendancePage() {
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
+  const [placeLocked, setPlaceLocked] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
   const [dutyRows, setDutyRows] = useState<DutyRow[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -83,12 +84,21 @@ export default function AttendancePage() {
     const data = await api<{
       can_assign: boolean;
       can_appoint: boolean;
+      place_locked?: boolean;
+      default_place_id?: number | null;
       rows: DutyRow[];
     }>(`/api/duties?date=${ymd}`);
     setDutyRows(data.rows);
     const visible = data.rows.map((r) => r.place);
     setPlaces(visible);
+    setPlaceLocked(Boolean(data.place_locked));
     setPlaceId((id) => {
+      if (
+        data.default_place_id != null &&
+        visible.some((p) => p.id === data.default_place_id)
+      ) {
+        return data.default_place_id;
+      }
       if (id !== "" && visible.some((p) => p.id === id)) return id;
       return visible[0]?.id ?? "";
     });
@@ -127,18 +137,28 @@ export default function AttendancePage() {
   }, [placeId, date, dutyRows, loadPeople]);
 
   async function appointMember() {
+    if (!placeId) {
+      setError("आधी स्थळ निवडा — सत्संगी त्याच स्थळाचा राहील");
+      return;
+    }
     setAppointBusy(true);
     setMsg(null);
     setError(null);
     try {
       await api("/api/members", {
         method: "POST",
-        body: JSON.stringify({ name: newName, phone: newPhone }),
+        body: JSON.stringify({
+          name: newName,
+          phone: newPhone,
+          home_place_id: placeId,
+        }),
       });
       setNewName("");
       setNewPhone("");
       await loadMembers();
-      setMsg("सत्संगी चरणसेवक नेमला");
+      setMsg(
+        `सत्संगी चरणसेवक नेमला · स्थळ ${selectedPlace?.name || ""}`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "नेमणूक अयशस्वी");
     } finally {
@@ -227,9 +247,9 @@ export default function AttendancePage() {
         <h2 className="text-lg font-bold">उपस्थिती</h2>
         <WeeklyTopics date={date} />
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
-          या गुरुवारी तुमच्या नावावर स्थळ नेमलेले नाही. संचालक / संवादक / चरणसेवक
-          नेमणूक करतील — किंवा त्यांनी दिलेली लिंक वापरा. वरचे विषय तरीही सर्वांना
-          दिसतात (नाशिकसह).
+          तुमचे स्थळ अजून नोंदलेले नाही. संचालक / संवादक / चरणसेवक नेमणूक करतील
+          — किंवा त्यांनी दिलेली स्थळ-लिंक वापरा. एकदा नाशिक (किंवा तुमचे स्थळ)
+          नोंद झाली की तेच default राहील; दुसरे स्थळ निवडता येणार नाही.
         </p>
       </div>
     );
@@ -247,13 +267,23 @@ export default function AttendancePage() {
 
       <WeeklyTopics date={date} highlightPlaceId={placeId} />
 
+      <PlaceDateBar
+        places={places}
+        placeId={placeId}
+        date={date}
+        onPlace={setPlaceId}
+        onDate={setDate}
+        locked={placeLocked}
+      />
+
       {canAppoint ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
           <h3 className="text-sm font-bold text-saffron-900">
             नवीन सत्संगी चरणसेवक नेमा
           </h3>
           <p className="text-[11px] text-temple-muted">
-            नाव + मोबाइल · अधिकार: संचालक / संवादक / चरणसेवक
+            नाव + मोबाइल · सध्या निवडलेल्या स्थळाचा (
+            {selectedPlace?.name || "—"}) सत्संगी राहील
           </p>
           <input
             type="text"
@@ -272,7 +302,7 @@ export default function AttendancePage() {
           />
           <button
             type="button"
-            disabled={appointBusy}
+            disabled={appointBusy || !placeId}
             onClick={() => void appointMember()}
             className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
@@ -285,14 +315,6 @@ export default function AttendancePage() {
           ) : null}
         </section>
       ) : null}
-
-      <PlaceDateBar
-        places={places}
-        placeId={placeId}
-        date={date}
-        onPlace={setPlaceId}
-        onDate={setDate}
-      />
 
       {canAssign && placeId ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">

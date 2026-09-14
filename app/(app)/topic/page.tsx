@@ -22,6 +22,7 @@ export default function TopicPage() {
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
+  const [placeLocked, setPlaceLocked] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
   const [kind, setKind] = useState<"atmaprabha" | "upadesh">("atmaprabha");
   const [title, setTitle] = useState("");
@@ -32,12 +33,22 @@ export default function TopicPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void api<{ places: Place[] }>("/api/places").then((data) => {
+    void api<{
+      places: Place[];
+      default_place_id: number | null;
+      place_locked: boolean;
+    }>("/api/places").then((data) => {
       setPlaces(data.places);
+      setPlaceLocked(Boolean(data.place_locked));
       setPlaceId((id) => {
         if (id !== "" && data.places.some((p) => p.id === id)) return id;
-        const nashik = data.places.find((p) => p.name === "नाशिक");
-        return nashik?.id ?? data.places[0]?.id ?? "";
+        if (
+          data.default_place_id != null &&
+          data.places.some((p) => p.id === data.default_place_id)
+        ) {
+          return data.default_place_id;
+        }
+        return data.places[0]?.id ?? "";
       });
     });
   }, []);
@@ -99,6 +110,7 @@ export default function TopicPage() {
         date={date}
         onPlace={setPlaceId}
         onDate={setDate}
+        locked={placeLocked}
       />
       <div className="grid grid-cols-2 gap-2">
         <button
