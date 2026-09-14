@@ -17,7 +17,7 @@ function filterForRole(profile: LocalProfile, questions: AjapaQuestion[]): Ajapa
     if (profile.role === "guru") {
       return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
     }
-    return questions; // software
+    return questions; // software / संचालक
   }
   return questions.filter((q) => phonesEqual(q.seeker_phone, profile.phone));
 }

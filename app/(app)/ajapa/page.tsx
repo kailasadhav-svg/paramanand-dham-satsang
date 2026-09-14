@@ -16,7 +16,8 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
 const ROLE_LABEL = {
   charansevak: "चरणसेवक",
   guru: "संवादक",
-  software: "सॉफ्टवेअर",
+  software: "संचालक",
+  satsangi: "सत्संगी चरणसेवक",
 } as const;
 
 export default function AjapaPage() {
@@ -63,10 +64,12 @@ export default function AjapaPage() {
 
   const viewHint =
     profile.role === "software"
-      ? "सॉफ्टवेअर — सर्व प्रश्न"
+      ? "संचालक — सर्व प्रश्न"
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
-        : "तुमचे प्रश्न / काम";
+        : profile.role === "charansevak"
+          ? "चरणसेवक — तुमचे प्रश्न / काम"
+          : "सत्संगी — तुमचे प्रश्न / काम";
 
   return (
     <div className="space-y-4">

@@ -13,14 +13,14 @@ export async function GET() {
   return NextResponse.json({ places: await listPlaces() });
 }
 
-/** संवादक / सॉफ्टवेअर: सत्संग स्थळाचे GPS सेट करा */
+/** संवादक / संचालक: सत्संग स्थळाचे GPS सेट करा */
 export async function PUT(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
   const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
   if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
-    return jsonError("फक्त संवादक / सॉफ्टवेअर स्थळ GPS सेट करू शकतात", 403);
+    return jsonError("फक्त संवादक / संचालक स्थळ GPS सेट करू शकतात", 403);
   }
 
   const body = (await request.json().catch(() => ({}))) as {

@@ -54,10 +54,10 @@ export function PhoneGate({ children }: { children: ReactNode }) {
     if (!ready || !profile) return;
     // चरणसेवक: विषय / प्रश्न / अहवाल बंद; उपस्थिती नेमणुकीनुसार खुली
     if (
-      profile.role === "charansevak" &&
+      (profile.role === "charansevak" || profile.role === "satsangi") &&
       ["/topic", "/questions", "/report"].some((p) => pathname.startsWith(p))
     ) {
-      router.replace("/ajapa");
+      router.replace("/attendance");
     }
   }, [ready, profile, pathname, router]);
 
@@ -85,7 +85,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
           <h1 className="font-display text-3xl text-saffron-900">मोबाइल निवडा</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            क्रमांकानुसार स्क्रीन — सॉफ्टवेअर / संवादक / चरणसेवक
+            क्रमांकानुसार स्क्रीन — संचालक / संवादक / चरणसेवक / सत्संगी
           </p>
         </div>
         <form
@@ -115,17 +115,15 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           </label>
           <ul className="space-y-1 text-xs text-temple-muted">
             <li>
-              · <strong>9225118811</strong> — सॉफ्टवेअर (कैलास · सर्व स्क्रीन)
+              · <strong>9225118811</strong> — संचालक (कैलास · सर्व स्क्रीन)
             </li>
             <li>
               · <strong>9850120960</strong> — संवादक (उपस्थिती · अहवाल · संवाद)
             </li>
             <li>
-              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सॉफ्टवेअर नाही)
+              · <strong>9423078811</strong> / <strong>9136443333</strong> — चरणसेवक (नेमणूक)
             </li>
-            <li>
-              · <strong>9136443333</strong> — चरणसेवक मधुसुदनदास (भेद नसेल · फक्त स्वतःचे काम)
-            </li>
+            <li>· इतर मोबाइल — सत्संगी चरणसेवक (स्वतःची उपस्थिती)</li>
           </ul>
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <button

@@ -245,6 +245,36 @@ async function migrate(db: Client) {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
+    `CREATE TABLE IF NOT EXISTS satsangi_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      appointed_by_phone TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_satsangi_phone ON satsangi_members(phone)`,
+    `CREATE TABLE IF NOT EXISTS attendance_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id INTEGER NOT NULL REFERENCES places(id),
+      meeting_date TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      name TEXT,
+      source TEXT NOT NULL DEFAULT 'app',
+      opinion TEXT,
+      checked_in_at TEXT NOT NULL,
+      UNIQUE (place_id, meeting_date, phone)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_attendance_people_date ON attendance_people(meeting_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_attendance_people_place ON attendance_people(place_id, meeting_date)`,
+    `CREATE TABLE IF NOT EXISTS join_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      place_id INTEGER NOT NULL REFERENCES places(id),
+      meeting_date TEXT NOT NULL,
+      created_by_phone TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_join_links_token ON join_links(token)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);
@@ -691,3 +721,243 @@ export async function clearDuty(placeId: number, date: string): Promise<boolean>
   });
   return (result.rowsAffected ?? 0) > 0;
 }
+
+export type SatsangiMember = {
+  id: number;
+  phone: string;
+  name: string;
+  appointed_by_phone: string | null;
+  created_at: string;
+};
+
+function asSatsangi(row: Row): SatsangiMember {
+  return {
+    id: num(row.id),
+    phone: str(row.phone),
+    name: str(row.name),
+    appointed_by_phone: strOrNull(row.appointed_by_phone),
+    created_at: str(row.created_at),
+  };
+}
+
+export async function listSatsangiMembers(): Promise<SatsangiMember[]> {
+  const db = await getDb();
+  const rs = await db.execute(
+    "SELECT * FROM satsangi_members ORDER BY name COLLATE NOCASE, id",
+  );
+  return rs.rows.map(asSatsangi);
+}
+
+export async function getSatsangiByPhone(phone: string): Promise<SatsangiMember | undefined> {
+  const digits = str(phone).replace(/\D/g, "");
+  const normalized = digits.length === 10 ? `91${digits}` : digits;
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM satsangi_members WHERE phone = ?",
+    args: [normalized],
+  });
+  return rs.rows[0] ? asSatsangi(rs.rows[0]) : undefined;
+}
+
+export async function upsertSatsangiMember(input: {
+  phone: string;
+  name: string;
+  appointed_by_phone?: string | null;
+}): Promise<SatsangiMember> {
+  const digits = str(input.phone).replace(/\D/g, "");
+  if (digits.length < 10) throw new Error("invalid phone");
+  const phone = digits.length === 10 ? `91${digits}` : digits;
+  const name = input.name.trim();
+  if (!name) throw new Error("name required");
+  const now = nowIso();
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO satsangi_members (phone, name, appointed_by_phone, created_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(phone) DO UPDATE SET
+        name = excluded.name,
+        appointed_by_phone = COALESCE(excluded.appointed_by_phone, satsangi_members.appointed_by_phone)`,
+    args: [phone, name, input.appointed_by_phone || null, now],
+  });
+  const saved = await getSatsangiByPhone(phone);
+  if (!saved) throw new Error("Failed to save member");
+  return saved;
+}
+
+export type AttendancePerson = {
+  id: number;
+  place_id: number;
+  meeting_date: string;
+  phone: string;
+  name: string | null;
+  source: string;
+  opinion: string | null;
+  checked_in_at: string;
+};
+
+function asAttendancePerson(row: Row): AttendancePerson {
+  return {
+    id: num(row.id),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    phone: str(row.phone),
+    name: strOrNull(row.name),
+    source: str(row.source) || "app",
+    opinion: strOrNull(row.opinion),
+    checked_in_at: str(row.checked_in_at),
+  };
+}
+
+export async function listAttendancePeople(
+  placeId: number,
+  date: string,
+): Promise<AttendancePerson[]> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ?
+      ORDER BY checked_in_at`,
+    args: [placeId, date],
+  });
+  return rs.rows.map(asAttendancePerson);
+}
+
+export async function countAttendancePeople(placeId: number, date: string): Promise<number> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT COUNT(*) AS c FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ?`,
+    args: [placeId, date],
+  });
+  return num(rs.rows[0]?.c);
+}
+
+/** Self check-in: one person, one place, one Thursday. Syncs meetings.men to headcount. */
+export async function checkInPerson(input: {
+  place_id: number;
+  meeting_date: string;
+  phone: string;
+  name?: string | null;
+  source?: "app" | "link";
+  opinion?: string | null;
+}): Promise<{ person: AttendancePerson; total: number; already: boolean }> {
+  const digits = str(input.phone).replace(/\D/g, "");
+  if (digits.length < 10) throw new Error("invalid phone");
+  const phone = digits.length === 10 ? `91${digits}` : digits;
+  const now = nowIso();
+  const db = await getDb();
+
+  const existing = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ? AND phone = ?`,
+    args: [input.place_id, input.meeting_date, phone],
+  });
+  if (existing.rows[0]) {
+    const total = await countAttendancePeople(input.place_id, input.meeting_date);
+    return { person: asAttendancePerson(existing.rows[0]), total, already: true };
+  }
+
+  await db.execute({
+    sql: `INSERT INTO attendance_people (
+        place_id, meeting_date, phone, name, source, opinion, checked_in_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      input.place_id,
+      input.meeting_date,
+      phone,
+      input.name?.trim() || null,
+      input.source || "app",
+      input.opinion?.trim() || null,
+      now,
+    ],
+  });
+
+  const total = await countAttendancePeople(input.place_id, input.meeting_date);
+  // Auto headcount: store total in men (legacy aggregate field used by reports)
+  await upsertMeeting({
+    place_id: input.place_id,
+    meeting_date: input.meeting_date,
+    men: total,
+    women: 0,
+    children: 0,
+    checkin_phone: phone,
+    checkin_at: now,
+    checkin_ok: true,
+  });
+
+  const rows = await db.execute({
+    sql: `SELECT * FROM attendance_people
+      WHERE place_id = ? AND meeting_date = ? AND phone = ?`,
+    args: [input.place_id, input.meeting_date, phone],
+  });
+  return { person: asAttendancePerson(rows.rows[0]!), total, already: false };
+}
+
+export type JoinLink = {
+  id: number;
+  token: string;
+  place_id: number;
+  meeting_date: string;
+  created_by_phone: string | null;
+  created_at: string;
+};
+
+function asJoinLink(row: Row): JoinLink {
+  return {
+    id: num(row.id),
+    token: str(row.token),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    created_by_phone: strOrNull(row.created_by_phone),
+    created_at: str(row.created_at),
+  };
+}
+
+export async function createJoinLink(input: {
+  token: string;
+  place_id: number;
+  meeting_date: string;
+  created_by_phone?: string | null;
+}): Promise<JoinLink> {
+  const db = await getDb();
+  const now = nowIso();
+  await db.execute({
+    sql: `INSERT INTO join_links (token, place_id, meeting_date, created_by_phone, created_at)
+      VALUES (?, ?, ?, ?, ?)`,
+    args: [
+      input.token,
+      input.place_id,
+      input.meeting_date,
+      input.created_by_phone || null,
+      now,
+    ],
+  });
+  const saved = await getJoinLinkByToken(input.token);
+  if (!saved) throw new Error("Failed to create join link");
+  return saved;
+}
+
+export async function getJoinLinkByToken(token: string): Promise<JoinLink | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM join_links WHERE token = ?",
+    args: [token],
+  });
+  return rs.rows[0] ? asJoinLink(rs.rows[0]) : undefined;
+}
+
+/** Previous Thursday duty for soft rotate nudge. */
+export async function getPreviousDutySamePlace(
+  placeId: number,
+  beforeDate: string,
+): Promise<PlaceDuty | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM place_duties
+      WHERE place_id = ? AND meeting_date < ?
+      ORDER BY meeting_date DESC LIMIT 1`,
+    args: [placeId, beforeDate],
+  });
+  return rs.rows[0] ? asPlaceDuty(rs.rows[0]) : undefined;
+}
+
