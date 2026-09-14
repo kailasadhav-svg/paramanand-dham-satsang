@@ -13,6 +13,7 @@ import {
   readLocalForDialogue,
   syncAjapaFromServer,
 } from "@/lib/offline/sync";
+import { VoiceNotePlayer, pickRecorderMime } from "@/components/VoiceNotePlayer";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
   ai_answered: "परमानंद साहित्य",
@@ -302,20 +303,31 @@ export default function AjapaPage() {
     setReplyAudioUrl(null);
     chunksRef.current = [];
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-          ? "audio/mp4"
-          : "audio/webm";
-      const rec = new MediaRecorder(stream, { mimeType: mime });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1,
+        },
+      });
+      const mime = pickRecorderMime();
+      const rec = mime
+        ? new MediaRecorder(stream, { mimeType: mime })
+        : new MediaRecorder(stream);
+      const usedMime = rec.mimeType || mime || "audio/webm";
       mediaRecorderRef.current = rec;
       rec.ondataavailable = (ev) => {
         if (ev.data.size > 0) chunksRef.current.push(ev.data);
       };
       rec.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mime });
+        const blob = new Blob(chunksRef.current, { type: usedMime });
+        if (blob.size < 64) {
+          setError("रेकॉर्ड रिकामे — पुन्हा व्हॉइस रेकॉर्ड करा");
+          setReplyAudioUrl(null);
+          setRecording(false);
+          return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
           setReplyAudioUrl(typeof reader.result === "string" ? reader.result : null);
@@ -754,7 +766,11 @@ export default function AjapaPage() {
                       ) : null}
                     </div>
                     {replyAudioUrl ? (
-                      <audio controls src={replyAudioUrl} className="w-full" />
+                      <VoiceNotePlayer
+                        src={replyAudioUrl}
+                        label="रेकॉर्ड झालेली व्हॉइस (ऐका / पाठवा)"
+                        filenameBase={`ajapa-draft-${q.id}`}
+                      />
                     ) : null}
                     {recording ? (
                       <p className="text-xs font-semibold text-red-700">
@@ -812,13 +828,11 @@ export default function AjapaPage() {
               </div>
             ) : null}
             {q.guru_answer_audio_url ? (
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-emerald-900">व्हॉइस नोट</p>
-                <audio controls src={q.guru_answer_audio_url} className="w-full" />
-                <p className="text-[10px] text-temple-muted">
-                  पुढील गुरुवारानंतर सर्वरवर राहत नाही
-                </p>
-              </div>
+              <VoiceNotePlayer
+                src={q.guru_answer_audio_url}
+                label="व्हॉइस नोट · मधुसुदनदास / संवादक"
+                filenameBase={`ajapa-voice-${q.id}`}
+              />
             ) : q.status === "guru_answered" && !q.guru_answer_text ? (
               <p className="text-xs text-temple-muted">
                 व्हॉइस कालबाह्य / काढली असू शकते — पुढील गुरुवारानंतर सर्वरवर नाही
