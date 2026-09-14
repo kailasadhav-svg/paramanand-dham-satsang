@@ -27,3 +27,6 @@ systemctl reload nginx || true
 curl -sS https://satsang.dhyeyapurti.in/api/health || true
 echo
 echo DONE
+
+# Reminder: set LEGACY_WHATSAPP_WEBHOOK_URL in .env.local to the OLD
+# Team Dhyeyapurti voter-bot webhook so hi / 1–9 keep working.

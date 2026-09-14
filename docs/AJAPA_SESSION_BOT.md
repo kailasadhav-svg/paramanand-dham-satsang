@@ -9,7 +9,7 @@
 
 ## १) बॉट कसा सुरू होतो
 
-फक्त हे keywords (इतर चॅट अस्पर्श):
+फक्त हे keywords (इतर चॅट अस्पर्श — जुना मतदार बॉट चालू राहतो):
 
 | Keyword |
 |---------|
@@ -17,6 +17,9 @@
 | `ajapa` · `Ajapa` · `AJAPA` · `ajpa` |
 | `SOHAM` · `Soham` · `soham` |
 | `सोहं` · `सोऽहं` · `सोहम्` |
+
+`hi` / `1`–`9` / मतदार मेनू → **आम्ही हाताळत नाही** → `LEGACY_WHATSAPP_WEBHOOK_URL` कडे forward.
+तपशील: [`LEGACY_BOT_PRESERVE.md`](./LEGACY_BOT_PRESERVE.md)
 
 **फक्त keyword** → सुंदर मेनू + बटणे (प्रश्न / अ‍ॅप / मदत)
 

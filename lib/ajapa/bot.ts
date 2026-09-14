@@ -252,12 +252,30 @@ async function finishGuruVoice(guruPhone: string, mediaId: string): Promise<BotR
 /**
  * WhatsApp Ajapa / Soham bot.
  * Keywords: अजपा · ajapa · ajpa · SOHAM · सोऽहं …
- * 24h session = free text/buttons (Meta template approve नको).
+ * जुना Team Dhyeyapurti मतदार बॉट अस्पर्श — फक्त keyword/सक्रिय अजपा session.
+ * बाकी (hi, 1–9, …) → handled:false → webhook जुन्या बॉटकडे forward करतो.
  */
 export async function processInboundMessage(msg: InboundWaMessage): Promise<BotResult> {
   const from = normalizePhone(msg.from);
   const text = (msg.text || "").trim();
   const sessionBefore = await getWaSession(from);
+
+  const isOurButton = /^ajapa_/i.test(text);
+  const isAjapaCommand = Boolean(
+    (text && parseQuestionCommand(text)) ||
+      (text && parseAnswerCommand(text)) ||
+      (text && isGateKeywordOnly(text)) ||
+      (text && startsWithGateKeyword(text)),
+  );
+  const inAjapaSession = Boolean(
+    sessionBefore && sessionBefore.state && sessionBefore.state !== "idle",
+  );
+
+  // hi / मतदार मेनू 1–9 / इतर → जुना बॉट (आम्ही स्पर्श करत नाही)
+  if (!isAjapaCommand && !isOurButton && !inAjapaSession) {
+    return { handled: false, replies: [] };
+  }
+
   await touchWaSession(from);
 
   const qCmd = text ? parseQuestionCommand(text) : null;
@@ -272,12 +290,12 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
 
   if (session?.state === "awaiting_question" && text) {
     const choice = normalizeChoice(text);
-    if (choice === "help" || isGateKeywordOnly(text)) {
+    if (choice === "help" || isGateKeywordOnly(text) || text === "ajapa_help") {
       await sendWelcome(from);
       await setWaSessionState(from, "idle", null);
       return { handled: true, replies: ["welcome"] };
     }
-    if (choice === "app") {
+    if (choice === "app" || text === "ajapa_open_app") {
       await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
       return { handled: true, replies: ["app link"] };
     }
@@ -291,13 +309,13 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
 
   if (session?.state === "awaiting_escalate_choice") {
     const choice = normalizeChoice(text);
-    if (choice === "1") return handleEscalate(from);
-    if (choice === "cancel") {
+    if (choice === "1" || text === "ajapa_escalate") return handleEscalate(from);
+    if (choice === "cancel" || text === "ajapa_enough") {
       await setWaSessionState(from, "idle", session.ajapa_question_id);
       await sendText(from, "ठीक आहे. पुन्हा हवे असल्यास `अजपा Q` / `SOHAM Q` विचारा.");
       return { handled: true, replies: ["enough"] };
     }
-    if (choice === "app") {
+    if (choice === "app" || text === "ajapa_open_app") {
       await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
       return { handled: true, replies: ["app link"] };
     }
@@ -324,6 +342,23 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
     return { handled: true, replies: ["welcome"] };
   }
 
+  // आमची बटणे (ajapa_*) — फक्त अजपा welcome नंतर
+  if (isOurButton) {
+    if (text === "ajapa_ask") {
+      await setWaSessionState(from, "awaiting_question", null);
+      await sendText(from, askQuestionPrompt());
+      return { handled: true, replies: ["ask prompt"] };
+    }
+    if (text === "ajapa_open_app") {
+      await sendText(from, `अ‍ॅप: ${appPublicUrl()}`);
+      return { handled: true, replies: ["app link"] };
+    }
+    if (text === "ajapa_help") {
+      await sendWelcome(from);
+      return { handled: true, replies: ["help"] };
+    }
+  }
+
   if (text && startsWithGateKeyword(text)) {
     const rest = text
       .replace(/^(?:अजपा|अजापा|ajapa|ajpa|soham|सोहं|सोऽहं|सोहम्)\s*/i, "")
@@ -340,19 +375,6 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
     }
     await sendWelcome(from);
     return { handled: true, replies: ["help"] };
-  }
-
-  if (text) {
-    const choice = normalizeChoice(text);
-    if (choice === "ask") {
-      await setWaSessionState(from, "awaiting_question", null);
-      await sendText(from, askQuestionPrompt());
-      return { handled: true, replies: ["ask prompt"] };
-    }
-    if (choice === "help") {
-      await sendWelcome(from);
-      return { handled: true, replies: ["welcome"] };
-    }
   }
 
   return { handled: false, replies: [] };
