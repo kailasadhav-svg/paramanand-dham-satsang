@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/a", destination: "/attendance", permanent: false },
+      // Exact /t only — /t/guru|/t/software|/t/charansevak stay as test entry pages.
       { source: "/t", destination: "/topic", permanent: false },
       { source: "/q", destination: "/questions", permanent: false },
       { source: "/j", destination: "/ajapa", permanent: false },

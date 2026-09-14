@@ -51,14 +51,14 @@ export function getInstallGuide(kind: BrowserKind = detectKind()): InstallGuide 
       return {
         kind,
         browserLabel: "Safari (iPhone)",
-        title: "Safari मध्ये हे करा",
+        title: "आता हे करा (Safari)",
         steps: [
-          "खाली Share बटण (□↑) दाबा",
-          "«Add to Home Screen» / होम स्क्रीनवर जोडा निवडा",
+          "खालील Share बटण (□↑) दाबा",
+          "«Add to Home Screen» निवडा",
           "Add / जोडा दाबा",
           "होम स्क्रीनवरील नवीन आयकॉन उघडा",
         ],
-        tip: "आयकॉनमधून उघडल्यावर वरचा लिंक दिसणार नाही.",
+        tip: "आयकॉन उघडल्यावर वरचा लिंक दिसणार नाही. सामान्य लोकांना फक्त अ‍ॅप दिसेल.",
         canNativeInstall: false,
       };
     case "ios-other":
