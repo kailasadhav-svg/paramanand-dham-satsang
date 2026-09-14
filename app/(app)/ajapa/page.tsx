@@ -321,9 +321,9 @@ export default function AjapaPage() {
       setRecordSecs(0);
       recordTimerRef.current = setInterval(() => {
         setRecordSecs((s) => {
-          if (s >= 59) {
+          if (s >= 119) {
             stopRecording();
-            return 60;
+            return 120;
           }
           return s + 1;
         });
@@ -673,7 +673,8 @@ export default function AjapaPage() {
                           onClick={() => stopRecording()}
                           className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
                         >
-                          थांबवा · {recordSecs}से
+                          थांबवा · {Math.floor(recordSecs / 60)}:
+                          {String(recordSecs % 60).padStart(2, "0")}
                         </button>
                       )}
                       {replyAudioUrl ? (
@@ -692,7 +693,7 @@ export default function AjapaPage() {
                     ) : null}
                     {recording ? (
                       <p className="text-xs font-semibold text-red-700">
-                        रेकॉर्डिंग सुरू · कमाल ~१ मिनिट
+                        रेकॉर्डिंग सुरू · कमाल २ मिनिटे
                       </p>
                     ) : null}
                     <button

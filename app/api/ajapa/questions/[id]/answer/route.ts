@@ -11,7 +11,7 @@ export const maxDuration = 60;
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const MAX_AUDIO_CHARS = 1_800_000; // ~1.3MB base64 — keep Turso row reasonable
+const MAX_AUDIO_CHARS = 3_600_000; // ~2.7MB base64 — ~२ मिनिटे voice
 
 /**
  * संवादक in-app उत्तर: text आणि/किंवा voice (data URL).
@@ -52,7 +52,7 @@ export async function POST(request: Request, ctx: Ctx) {
       return jsonError("व्हॉइस फक्त audio data URL असावी", 400);
     }
     if (audioUrl.length > MAX_AUDIO_CHARS) {
-      return jsonError("व्हॉइस खूप मोठी — १ मिनिटापर्यंत रेकॉर्ड करा", 400);
+      return jsonError("व्हॉइस खूप मोठी — जास्तीत जास्त २ मिनिटे रेकॉर्ड करा", 400);
     }
   }
 
