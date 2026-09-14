@@ -75,6 +75,13 @@ export function appDisplayName(role: StaffRole): string {
   return "अजपा संवाद"; // software
 }
 
+/** User-facing role name (गुरु → संवादक). */
+export function roleLabelMarathi(role: StaffRole): string {
+  if (role === "software") return "सॉफ्टवेअर";
+  if (role === "guru") return "संवादक";
+  return "चरणसेवक";
+}
+
 export function defaultHomePath(role: StaffRole): string {
   return canSeeStaffScreens(role) ? "/attendance" : "/ajapa";
 }

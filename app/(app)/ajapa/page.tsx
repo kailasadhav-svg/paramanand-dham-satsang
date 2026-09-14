@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { InstallBanner } from "@/components/InstallBanner";
 import { useProfile } from "@/components/PhoneGate";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { searchLocal } from "@/lib/offline/idb";
@@ -9,14 +8,14 @@ import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
-  ai_answered: "AI उत्तर",
-  escalated: "गुरुंकडे",
-  guru_answered: "गुरु उत्तर",
+  ai_answered: "परमानंद साहित्य",
+  escalated: "संवादकांकडे",
+  guru_answered: "संवादक उत्तर",
 };
 
 const ROLE_LABEL = {
   charansevak: "चरणसेवक",
-  guru: "गुरु",
+  guru: "संवादक",
   software: "सॉफ्टवेअर",
 } as const;
 
@@ -66,12 +65,11 @@ export default function AjapaPage() {
     profile.role === "software"
       ? "सॉफ्टवेअर — सर्व प्रश्न"
       : profile.role === "guru"
-        ? "गुरु — उत्तर द्यावयाचे प्रश्न"
+        ? "संवादक — उत्तर द्यावयाचे प्रश्न"
         : "तुमचे प्रश्न / काम";
 
   return (
     <div className="space-y-4">
-      <InstallBanner />
 
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -105,8 +103,8 @@ export default function AjapaPage() {
         {(
           [
             ["all", "सर्व"],
-            ["ai_answered", "AI"],
-            ["escalated", "गुरुंकडे"],
+            ["ai_answered", "परमानंद साहित्य"],
+            ["escalated", "संवादकांकडे"],
             ["guru_answered", "पूर्ण"],
           ] as const
         ).map(([value, label]) => (
@@ -145,13 +143,15 @@ export default function AjapaPage() {
             ) : null}
             {q.ai_answer ? (
               <details className="text-sm">
-                <summary className="cursor-pointer font-medium text-saffron-800">AI उत्तर</summary>
+                <summary className="cursor-pointer font-medium text-saffron-800">
+                  परमानंद साहित्य
+                </summary>
                 <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">{q.ai_answer}</p>
               </details>
             ) : null}
             {q.guru_answer_text ? (
               <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                <p className="font-semibold text-saffron-900">गुरु उत्तर</p>
+                <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
                 <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
               </div>
             ) : null}

@@ -1,36 +1,103 @@
-/* Paramanand Dham — minimal SW for installability + shell cache */
-const CACHE = "paramanand-shell-v1";
-const PRECACHE = ["/", "/ajapa", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+/* Paramanand Dham — PWA installability without stale Next.js shells */
+const CACHE = "paramanand-shell-v3";
+const PRECACHE = [
+  "/manifest.webmanifest",
+  "/manifests/samvadak.webmanifest",
+  "/manifests/software.webmanifest",
+  "/manifests/charansevak.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/samvadak/icon-192.png",
+  "/icons/samvadak/apple-touch-icon.png",
+  "/icons/software/icon-192.png",
+  "/icons/software/apple-touch-icon.png",
+  "/icons/charansevak/icon-192.png",
+  "/icons/charansevak/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE)
+      .then((cache) =>
+        Promise.all(
+          PRECACHE.map((url) =>
+            cache.add(url).catch(() => undefined),
+          ),
+        ),
+      )
+      .then(() => self.skipWaiting()),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-    ).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+      )
+      .then(() => self.clients.claim()),
   );
 });
+
+function isHashedNextAsset(pathname) {
+  return pathname.startsWith("/_next/static/");
+}
+
+function isStaticAsset(pathname) {
+  if (pathname.startsWith("/icons/") || pathname.startsWith("/manifests/")) return true;
+  if (pathname.endsWith(".webmanifest")) return true;
+  return /\.(png|jpg|jpeg|svg|webp|ico|woff2?)$/i.test(pathname);
+}
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
-  const url = new URL(req.url);
+
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch {
+    return;
+  }
   if (url.origin !== self.location.origin) return;
-  // API: network only (sync when online)
   if (url.pathname.startsWith("/api/")) return;
 
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        const copy = res.clone();
-        void caches.open(CACHE).then((cache) => cache.put(req, copy));
-        return res;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match("/ajapa"))),
-  );
+  // Navigations + RSC/data: always network. Stale HTML pointing at old
+  // /_next/static/*.js hashes causes "client-side exception" white screens.
+  const isDocument =
+    req.mode === "navigate" ||
+    req.destination === "document" ||
+    req.headers.get("rsc") === "1" ||
+    url.pathname.startsWith("/_next/data/");
+
+  if (isDocument || (url.pathname.startsWith("/_next/") && !isHashedNextAsset(url.pathname))) {
+    return;
+  }
+
+  if (isHashedNextAsset(url.pathname) || isStaticAsset(url.pathname)) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        try {
+          const res = await fetch(req);
+          if (res.ok) {
+            cache.put(req, res.clone());
+          }
+          return res;
+        } catch (err) {
+          if (hit) return hit;
+          throw err;
+        }
+      }),
+    );
+  }
 });

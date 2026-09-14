@@ -176,7 +176,7 @@ export async function askEscalate(opts: {
   if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
     await sendButtons(opts.to, body, [
       // WhatsApp interactive title ≤20 chars (full label on Meta template)
-      { id: "ajapa_escalate", title: "गुरुंकडे पाठवा" },
+      { id: "ajapa_escalate", title: "संवादकांकडे पाठवा" },
       { id: "ajapa_enough", title: "पुरे आहे" },
       { id: "ajapa_open_app", title: "अ‍ॅप उघडा" },
     ]);
@@ -225,7 +225,7 @@ export async function notifyGuruNewQuestion(opts: {
 प्रश्न:
 ${opts.question}
 
-AI उत्तर (संक्षेप):
+परमानंद साहित्य (संक्षेप):
 ${truncateParam(opts.aiAnswer, 800)}
 
 उत्तर देण्यासाठी लिहा:

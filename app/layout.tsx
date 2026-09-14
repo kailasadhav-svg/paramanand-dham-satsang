@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: "अजपा संवाद",
     template: "%s · अजपा संवाद",
   },
-  description: "अजपा प्रश्नोत्तर — चरणसेवक व गुरु संवाद · Add to Home Screen",
+  description: "अजपा प्रश्नोत्तर — चरणसेवक व संवादक संवाद · Add to Home Screen",
   applicationName: "अजपा संवाद",
   manifest: "/manifest.webmanifest",
   icons: {
