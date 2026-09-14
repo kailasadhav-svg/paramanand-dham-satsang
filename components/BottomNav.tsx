@@ -13,7 +13,7 @@ type NavItem = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/attendance", label: "उपस्थिती", icon: UsersIcon, staffOnly: true },
+  { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
   { href: "/topic", label: "विषय", icon: BookIcon, staffOnly: true },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon, staffOnly: true },
   { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
@@ -25,10 +25,18 @@ export function BottomNav() {
   const profile = useProfileOptional();
   const staff = profile ? canSeeStaffScreens(profile.role) : false;
   const items = ITEMS.filter((i) => (i.staffOnly ? staff : true));
+  const cols =
+    items.length >= 5
+      ? "grid-cols-5"
+      : items.length === 2
+        ? "grid-cols-2"
+        : items.length === 1
+          ? "grid-cols-1"
+          : "grid-cols-3";
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-saffron-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className={`mx-auto grid max-w-lg ${staff ? "grid-cols-5" : "grid-cols-1"}`}>
+      <ul className={`mx-auto grid max-w-lg ${cols}`}>
         {items.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;

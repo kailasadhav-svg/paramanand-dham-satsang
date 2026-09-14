@@ -203,6 +203,18 @@ async function migrate(db: Client) {
       last_inbound_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS place_duties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id INTEGER NOT NULL REFERENCES places(id),
+      meeting_date TEXT NOT NULL,
+      charansevak_phone TEXT NOT NULL,
+      charansevak_name TEXT,
+      assigned_by_phone TEXT,
+      updated_at TEXT NOT NULL,
+      UNIQUE (place_id, meeting_date)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);
@@ -483,4 +495,101 @@ export async function listQuestions(opts: {
 
 export function attendanceTotal(m: Pick<Meeting, "men" | "women" | "children">): number {
   return (m.men || 0) + (m.women || 0) + (m.children || 0);
+}
+
+export type PlaceDuty = {
+  id: number;
+  place_id: number;
+  meeting_date: string;
+  charansevak_phone: string;
+  charansevak_name: string | null;
+  assigned_by_phone: string | null;
+  updated_at: string;
+};
+
+export type PlaceDutyWithPlace = PlaceDuty & { place_name: string };
+
+function asPlaceDuty(row: Row): PlaceDuty {
+  return {
+    id: num(row.id),
+    place_id: num(row.place_id),
+    meeting_date: str(row.meeting_date),
+    charansevak_phone: str(row.charansevak_phone),
+    charansevak_name: strOrNull(row.charansevak_name),
+    assigned_by_phone: strOrNull(row.assigned_by_phone),
+    updated_at: str(row.updated_at),
+  };
+}
+
+function asPlaceDutyWithPlace(row: Row): PlaceDutyWithPlace {
+  return { ...asPlaceDuty(row), place_name: str(row.place_name) };
+}
+
+export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace[]> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT d.*, p.name AS place_name
+       FROM place_duties d
+       JOIN places p ON p.id = d.place_id
+       WHERE d.meeting_date = ?
+       ORDER BY p.sort_order`,
+    args: [date],
+  });
+  return rs.rows.map(asPlaceDutyWithPlace);
+}
+
+export async function getDuty(
+  placeId: number,
+  date: string,
+): Promise<PlaceDuty | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT * FROM place_duties WHERE place_id = ? AND meeting_date = ?",
+    args: [placeId, date],
+  });
+  return rs.rows[0] ? asPlaceDuty(rs.rows[0]) : undefined;
+}
+
+export async function upsertDuty(input: {
+  place_id: number;
+  meeting_date: string;
+  charansevak_phone: string;
+  charansevak_name?: string | null;
+  assigned_by_phone?: string | null;
+}): Promise<PlaceDuty> {
+  const phone = str(input.charansevak_phone).replace(/\D/g, "");
+  if (phone.length < 10) throw new Error("invalid phone");
+  const now = nowIso();
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO place_duties (
+        place_id, meeting_date, charansevak_phone, charansevak_name,
+        assigned_by_phone, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(place_id, meeting_date) DO UPDATE SET
+        charansevak_phone = excluded.charansevak_phone,
+        charansevak_name = excluded.charansevak_name,
+        assigned_by_phone = excluded.assigned_by_phone,
+        updated_at = excluded.updated_at`,
+    args: [
+      input.place_id,
+      input.meeting_date,
+      phone.length === 10 ? `91${phone}` : phone,
+      input.charansevak_name?.trim() || null,
+      input.assigned_by_phone || null,
+      now,
+    ],
+  });
+  const saved = await getDuty(input.place_id, input.meeting_date);
+  if (!saved) throw new Error("Failed to save duty");
+  return saved;
+}
+
+export async function clearDuty(placeId: number, date: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "DELETE FROM place_duties WHERE place_id = ? AND meeting_date = ?",
+    args: [placeId, date],
+  });
+  return (result.rowsAffected ?? 0) > 0;
 }
