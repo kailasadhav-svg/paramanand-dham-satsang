@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfileChip, useClearProfile, useProfileOptional } from "@/components/PhoneGate";
 import { profileAppName } from "@/lib/offline/profile";
@@ -12,7 +13,11 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
 
   async function logout() {
     clearProfile();
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope: "admin" }),
+    });
     router.replace("/login");
     router.refresh();
   }
@@ -31,11 +36,15 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
         <div className="flex flex-col items-end gap-1">
           <button
             type="button"
-            onClick={logout}
+            onClick={() => void logout()}
             className="rounded-full border border-saffron-200 px-3 py-1.5 text-xs font-semibold text-saffron-800"
           >
             बाहेर पडा
           </button>
+          <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
+            <Link href="/members">सेवक</Link>
+            <Link href="/weekly">आठवडा</Link>
+          </nav>
           {profile ? (
             <button
               type="button"

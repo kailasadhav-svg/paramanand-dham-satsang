@@ -1,7 +1,8 @@
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "satsang_session";
+export const MEMBER_COOKIE = "satsang_member";
 
 export function adminPin(): string {
   return process.env.ADMIN_PIN || "1960";
@@ -25,9 +26,35 @@ export function isSessionToken(token: string | undefined | null): boolean {
   return Boolean(token && token === expectedSessionToken());
 }
 
+export function memberSessionToken(memberId: number): string {
+  const hmac = createHmac("sha256", sessionSecret())
+    .update(`member:${memberId}`)
+    .digest("hex");
+  return `${memberId}.${hmac}`;
+}
+
+export function parseMemberSessionToken(token: string | undefined | null): number | null {
+  if (!token) return null;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return null;
+  const id = Number(token.slice(0, dot));
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const expected = memberSessionToken(id);
+  const a = Buffer.from(token);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return null;
+  if (!timingSafeEqual(a, b)) return null;
+  return id;
+}
+
 export async function getSession(): Promise<boolean> {
   const jar = await cookies();
   return isSessionToken(jar.get(SESSION_COOKIE)?.value);
+}
+
+export async function getMemberId(): Promise<number | null> {
+  const jar = await cookies();
+  return parseMemberSessionToken(jar.get(MEMBER_COOKIE)?.value);
 }
 
 export async function requireSession(): Promise<void> {
