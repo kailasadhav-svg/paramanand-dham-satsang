@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
+import { api } from "@/lib/api";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
-import { searchLocal } from "@/lib/offline/idb";
+import { searchLocal, upsertQuestions } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
@@ -25,11 +26,19 @@ export default function AjapaPage() {
   const [items, setItems] = useState<AjapaQuestion[]>([]);
   const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
   const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+
+  const canAsk =
+    profile.role === "charansevak" ||
+    profile.role === "satsangi" ||
+    profile.role === "software";
 
   const syncAndLoad = useCallback(async () => {
     setSyncing(true);
@@ -68,12 +77,43 @@ export default function AjapaPage() {
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
         : profile.role === "charansevak"
-          ? "चरणसेवक — तुमचे प्रश्न / काम"
-          : "सत्संगी — तुमचे प्रश्न / काम";
+          ? "चरणसेवक — प्रश्न टाका / सिंक"
+          : "सत्संगी — प्रश्न टाका / सिंक";
+
+  async function submitQuestion(e: React.FormEvent) {
+    e.preventDefault();
+    const text = draft.trim();
+    if (text.length < 3) {
+      setError("प्रश्न थोडा मोठा लिहा");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const data = await api<{ question: AjapaQuestion }>("/api/ajapa/questions", {
+        method: "POST",
+        body: JSON.stringify({
+          question: text,
+          seeker_name: profile.name || null,
+        }),
+      });
+      await upsertQuestions([data.question]);
+      setDraft("");
+      setFilter("all");
+      setQuery("");
+      setOkMsg("प्रश्न जतन · परमानंद साहित्य उत्तर खाली दिसेल");
+      setItems(await readLocalForProfile(profile));
+      void syncAndLoad();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "प्रश्न जतन अयशस्वी");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
-
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">अजपा संवाद</h2>
@@ -93,6 +133,36 @@ export default function AjapaPage() {
           {syncing ? "सिंक…" : "सिंक"}
         </button>
       </div>
+
+      {canAsk ? (
+        <form
+          onSubmit={(e) => void submitQuestion(e)}
+          className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200"
+        >
+          <p className="text-sm font-bold text-saffron-900">नवीन प्रश्न टाका</p>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            placeholder="उदा. अजपा म्हणजे काय?"
+            className="w-full rounded-xl border border-saffron-200 bg-saffron-50 px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={submitting || draft.trim().length < 3}
+            className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {submitting ? "उत्तर तयार…" : "प्रश्न पाठवा"}
+          </button>
+          <p className="text-[11px] text-temple-muted">
+            वरचा शोध बॉक्स फक्त यादी शोधतो — प्रश्न येथे टाका
+          </p>
+        </form>
+      ) : (
+        <p className="rounded-xl bg-saffron-50 px-3 py-2 text-xs text-temple-muted">
+          संवादक यादी पाहतात · प्रश्न चरणसेवक / सत्संगी टाकतात
+        </p>
+      )}
 
       <input
         type="search"
@@ -126,6 +196,9 @@ export default function AjapaPage() {
         ))}
       </div>
 
+      {okMsg ? (
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{okMsg}</p>
+      ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       {loading ? <p className="text-sm text-temple-muted">लोड होत आहे…</p> : null}
 
@@ -138,14 +211,14 @@ export default function AjapaPage() {
                 {STATUS_LABEL[q.status]}
               </span>
             </div>
-            {profile.role !== "charansevak" ? (
+            {profile.role === "software" || profile.role === "guru" ? (
               <p className="text-xs text-temple-muted">
                 {q.seeker_name ? `${q.seeker_name} · ` : ""}
                 {displayPhone(q.seeker_phone)}
               </p>
             ) : null}
             {q.ai_answer ? (
-              <details className="text-sm">
+              <details className="text-sm" open>
                 <summary className="cursor-pointer font-medium text-saffron-800">
                   परमानंद साहित्य
                 </summary>
@@ -167,7 +240,11 @@ export default function AjapaPage() {
 
       {!loading && visible.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          {query ? "शोध रिक्त" : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
+          {query
+            ? "शोध रिक्त — फिल्टर «सर्व» करा किंवा शोध मिटवा"
+            : canAsk
+              ? "अजून प्रश्न नाहीत — वर «नवीन प्रश्न टाका» वापरा"
+              : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
         </p>
       ) : null}
     </div>
