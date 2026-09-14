@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
 const ROLE_LABEL = {
   charansevak: "चरणसेवक",
   guru: "संवादक",
-  software: "संचालक",
+  software: "सेवक",
 } as const;
 
 export default function AjapaPage() {
@@ -82,7 +82,7 @@ export default function AjapaPage() {
 
   const viewHint =
     profile.role === "software"
-      ? "संचालक — सर्व प्रश्न"
+      ? "सेवक — सर्व प्रश्न"
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
         : "तुमचे प्रश्न · साहित्य उत्तर · संवादकांकडे पाठवा";

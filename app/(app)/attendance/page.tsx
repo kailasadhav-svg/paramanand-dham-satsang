@@ -367,7 +367,7 @@ export default function AttendancePage() {
             नवीन सत्संगी जोडा
           </h3>
           <p className="break-words text-[11px] text-temple-muted">
-            संचालक / संवादक / चरणसेवक · नाव + मोबाइल · स्थळ{" "}
+            सेवक / संवादक / चरणसेवक · नाव + मोबाइल · स्थळ{" "}
             <strong>{selectedPlace?.name || "—"}</strong>
           </p>
           <input

@@ -162,7 +162,7 @@ export default function QuestionsPage() {
         <h2 className="text-lg font-bold">प्रश्नोत्तर</h2>
         <p className="break-words text-xs text-temple-muted">
           {staff
-            ? "संचालक / संवादक — प्रश्न व उत्तर"
+            ? "सेवक / संवादक — प्रश्न व उत्तर"
             : "सत्संगी — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
         </p>
       </div>
