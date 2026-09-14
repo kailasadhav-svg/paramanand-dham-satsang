@@ -8,7 +8,7 @@ import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
-  ai_answered: "AI उत्तर",
+  ai_answered: "परमानंद साहित्य",
   escalated: "संवादकांकडे",
   guru_answered: "संवादक उत्तर",
 };
@@ -103,7 +103,7 @@ export default function AjapaPage() {
         {(
           [
             ["all", "सर्व"],
-            ["ai_answered", "AI"],
+            ["ai_answered", "परमानंद साहित्य"],
             ["escalated", "संवादकांकडे"],
             ["guru_answered", "पूर्ण"],
           ] as const
@@ -143,7 +143,9 @@ export default function AjapaPage() {
             ) : null}
             {q.ai_answer ? (
               <details className="text-sm">
-                <summary className="cursor-pointer font-medium text-saffron-800">AI उत्तर</summary>
+                <summary className="cursor-pointer font-medium text-saffron-800">
+                  परमानंद साहित्य
+                </summary>
                 <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">{q.ai_answer}</p>
               </details>
             ) : null}
