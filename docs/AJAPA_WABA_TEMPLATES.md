@@ -5,7 +5,9 @@
 **Live Meta/Dove Soft / Turiya submit:** credentials (`WHATSAPP_TOKEN` + `WHATSAPP_WABA_ID`) किंवा portal `+` Create Template; नंबर `7030111501` ≠ WABA_ID.  
 **WABA / नंबर:** `7030111501` (Team Dhyeyapurti · `917030111501`)  
 **सर-बॉट:** या नंबरवर चालू असलेला बॉट **अस्पर्श / धक्का नाही / मोडू नये**.  
-**परमानंद धाम अजपा:** फक्त keyword `अजपा` / `ajapa` (सर यांच्या कमांडला अडथळा नाही).  
+**परमानंद धाम अजपा:** keyword `अजपा` / `ajapa` / `ajpa` / `SOHAM` / `सोऽहं` (सर यांच्या कमांडला अडथळा नाही).  
+**Session-first:** यूजरने keyword पाठवल्यावर २४ तास — template नको. फक्त बाह्य notify साठी खालील टेम्प्लेट.  
+**तपशील:** [`AJAPA_SESSION_BOT.md`](./AJAPA_SESSION_BOT.md)  
 **Language:** `mr`  
 **Footer (सर्व बॉट / टेम्प्लेट / सूचना):**  
 `|| हरि ॐ परमानंद विश्वव्यापकम् ||`

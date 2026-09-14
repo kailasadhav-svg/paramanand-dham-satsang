@@ -1,24 +1,48 @@
 /**
- * Smoke test for Ajapa state machine (WhatsApp dry-run).
+ * Smoke test — Ajapa/Soham WhatsApp bot (dry-run).
  * Run: WHATSAPP_DRY_RUN=1 npx tsx scripts/ajapa-smoke.ts
  */
-import { countWords, generateAjapaAiAnswer } from "../lib/ajapa/ai";
+import {
+  AJAPA_AI_MAX_CHARS_TEXT,
+  AJAPA_AI_MAX_WORDS,
+  AJAPA_AI_MIN_WORDS,
+  generateAjapaAiAnswer,
+} from "../lib/ajapa/ai";
 import { processInboundMessage } from "../lib/ajapa/bot";
-import { listAjapaQuestions } from "../lib/ajapa/store";
+import { isGateKeywordOnly, parseQuestionCommand } from "../lib/ajapa/keywords";
 import { normalizePhone } from "../lib/ajapa/phone";
+import { listAjapaQuestions } from "../lib/ajapa/store";
 
 process.env.WHATSAPP_DRY_RUN = "1";
 process.env.GURU_PHONE = "9850120960";
 
 async function main() {
+  if (!isGateKeywordOnly("SOHAM") || !isGateKeywordOnly("ajpa") || !isGateKeywordOnly("अजपा")) {
+    throw new Error("keyword gate failed");
+  }
+  if (!parseQuestionCommand("SOHAM Q अजपा जप कसा करावा?")) {
+    throw new Error("SOHAM Q parse failed");
+  }
+  console.log("keywords ok");
+
   const seeker = normalizePhone("9876543210");
   const guru = normalizePhone("9850120960");
 
+  const welcome = await processInboundMessage({ from: seeker, text: "SOHAM" });
+  if (!welcome.handled) throw new Error("SOHAM welcome failed");
+  console.log("welcome ok");
+
   const ai = await generateAjapaAiAnswer("अजपा जप कसा करावा?");
-  if (ai.wordCount < 200) {
-    throw new Error(`AI answer too short: ${ai.wordCount} words`);
+  if (ai.wordCount < AJAPA_AI_MIN_WORDS) {
+    throw new Error(`AI too short: ${ai.wordCount}`);
   }
-  console.log("AI words:", ai.wordCount, "source:", ai.source);
+  if (ai.wordCount > AJAPA_AI_MAX_WORDS) {
+    throw new Error(`AI too long: ${ai.wordCount}`);
+  }
+  if (ai.answer.length > AJAPA_AI_MAX_CHARS_TEXT) {
+    throw new Error(`AI chars ${ai.answer.length} > ${AJAPA_AI_MAX_CHARS_TEXT}`);
+  }
+  console.log("AI words:", ai.wordCount, "chars:", ai.answer.length, "source:", ai.source);
 
   const q1 = await processInboundMessage({
     from: seeker,
@@ -34,7 +58,7 @@ async function main() {
 
   const a = await processInboundMessage({
     from: guru,
-    text: `अजपा A ${seeker}`,
+    text: `SOHAM A ${seeker}`,
   });
   if (!a.handled) throw new Error("A failed");
   console.log("A ok");

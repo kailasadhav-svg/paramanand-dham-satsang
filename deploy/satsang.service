@@ -1,0 +1,20 @@
+[Unit]
+Description=Paramanand Dham Satsang (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/satsang
+Environment=NODE_ENV=production
+Environment=PORT=43123
+EnvironmentFile=-/var/www/satsang/.env.local
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+# Keep SQLite writable
+ReadWritePaths=/var/www/satsang/data
+
+[Install]
+WantedBy=multi-user.target

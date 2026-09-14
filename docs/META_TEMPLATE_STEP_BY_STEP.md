@@ -5,7 +5,8 @@
 **Language:** Marathi (`mr`)  
 **Category:** Utility (सर्व १०)  
 **Footer:** `|| हरि ॐ परमानंद विश्वव्यापकम् ||`  
-**मजकूर मसुदा:** [`AJAPA_WABA_TEMPLATES.md`](./AJAPA_WABA_TEMPLATES.md)
+**मजकूर मसुदा:** [`AJAPA_WABA_TEMPLATES.md`](./AJAPA_WABA_TEMPLATES.md)  
+**AI उत्तर मर्यादा (Meta):** [`META_AI_ANSWER_LIMITS.md`](./META_AI_ANSWER_LIMITS.md) — २००–४५० शब्द, text ≤४०००, template var ≤१०२४
 
 > ⚠️ सर यांचा चालू बॉट **अस्पर्श**. फक्त खालील **नवीन** टेम्प्लेट तयार करा. जुने डिलीट/एडिट करू नका.
 
