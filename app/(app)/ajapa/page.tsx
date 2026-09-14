@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
+import { api } from "@/lib/api";
+import {
+  literatureLooksMismatched,
+  literatureLooksTechy,
+} from "@/lib/ajapa/mismatch";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
 import { searchLocal } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
@@ -29,6 +34,8 @@ export default function AjapaPage() {
   const [syncing, setSyncing] = useState(false);
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [regenId, setRegenId] = useState<number | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
 
   const syncAndLoad = useCallback(async () => {
     setSyncing(true);
@@ -55,6 +62,43 @@ export default function AjapaPage() {
     void syncAndLoad();
   }, [syncAndLoad]);
 
+  const regenerateLiterature = useCallback(
+    async (q: AjapaQuestion) => {
+      setRegenId(q.id);
+      setError(null);
+      setOkMsg(null);
+      try {
+        const data = await api<{ question: AjapaQuestion }>(
+          `/api/ajapa/questions/${q.id}/regenerate`,
+          { method: "POST", body: "{}" },
+        );
+        setItems((prev) =>
+          prev.map((row) => (row.id === q.id ? data.question : row)),
+        );
+        setOkMsg("परमानंद साहित्य उत्तर प्रश्नानुसार पुन्हा तयार झाले");
+        await syncAndLoad();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "पुन्हा तयार अयशस्वी");
+      } finally {
+        setRegenId(null);
+      }
+    },
+    [syncAndLoad],
+  );
+
+  // Auto-fix old tech / wrong literature answers already in local list
+  useEffect(() => {
+    if (loading || offline || syncing) return;
+    const stale = items.find(
+      (q) =>
+        q.status === "ai_answered" &&
+        (literatureLooksMismatched(q.question, q.ai_answer) ||
+          literatureLooksTechy(q.ai_answer)),
+    );
+    if (!stale || regenId != null) return;
+    void regenerateLiterature(stale);
+  }, [items, loading, offline, syncing, regenId, regenerateLiterature]);
+
   const visible = useMemo(() => {
     let list = items;
     if (filter !== "all") list = list.filter((q) => q.status === filter);
@@ -70,7 +114,6 @@ export default function AjapaPage() {
 
   return (
     <div className="space-y-4">
-
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">अजपा संवाद</h2>
@@ -79,7 +122,12 @@ export default function AjapaPage() {
             {offline ? " · ऑफलाइन" : ""}
           </p>
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
-          {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
+          {syncNote ? (
+            <p className="text-[11px] text-temple-muted">{syncNote}</p>
+          ) : null}
+          {okMsg ? (
+            <p className="text-[11px] text-saffron-800">{okMsg}</p>
+          ) : null}
         </div>
         <button
           type="button"
@@ -127,39 +175,59 @@ export default function AjapaPage() {
       {loading ? <p className="text-sm text-temple-muted">लोड होत आहे…</p> : null}
 
       <ul className="space-y-3">
-        {visible.map((q) => (
-          <li key={q.id} className="card space-y-2 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold">{q.question}</p>
-              <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
-                {STATUS_LABEL[q.status]}
-              </span>
-            </div>
-            {profile.role !== "charansevak" ? (
-              <p className="text-xs text-temple-muted">
-                {q.seeker_name ? `${q.seeker_name} · ` : ""}
-                {displayPhone(q.seeker_phone)}
-              </p>
-            ) : null}
-            {q.ai_answer ? (
-              <details className="text-sm">
-                <summary className="cursor-pointer font-medium text-saffron-800">
-                  परमानंद साहित्य
-                </summary>
-                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">{q.ai_answer}</p>
-              </details>
-            ) : null}
-            {q.guru_answer_text ? (
-              <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
-                <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+        {visible.map((q) => {
+          const needsRefresh =
+            q.status === "ai_answered" &&
+            (literatureLooksMismatched(q.question, q.ai_answer) ||
+              literatureLooksTechy(q.ai_answer));
+          return (
+            <li key={q.id} className="card space-y-2 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">{q.question}</p>
+                <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
+                  {STATUS_LABEL[q.status]}
+                </span>
               </div>
-            ) : null}
-            {q.guru_answer_audio_url ? (
-              <audio controls src={q.guru_answer_audio_url} className="w-full" />
-            ) : null}
-          </li>
-        ))}
+              {profile.role !== "charansevak" ? (
+                <p className="text-xs text-temple-muted">
+                  {q.seeker_name ? `${q.seeker_name} · ` : ""}
+                  {displayPhone(q.seeker_phone)}
+                </p>
+              ) : null}
+              {q.ai_answer ? (
+                <details className="text-sm" open={needsRefresh || undefined}>
+                  <summary className="cursor-pointer font-medium text-saffron-800">
+                    परमानंद साहित्य
+                  </summary>
+                  <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
+                    {q.ai_answer}
+                  </p>
+                </details>
+              ) : null}
+              {needsRefresh ? (
+                <button
+                  type="button"
+                  disabled={regenId === q.id || offline}
+                  onClick={() => void regenerateLiterature(q)}
+                  className="w-full rounded-xl bg-saffron-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {regenId === q.id
+                    ? "साहित्य पुन्हा तयार…"
+                    : "चुकीचे / जुने उत्तर — साहित्य पुन्हा तयार करा"}
+                </button>
+              ) : null}
+              {q.guru_answer_text ? (
+                <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
+                  <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
+                  <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+                </div>
+              ) : null}
+              {q.guru_answer_audio_url ? (
+                <audio controls src={q.guru_answer_audio_url} className="w-full" />
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
 
       {!loading && visible.length === 0 ? (

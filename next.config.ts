@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   // Ensure literature markdown is available on Vercel serverless
   outputFileTracingIncludes: {
     "/api/ajapa/questions": ["./data/literature/**/*"],
+    "/api/ajapa/questions/[id]/regenerate": ["./data/literature/**/*"],
     "/api/whatsapp/webhook": ["./data/literature/**/*"],
   },
   async redirects() {
