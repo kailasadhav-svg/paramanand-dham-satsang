@@ -32,7 +32,9 @@ export async function syncAjapaFromServer(profile: LocalProfile): Promise<SyncRe
   const base = new URLSearchParams();
   base.set("limit", "200");
   if (since) base.set("since", since);
-  if (profile.role === "charansevak") base.set("seeker_phone", profile.phone);
+  if (profile.role === "charansevak" || profile.role === "satsangi") {
+    base.set("seeker_phone", profile.phone);
+  }
 
   try {
     let questions: AjapaQuestion[] = [];

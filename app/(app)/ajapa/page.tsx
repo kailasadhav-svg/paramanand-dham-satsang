@@ -35,6 +35,11 @@ export default function AjapaPage() {
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
 
+  const [otpForId, setOtpForId] = useState<number | null>(null);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
+
   const canAsk =
     profile.role === "charansevak" ||
     profile.role === "satsangi" ||
@@ -102,13 +107,64 @@ export default function AjapaPage() {
       setDraft("");
       setFilter("all");
       setQuery("");
-      setOkMsg("प्रश्न जतन · परमानंद साहित्य उत्तर खाली दिसेल");
+      setOkMsg(
+        data.question.ai_answer
+          ? "प्रश्न + परमानंद साहित्य उत्तर खाली आहे"
+          : "प्रश्न जतन · उत्तर लोड करा (सिंक)",
+      );
       setItems(await readLocalForProfile(profile));
       void syncAndLoad();
     } catch (err) {
       setError(err instanceof Error ? err.message : "प्रश्न जतन अयशस्वी");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function requestOtp(q: AjapaQuestion) {
+    setOtpBusy(true);
+    setError(null);
+    setOtpHint(null);
+    setOkMsg(null);
+    try {
+      const data = await api<{
+        message: string;
+        debug_otp?: string;
+      }>(`/api/ajapa/questions/${q.id}/request-otp`, { method: "POST" });
+      setOtpForId(q.id);
+      setOtpValue(data.debug_otp || "");
+      setOtpHint(data.message);
+      setOkMsg(data.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OTP अयशस्वी");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
+
+  async function verifyOtp(q: AjapaQuestion) {
+    setOtpBusy(true);
+    setError(null);
+    try {
+      const data = await api<{ question: AjapaQuestion; message: string }>(
+        `/api/ajapa/questions/${q.id}/verify-otp`,
+        {
+          method: "POST",
+          body: JSON.stringify({ otp: otpValue }),
+        },
+      );
+      await upsertQuestions([data.question]);
+      setItems(await readLocalForProfile(profile));
+      setOtpForId(null);
+      setOtpValue("");
+      setOtpHint(null);
+      setFilter("escalated");
+      setOkMsg(data.message);
+      void syncAndLoad();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OTP चुकीचा");
+    } finally {
+      setOtpBusy(false);
     }
   }
 
@@ -152,10 +208,10 @@ export default function AjapaPage() {
             disabled={submitting || draft.trim().length < 3}
             className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {submitting ? "उत्तर तयार…" : "प्रश्न पाठवा"}
+            {submitting ? "परमानंद साहित्य उत्तर तयार…" : "प्रश्न पाठवा"}
           </button>
           <p className="text-[11px] text-temple-muted">
-            वरचा शोध बॉक्स फक्त यादी शोधतो — प्रश्न येथे टाका
+            वरचा शोध बॉक्स फक्त यादी शोधतो — प्रश्न येथे टाका. उत्तर खाली «परमानंद साहित्य उत्तर» मध्ये दिसेल.
           </p>
         </form>
       ) : (
@@ -204,7 +260,7 @@ export default function AjapaPage() {
 
       <ul className="space-y-3">
         {visible.map((q) => (
-          <li key={q.id} className="card space-y-2 p-3">
+          <li key={q.id} className="card space-y-3 p-3">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold">{q.question}</p>
               <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
@@ -217,18 +273,76 @@ export default function AjapaPage() {
                 {displayPhone(q.seeker_phone)}
               </p>
             ) : null}
+
             {q.ai_answer ? (
-              <details className="text-sm" open>
-                <summary className="cursor-pointer font-medium text-saffron-800">
-                  परमानंद साहित्य
-                </summary>
-                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">{q.ai_answer}</p>
-              </details>
+              <div className="rounded-xl bg-saffron-50/80 p-3 text-sm ring-1 ring-saffron-100">
+                <p className="mb-1 font-bold text-saffron-900">परमानंद साहित्य उत्तर</p>
+                <p className="max-h-64 overflow-y-auto whitespace-pre-wrap text-temple-ink/90">
+                  {q.ai_answer}
+                </p>
+              </div>
+            ) : (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                साहित्य उत्तर अजून नाही — पुन्हा प्रश्न पाठवा किंवा सिंक करा
+              </p>
+            )}
+
+            {q.status === "ai_answered" && canAsk ? (
+              <div className="space-y-2 border-t border-saffron-100 pt-2">
+                {otpForId === q.id ? (
+                  <>
+                    <p className="text-xs text-temple-muted">
+                      {otpHint || "WhatsApp वर आलेला OTP टाका"}
+                    </p>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="६ अंकी OTP"
+                      className="w-full rounded-xl border border-saffron-200 px-3 py-2 text-center text-lg font-bold tracking-widest"
+                    />
+                    <button
+                      type="button"
+                      disabled={otpBusy || otpValue.length !== 6}
+                      onClick={() => void verifyOtp(q)}
+                      className="w-full rounded-full bg-saffron-700 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    >
+                      {otpBusy ? "तपास…" : "OTP खात्री · संवादकांकडे पाठवा"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={otpBusy}
+                      onClick={() => void requestOtp(q)}
+                      className="w-full text-xs font-semibold text-saffron-800 underline"
+                    >
+                      OTP पुन्हा पाठवा
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={otpBusy}
+                    onClick={() => void requestOtp(q)}
+                    className="w-full rounded-full bg-white py-2.5 text-sm font-semibold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
+                  >
+                    मधुसुदनदास उत्तर हवे · WhatsApp OTP
+                  </button>
+                )}
+              </div>
             ) : null}
+
+            {q.status === "escalated" ? (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950">
+                संवादकांकडे पाठवले · मधुसुदनदास उत्तर येईल तेव्हा «पूर्ण» मध्ये दिसेल
+              </p>
+            ) : null}
+
             {q.guru_answer_text ? (
-              <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
-                <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
+              <div className="rounded-xl bg-emerald-50 p-3 text-sm ring-1 ring-emerald-100">
+                <p className="font-bold text-emerald-900">मधुसुदनदास / संवादक उत्तर</p>
+                <p className="mt-1 whitespace-pre-wrap">{q.guru_answer_text}</p>
               </div>
             ) : null}
             {q.guru_answer_audio_url ? (
@@ -241,10 +355,10 @@ export default function AjapaPage() {
       {!loading && visible.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
           {query
-            ? "शोध रिक्त — फिल्टर «सर्व» करा किंवा शोध मिटवा"
+            ? "शोध रिक्त — फिल्टर «सर्व» करा"
             : canAsk
-              ? "अजून प्रश्न नाहीत — वर «नवीन प्रश्न टाका» वापरा"
-              : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
+              ? "अजून प्रश्न नाहीत — वर प्रश्न टाका"
+              : "प्रश्न नाहीत — सिंक करा"}
         </p>
       ) : null}
     </div>
