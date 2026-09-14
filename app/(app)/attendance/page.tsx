@@ -5,7 +5,11 @@ import { NumberStepper, PlaceDateBar, SaveBar, type Place } from "@/components/F
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { DEFAULT_MEETING_TIME, defaultThursdayYmd } from "@/lib/dates";
-import { ATTENDANCE_GEO_MAX_METERS, OFF_SITE_WARNING } from "@/lib/geo";
+import {
+  ATTENDANCE_GEO_MAX_METERS,
+  OFF_SITE_WARNING,
+  ON_SITE_BLESSING,
+} from "@/lib/geo";
 import { canSeeStaffScreens } from "@/lib/roles";
 
 type Meeting = {
@@ -420,7 +424,11 @@ export default function AttendancePage() {
         saved={saved}
         error={error}
         label={saved ? "दुरुस्ती पुन्हा जतन करा" : "जतन / दुरुस्ती करा"}
-        savedLabel="जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
+        savedLabel={
+          staff
+            ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
+            : ON_SITE_BLESSING
+        }
         onSave={() => void saveAttendance()}
       />
     </div>
