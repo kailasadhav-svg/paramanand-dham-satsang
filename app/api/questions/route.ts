@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
+import { normalizePhone } from "@/lib/ajapa/phone";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
 
@@ -44,5 +46,23 @@ export async function POST(request: Request) {
     meeting_id: body.meeting_id ?? null,
     asked_on: askedOn,
   });
-  return NextResponse.json({ question }, { status: 201 });
+
+  // Also land in अजपा संवाद (परमानंद साहित्य) so सिंक shows it.
+  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  let ajapa_id: number | null = null;
+  if (actor) {
+    try {
+      const ajapa = await mirrorWeeklyQuestionToAjapa({
+        question: question.question,
+        place_id: question.place_id,
+        asked_on: askedOn,
+        seeker_phone: actor,
+      });
+      ajapa_id = ajapa?.id ?? null;
+    } catch (err) {
+      console.error("mirror weekly → ajapa failed", err);
+    }
+  }
+
+  return NextResponse.json({ question, ajapa_id }, { status: 201 });
 }

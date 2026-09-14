@@ -87,7 +87,9 @@ export default function QuestionsPage() {
         }),
       });
       setDraft("");
-      setOkMsg("प्रश्न जतन झाला — उत्तर आल्यावर येथे दिसेल");
+      setOkMsg(
+        "प्रश्न जतन झाला — संवाद मध्येही दिसेल (सिंक दाबा). उत्तर आल्यावर येथेही दिसेल.",
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "जतन अयशस्वी");
