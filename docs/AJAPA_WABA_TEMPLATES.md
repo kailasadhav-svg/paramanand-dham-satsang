@@ -1,6 +1,7 @@
 # Meta टेम्प्लेट मसुदा — LOCKED (submit नंतर)
 
-**Status:** DRAFT LOCKED — Dove Soft / Meta वर **submit नाही** जोपर्यंत स्पष्ट `submit हो`.  
+**Status:** DRAFT LOCKED — payloads ready (`npm run submit:templates`).  
+**Live Meta/Dove Soft submit:** credentials (`WHATSAPP_TOKEN` + `WHATSAPP_WABA_ID`) हवेत; नंबर `7030111501` ≠ WABA_ID.  
 **WABA / नंबर:** `7030111501`  
 **सर-बॉट:** या नंबरवर चालू असलेला बॉट **अस्पर्श / धक्का नाही / मोडू नये**.  
 **परमानंद धाम अजपा:** फक्त keyword `अजपा` / `ajapa` (सर यांच्या कमांडला अडथळा नाही).  
