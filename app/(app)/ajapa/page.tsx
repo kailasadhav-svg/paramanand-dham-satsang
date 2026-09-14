@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
 import type { AjapaQuestion } from "@/lib/ajapa/types";
+import { api } from "@/lib/api";
 import { searchLocal } from "@/lib/offline/idb";
 import { displayPhone } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
@@ -16,7 +17,7 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
 const ROLE_LABEL = {
   charansevak: "चरणसेवक",
   guru: "संवादक",
-  software: "सॉफ्टवेअर",
+  software: "संचालक",
 } as const;
 
 export default function AjapaPage() {
@@ -29,6 +30,7 @@ export default function AjapaPage() {
   const [syncing, setSyncing] = useState(false);
   const [offline, setOffline] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const syncAndLoad = useCallback(async () => {
     setSyncing(true);
@@ -38,10 +40,14 @@ export default function AjapaPage() {
       const result = await syncAjapaFromServer(profile);
       setItems(await readLocalForProfile(profile));
       setOffline(result.offline);
+      const extra =
+        result.mirrored && result.mirrored > 0
+          ? ` · नवीन उत्तर ${result.mirrored}`
+          : "";
       setSyncNote(
         result.offline
           ? "ऑफलाइन · लोकल यादी"
-          : `सिंक · +${result.pulled} · एकूण ${result.localCount}`,
+          : `सिंक · +${result.pulled} · एकूण ${result.localCount}${extra}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "लोड अयशस्वी");
@@ -61,16 +67,28 @@ export default function AjapaPage() {
     return searchLocal(list, query);
   }, [items, filter, query]);
 
+  async function sendToGuru(id: number) {
+    setBusyId(id);
+    setError(null);
+    try {
+      await api(`/api/ajapa/questions/${id}/escalate`, { method: "POST" });
+      await syncAndLoad();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "पाठवता आले नाही");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const viewHint =
     profile.role === "software"
-      ? "सॉफ्टवेअर — सर्व प्रश्न"
+      ? "संचालक — सर्व प्रश्न"
       : profile.role === "guru"
         ? "संवादक — उत्तर द्यावयाचे प्रश्न"
-        : "तुमचे प्रश्न / काम";
+        : "तुमचे प्रश्न · साहित्य उत्तर · संवादकांकडे पाठवा";
 
   return (
     <div className="space-y-4">
-
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold">अजपा संवाद</h2>
@@ -79,7 +97,9 @@ export default function AjapaPage() {
             {offline ? " · ऑफलाइन" : ""}
           </p>
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
-          {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
+          {syncNote ? (
+            <p className="text-[11px] text-temple-muted">{syncNote}</p>
+          ) : null}
         </div>
         <button
           type="button"
@@ -141,12 +161,31 @@ export default function AjapaPage() {
                 {displayPhone(q.seeker_phone)}
               </p>
             ) : null}
+            {q.status === "ai_answered" ? (
+              <button
+                type="button"
+                disabled={busyId === q.id}
+                onClick={() => void sendToGuru(q.id)}
+                className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busyId === q.id
+                  ? "पाठवत आहे…"
+                  : "मधुसुदनदास विजयानंद यांच्याकडे पाठवा"}
+              </button>
+            ) : null}
+            {q.status === "escalated" ? (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+                संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
+              </p>
+            ) : null}
             {q.ai_answer ? (
-              <details className="text-sm">
+              <details open={q.status === "ai_answered"} className="text-sm">
                 <summary className="cursor-pointer font-medium text-saffron-800">
-                  परमानंद साहित्य
+                  परमानंद साहित्य उत्तर
                 </summary>
-                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">{q.ai_answer}</p>
+                <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
+                  {q.ai_answer}
+                </p>
               </details>
             ) : null}
             {q.guru_answer_text ? (
@@ -164,7 +203,9 @@ export default function AjapaPage() {
 
       {!loading && visible.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          {query ? "शोध रिक्त" : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा"}
+          {query
+            ? "शोध रिक्त"
+            : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा (किंवा प्रश्न टॅबवर नवीन प्रश्न विचारा)"}
         </p>
       ) : null}
     </div>

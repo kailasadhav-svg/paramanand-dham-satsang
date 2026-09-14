@@ -158,7 +158,27 @@ export async function getAjapaQuestion(id: number): Promise<AjapaQuestion | unde
   return rs.rows[0] ? asAjapa(rs.rows[0]) : undefined;
 }
 
-/** Dedup helper — same प्रश्न text already in संवाद? */
+/** Dedup helper — same प्रश्न text already in संवाद for this seeker? */
+export async function findAjapaBySeekerAndQuestion(
+  seekerPhone: string,
+  question: string,
+): Promise<AjapaQuestion | undefined> {
+  const text = question.trim();
+  const phone = String(seekerPhone || "").trim();
+  if (!text || !phone) return undefined;
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT * FROM ajapa_questions
+      WHERE seeker_phone = ?
+        AND lower(trim(question)) = lower(trim(?))
+      ORDER BY id DESC
+      LIMIT 1`,
+    args: [phone, text],
+  });
+  return rs.rows[0] ? asAjapa(rs.rows[0]) : undefined;
+}
+
+/** @deprecated prefer findAjapaBySeekerAndQuestion — global text match steals others' rows */
 export async function findAjapaByQuestionText(
   question: string,
 ): Promise<AjapaQuestion | undefined> {
@@ -183,6 +203,22 @@ export async function escalateAjapaQuestion(id: number): Promise<AjapaQuestion |
       SET status = 'escalated', escalated_at = ?, updated_at = ?
       WHERE id = ? AND status = 'ai_answered'`,
     args: [now, now, id],
+  });
+  return getAjapaQuestion(id);
+}
+
+/** चुकीचे/जुने साहित्य उत्तर पुन्हा तयार — फक्त ai_answered. */
+export async function updateAjapaAiAnswer(
+  id: number,
+  ai_answer: string,
+): Promise<AjapaQuestion | undefined> {
+  const now = nowIso();
+  const db = await getDb();
+  await db.execute({
+    sql: `UPDATE ajapa_questions
+      SET ai_answer = ?, updated_at = ?
+      WHERE id = ? AND status = 'ai_answered'`,
+    args: [ai_answer, now, id],
   });
   return getAjapaQuestion(id);
 }

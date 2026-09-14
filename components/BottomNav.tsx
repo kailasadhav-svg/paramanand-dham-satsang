@@ -15,7 +15,7 @@ type NavItem = {
 const ITEMS: NavItem[] = [
   { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
   { href: "/topic", label: "विषय", icon: BookIcon, staffOnly: true },
-  { href: "/questions", label: "प्रश्न", icon: QuestionIcon, staffOnly: true },
+  { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
   { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
   { href: "/report", label: "अहवाल", icon: ReportIcon, staffOnly: true },
 ];
@@ -36,20 +36,24 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-saffron-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className={`mx-auto grid max-w-lg ${cols}`}>
+      <ul
+        className={`mx-auto grid w-full max-w-lg md:max-w-3xl ${cols} px-1`}
+      >
         {items.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
           return (
-            <li key={item.href}>
+            <li key={item.href} className="min-w-0">
               <Link
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 py-2.5 text-[13px] font-semibold ${
+                className={`flex flex-col items-center gap-0.5 px-0.5 py-2 text-center font-semibold leading-tight ${
                   active ? "text-saffron-700" : "text-temple-muted"
                 }`}
               >
                 <Icon active={active} />
-                {item.label}
+                <span className="w-full break-keep text-[10px] sm:text-[12px]">
+                  {item.label}
+                </span>
               </Link>
             </li>
           );
