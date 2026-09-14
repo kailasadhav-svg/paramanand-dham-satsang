@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
 import { api } from "@/lib/api";
@@ -72,6 +73,14 @@ export default function TopicPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold">विषय व संचालक</h2>
+      <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950 ring-1 ring-amber-100">
+        हा <strong>सत्संग विषय</strong> अहवाल / उपस्थितीसाठी जतन होतो.
+        अजपा प्रश्न–उत्तर इथे दिसत नाही — ते खालील मेनूमधील{" "}
+        <Link href="/ajapa" className="font-bold underline">
+          अजपा
+        </Link>{" "}
+        मध्ये «नवीन प्रश्न टाका» वापरा.
+      </p>
       <PlaceDateBar
         places={places}
         placeId={placeId}
@@ -131,6 +140,15 @@ export default function TopicPage() {
         />
       </label>
       <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
+      {saved ? (
+        <p className="text-center text-xs text-emerald-800">
+          विषय जतन · अहवाल मेनूमध्ये दिसेल · अजपा प्रश्नासाठी{" "}
+          <Link href="/ajapa" className="font-semibold underline">
+            अजपा
+          </Link>{" "}
+          उघडा
+        </p>
+      ) : null}
     </div>
   );
 }

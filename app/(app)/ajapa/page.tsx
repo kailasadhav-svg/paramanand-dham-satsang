@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
@@ -179,6 +180,10 @@ export default function AjapaPage() {
           </p>
           <p className="text-[11px] text-temple-muted">{viewHint}</p>
           {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
+          <p className="mt-1 text-[11px] leading-snug text-temple-muted">
+            «विषय» मेनू = सत्संग शीर्षक (अहवाल). इथे फक्त अजपा{" "}
+            <strong>प्रश्न–उत्तर</strong> दिसतात.
+          </p>
         </div>
         <button
           type="button"
@@ -353,13 +358,25 @@ export default function AjapaPage() {
       </ul>
 
       {!loading && visible.length === 0 ? (
-        <p className="text-center text-sm text-temple-muted">
-          {query
-            ? "शोध रिक्त — फिल्टर «सर्व» करा"
-            : canAsk
-              ? "अजून प्रश्न नाहीत — वर प्रश्न टाका"
-              : "प्रश्न नाहीत — सिंक करा"}
-        </p>
+        <div className="space-y-2 rounded-2xl bg-saffron-50 px-3 py-4 text-center text-sm text-temple-muted ring-1 ring-saffron-100">
+          {query ? (
+            <p>शोध रिक्त — फिल्टर «सर्व» करा</p>
+          ) : canAsk ? (
+            <>
+              <p className="font-semibold text-temple-ink">अजून अजपा प्रश्न नाहीत</p>
+              <p>
+                वर «नवीन प्रश्न टाका» मध्ये लिहून <strong>प्रश्न पाठवा</strong>.
+                सत्संगचा विषय («मी कोण आहे» इ.) इथे येत नाही — तो{" "}
+                <Link href="/topic" className="font-semibold text-saffron-800 underline">
+                  विषय
+                </Link>{" "}
+                / अहवाल मध्ये राहतो.
+              </p>
+            </>
+          ) : (
+            <p>प्रश्न नाहीत — सिंक करा · प्रश्न चरणसेवक / सत्संगी टाकतात</p>
+          )}
+        </div>
       ) : null}
     </div>
   );
