@@ -221,6 +221,8 @@ export async function saveGuruVoiceAnswer(
 export async function listAjapaQuestions(opts?: {
   status?: AjapaStatus;
   seeker_phone?: string;
+  /** ISO timestamp — only rows with updated_at > since (incremental sync). */
+  since?: string;
   limit?: number;
 }): Promise<AjapaQuestion[]> {
   const clauses: string[] = [];
@@ -233,12 +235,16 @@ export async function listAjapaQuestions(opts?: {
     clauses.push("seeker_phone = ?");
     params.push(opts.seeker_phone);
   }
+  if (opts?.since) {
+    clauses.push("updated_at > ?");
+    params.push(opts.since);
+  }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500);
   params.push(limit);
   const db = await getDb();
   const rs = await db.execute({
-    sql: `SELECT * FROM ajapa_questions ${where} ORDER BY created_at DESC, id DESC LIMIT ?`,
+    sql: `SELECT * FROM ajapa_questions ${where} ORDER BY updated_at DESC, id DESC LIMIT ?`,
     args: params,
   });
   return rs.rows.map(asAjapa);

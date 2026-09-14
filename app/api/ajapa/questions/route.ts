@@ -13,17 +13,22 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as AjapaStatus | null;
   const seeker = searchParams.get("seeker_phone") || undefined;
+  const since = searchParams.get("since") || undefined;
   const limit = searchParams.get("limit");
 
   const valid: AjapaStatus[] = ["ai_answered", "escalated", "guru_answered"];
   if (status && !valid.includes(status)) {
-    return jsonError("Invalid status", 400);
+    return await jsonError("Invalid status", 400);
   }
 
   const questions = await listAjapaQuestions({
     status: status || undefined,
     seeker_phone: seeker,
+    since,
     limit: limit ? Number(limit) : 100,
   });
-  return NextResponse.json({ questions });
+  return NextResponse.json({
+    questions,
+    server_time: new Date().toISOString(),
+  });
 }
