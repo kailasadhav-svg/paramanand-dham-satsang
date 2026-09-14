@@ -5,10 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
-import type { AjapaQuestion } from "@/lib/ajapa/types";
+import type { AjapaQuestion, AjapaVisibility } from "@/lib/ajapa/types";
 import { defaultThursdayYmd } from "@/lib/dates";
 import { searchLocal, upsertQuestions } from "@/lib/offline/idb";
-import { displayPhone } from "@/lib/offline/phone";
+import { displayPhone, phonesEqual } from "@/lib/offline/phone";
 import {
   readLocalForDialogue,
   syncAjapaFromServer,
@@ -50,6 +50,7 @@ export default function AjapaPage() {
   const [filter, setFilter] = useState<"all" | AjapaQuestion["status"]>("all");
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const [visibility, setVisibility] = useState<AjapaVisibility>("private");
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,13 +164,18 @@ export default function AjapaPage() {
           seeker_name: profile.name || null,
           place_id: scope.place_id,
           meeting_date: scope.meeting_date,
+          visibility,
         }),
       });
       await upsertQuestions([data.question]);
       setDraft("");
       setFilter("all");
       setQuery("");
-      setOkMsg(`«${topicTitle}» विषयावरील उत्तर खाली आहे`);
+      setOkMsg(
+        visibility === "private"
+          ? `खाजगी प्रश्न · AI उत्तर खाली (फक्त तुम्हाला)`
+          : `सार्वजनिक प्रश्न · «${topicTitle}» वर सर्वांना दिसेल`,
+      );
       setItems(await readLocalForDialogue(profile, scope));
       void syncAndLoad();
     } catch (err) {
@@ -237,7 +243,8 @@ export default function AjapaPage() {
             {offline ? " · ऑफलाइन" : ""}
           </p>
           <p className="text-[11px] text-temple-muted">
-            जो विषय जतन — त्यावरच संवाद · स्थळातील सर्वांना दिसतो
+            विषय → संवाद · AI उत्तर नेहमी · private/public निवड · मधुसुदनदास =
+            Meta WhatsApp OTP
           </p>
           {syncNote ? <p className="text-[11px] text-temple-muted">{syncNote}</p> : null}
         </div>
@@ -296,13 +303,42 @@ export default function AjapaPage() {
           className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200"
         >
           <p className="text-sm font-bold text-saffron-900">
-            «{topicTitle}» वर प्रश्न टाका
+            «{topicTitle}» वर तुमचा प्रश्न
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setVisibility("private")}
+              className={`rounded-xl py-2.5 text-xs font-bold ring-1 ${
+                visibility === "private"
+                  ? "bg-saffron-700 text-white ring-saffron-700"
+                  : "bg-white text-temple-ink ring-saffron-200"
+              }`}
+            >
+              खाजगी (private)
+            </button>
+            <button
+              type="button"
+              onClick={() => setVisibility("public")}
+              className={`rounded-xl py-2.5 text-xs font-bold ring-1 ${
+                visibility === "public"
+                  ? "bg-saffron-700 text-white ring-saffron-700"
+                  : "bg-white text-temple-ink ring-saffron-200"
+              }`}
+            >
+              सार्वजनिक (public)
+            </button>
+          </div>
+          <p className="text-[11px] text-temple-muted">
+            {visibility === "private"
+              ? "फक्त तुम्हाला + संचालक/संवादक · AI उत्तर मिळेलच"
+              : "स्थळातील सर्वांना दिसेल · AI उत्तर मिळेलच"}
           </p>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
-            placeholder={`उदा. «${topicTitle}» या विषयात …`}
+            placeholder={`उदा. «${topicTitle}» या विषयात माझा प्रश्न…`}
             className="w-full rounded-xl border border-saffron-200 bg-saffron-50 px-3 py-2 text-sm"
           />
           <button
@@ -310,7 +346,7 @@ export default function AjapaPage() {
             disabled={submitting || draft.trim().length < 3}
             className="w-full rounded-2xl bg-saffron-700 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {submitting ? "या विषयावर उत्तर तयार…" : "प्रश्न पाठवा"}
+            {submitting ? "AI उत्तर तयार…" : "प्रश्न पाठवा · AI उत्तर"}
           </button>
         </form>
       ) : null}
@@ -370,9 +406,20 @@ export default function AjapaPage() {
           <li key={q.id} className="card space-y-3 p-3">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold">{q.question}</p>
-              <span className="shrink-0 rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
-                {STATUS_LABEL[q.status]}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="rounded-full bg-saffron-50 px-2 py-0.5 text-[11px] font-semibold text-saffron-800 ring-1 ring-saffron-200">
+                  {STATUS_LABEL[q.status]}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${
+                    q.visibility === "public"
+                      ? "bg-emerald-50 text-emerald-900 ring-emerald-200"
+                      : "bg-stone-100 text-stone-700 ring-stone-200"
+                  }`}
+                >
+                  {q.visibility === "public" ? "सार्वजनिक" : "खाजगी"}
+                </span>
+              </div>
             </div>
             {q.topic_title ? (
               <p className="text-[11px] font-semibold text-saffron-800">
@@ -402,12 +449,14 @@ export default function AjapaPage() {
               </p>
             )}
 
-            {q.status === "ai_answered" && canAsk ? (
+            {q.status === "ai_answered" &&
+            phonesEqual(profile.phone, q.seeker_phone) ? (
               <div className="space-y-2 border-t border-saffron-100 pt-2">
                 {otpForId === q.id ? (
                   <>
                     <p className="text-xs text-temple-muted">
-                      {otpHint || "WhatsApp वर आलेला OTP टाका"}
+                      {otpHint ||
+                        `Meta WhatsApp OTP · ${displayPhone(profile.phone)} वर तपासा`}
                     </p>
                     <input
                       type="tel"
@@ -426,7 +475,7 @@ export default function AjapaPage() {
                       onClick={() => void verifyOtp(q)}
                       className="w-full rounded-full bg-saffron-700 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                     >
-                      {otpBusy ? "तपास…" : "OTP खात्री · संवादकांकडे पाठवा"}
+                      {otpBusy ? "तपास…" : "OTP खात्री · मधुसुदनदास कडे"}
                     </button>
                     <button
                       type="button"
@@ -438,14 +487,20 @@ export default function AjapaPage() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={otpBusy}
-                    onClick={() => void requestOtp(q)}
-                    className="w-full rounded-full bg-white py-2.5 text-sm font-semibold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
-                  >
-                    मधुसुदनदास उत्तर हवे · WhatsApp OTP
-                  </button>
+                  <>
+                    <p className="text-[11px] text-temple-muted">
+                      मधुसुदनदास उत्तर हवे असल्यास तुमच्या मोबाइलवर Meta WhatsApp
+                      OTP येईल — खात्री झाल्यावर संवादकांकडे जाईल.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={otpBusy}
+                      onClick={() => void requestOtp(q)}
+                      className="w-full rounded-full bg-white py-2.5 text-sm font-semibold text-saffron-900 ring-1 ring-saffron-300 disabled:opacity-50"
+                    >
+                      मधुसुदनदास उत्तर · Meta WhatsApp OTP
+                    </button>
+                  </>
                 )}
               </div>
             ) : null}

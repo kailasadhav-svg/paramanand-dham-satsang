@@ -304,8 +304,12 @@ async function migrate(db: Client) {
   await ensureColumn(db, "ajapa_questions", "meeting_date", "TEXT");
   await ensureColumn(db, "ajapa_questions", "topic_kind", "TEXT");
   await ensureColumn(db, "ajapa_questions", "topic_title", "TEXT");
+  await ensureColumn(db, "ajapa_questions", "visibility", "TEXT DEFAULT 'private'");
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_ajapa_place_date ON ajapa_questions(place_id, meeting_date)",
+  );
+  await db.execute(
+    `UPDATE ajapa_questions SET visibility = 'private' WHERE visibility IS NULL OR visibility = ''`,
   );
 
   const insert = SEED_PLACES.map((name, i) => ({

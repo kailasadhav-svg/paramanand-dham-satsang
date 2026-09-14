@@ -8,14 +8,13 @@ import {
 } from "@/lib/ajapa/store";
 import { notifyGuruNewQuestion } from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
-import { detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Verify WhatsApp OTP → escalate to मधुसुदनदास. */
+/** Verify Meta WhatsApp OTP on seeker mobile → escalate to मधुसुदनदास. */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
@@ -34,10 +33,12 @@ export async function POST(request: Request, ctx: Ctx) {
     return jsonError("हा प्रश्न आधीच संवादकांकडे / पूर्ण आहे", 400);
   }
 
-  const role = detectStaffRole(actor);
   const isOwner = phonesEqual(actor, q.seeker_phone);
-  if (!isOwner && role !== "software" && role !== "guru") {
-    return jsonError("फक्त प्रश्नकर्ता OTP वापरू शकतो", 403);
+  if (!isOwner) {
+    return jsonError(
+      "Meta WhatsApp OTP फक्त प्रश्नकर्त्याच्या मोबाइलने खात्री होते",
+      403,
+    );
   }
 
   const verified = await verifyEscalateOtp({
@@ -64,6 +65,8 @@ export async function POST(request: Request, ctx: Ctx) {
   return NextResponse.json({
     ok: true,
     question: escalated,
-    message: "संवादकांकडे पाठवले · मधुसुदनदास यांना WhatsApp सूचना",
+    auth: "meta_whatsapp_otp",
+    message:
+      "मोबाइल OTP खात्री झाली · मधुसुदनदास / संवादकांकडे पाठवले",
   });
 }

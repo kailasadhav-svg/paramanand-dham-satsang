@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createEscalateOtp } from "@/lib/ajapa/otp";
 import { getAjapaQuestion } from "@/lib/ajapa/store";
 import { sendText, whatsappConfigured } from "@/lib/ajapa/whatsapp";
-import { normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
+import { displayPhone, normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 import { detectStaffRole } from "@/lib/roles";
 
@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Send WhatsApp OTP so seeker can request मधुसुदनदास answer. */
+/**
+ * Meta WhatsApp verified OTP — साधकाच्या मोबाइलवर.
+ * OTP खात्री झाल्यावरच मधुसुदनदास कडे escalate.
+ */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
@@ -31,7 +34,14 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const role = detectStaffRole(actor);
   const isOwner = phonesEqual(actor, q.seeker_phone);
-  if (!isOwner && role !== "software" && role !== "guru") {
+  // फक्त प्रश्नकर्त्याच्या मोबाइलवर Meta OTP — staff proxy नाही
+  if (!isOwner) {
+    if (role === "software" || role === "guru") {
+      return jsonError(
+        "मधुसुदनदास उत्तरासाठी प्रश्नकर्त्याच्या मोबाइलवर Meta WhatsApp OTP लागतो — स्वतः लॉगिन करा",
+        403,
+      );
+    }
     return jsonError("फक्त प्रश्नकर्ता OTP मागू शकतो", 403);
   }
 
@@ -43,11 +53,12 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const body = `परमानंद धाम · अजपा संवाद
 
-मधुसुदनदास विजयानंद यांचे उत्तर मागण्यासाठी OTP:
+मधुसुदनदास विजयानंद यांचे उत्तर मागण्यासाठी *Meta WhatsApp OTP*:
 
 *${code}*
 
-अ‍ॅपमध्ये हा OTP टाका (१० मिनिटे वैध).
+अ‍ॅप → संवाद मध्ये हा OTP टाका (१० मिनिटे वैध).
+ही तुमच्या मोबाइलची खात्री आहे.
 प्रश्न: ${q.question.slice(0, 120)}`;
 
   let wa: { ok: boolean; error?: string; skipped?: boolean } = {
@@ -68,16 +79,16 @@ export async function POST(request: Request, ctx: Ctx) {
   return NextResponse.json({
     ok: true,
     question_id: id,
-    sent_to: targetPhone.replace(/^91/, ""),
+    sent_to: displayPhone(targetPhone),
     expires_at,
     whatsapp_ok: wa.ok,
     whatsapp_error: wa.ok ? null : wa.error || null,
-    // Only expose OTP when dry-run / unconfigured (local testing)
+    auth: "meta_whatsapp_otp",
     debug_otp: dry ? code : undefined,
     message: wa.ok
-      ? "WhatsApp वर OTP पाठवला — अ‍ॅपमध्ये टाका"
+      ? `Meta WhatsApp OTP · ${displayPhone(targetPhone)} वर पाठवला — अ‍ॅपमध्ये टाका`
       : dry
-        ? `WhatsApp बंद/dry-run · टेस्ट OTP: ${code}`
-        : "WhatsApp OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
+        ? `WhatsApp dry-run · टेस्ट OTP: ${code}`
+        : "Meta WhatsApp OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
   });
 }

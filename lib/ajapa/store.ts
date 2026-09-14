@@ -1,6 +1,13 @@
 import type { Row } from "@libsql/client";
 import { getDb } from "@/lib/db";
-import type { AjapaQuestion, AjapaSessionState, AjapaStatus, WaSession } from "./types";
+import type {
+  AjapaQuestion,
+  AjapaSessionState,
+  AjapaStatus,
+  AjapaVisibility,
+  WaSession,
+} from "./types";
+import { phonesEqual } from "./phone";
 
 function num(value: unknown, fallback = 0): number {
   if (value == null) return fallback;
@@ -26,6 +33,15 @@ function asStatus(value: unknown): AjapaStatus {
   return "ai_answered";
 }
 
+function asVisibility(value: unknown): AjapaVisibility {
+  return value === "public" ? "public" : "private";
+}
+
+function asTopicKind(value: unknown): "atmaprabha" | "upadesh" | null {
+  if (value === "atmaprabha" || value === "upadesh") return value;
+  return null;
+}
+
 function asState(value: unknown): AjapaSessionState {
   const ok: AjapaSessionState[] = [
     "idle",
@@ -37,11 +53,6 @@ function asState(value: unknown): AjapaSessionState {
   return ok.includes(value as AjapaSessionState) ? (value as AjapaSessionState) : "idle";
 }
 
-function asTopicKind(value: unknown): "atmaprabha" | "upadesh" | null {
-  if (value === "atmaprabha" || value === "upadesh") return value;
-  return null;
-}
-
 function asAjapa(row: Row): AjapaQuestion {
   return {
     id: num(row.id),
@@ -50,6 +61,7 @@ function asAjapa(row: Row): AjapaQuestion {
     question: str(row.question),
     ai_answer: strOrNull(row.ai_answer),
     status: asStatus(row.status),
+    visibility: asVisibility(row.visibility),
     guru_answer_text: strOrNull(row.guru_answer_text),
     guru_answer_audio_url: strOrNull(row.guru_answer_audio_url),
     guru_answer_audio_media_id: strOrNull(row.guru_answer_audio_media_id),
@@ -77,6 +89,17 @@ function asSession(row: Row): WaSession {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+/** Who may see a question (private stays with owner + staff). */
+export function canViewAjapaQuestion(
+  q: AjapaQuestion,
+  viewerPhone: string,
+  viewerRole: string,
+): boolean {
+  if (q.visibility === "public") return true;
+  if (viewerRole === "software" || viewerRole === "guru") return true;
+  return phonesEqual(viewerPhone, q.seeker_phone);
 }
 
 export async function getWaSession(phone: string): Promise<WaSession | undefined> {
@@ -135,6 +158,7 @@ export async function createAjapaQuestion(input: {
   seeker_name?: string | null;
   question: string;
   ai_answer: string;
+  visibility?: AjapaVisibility;
   place_id?: number | null;
   place_name?: string | null;
   meeting_date?: string | null;
@@ -142,19 +166,22 @@ export async function createAjapaQuestion(input: {
   topic_title?: string | null;
 }): Promise<AjapaQuestion> {
   const now = nowIso();
+  const visibility: AjapaVisibility =
+    input.visibility === "public" ? "public" : "private";
   const db = await getDb();
   const result = await db.execute({
     sql: `INSERT INTO ajapa_questions (
-      seeker_phone, seeker_name, question, ai_answer, status,
+      seeker_phone, seeker_name, question, ai_answer, status, visibility,
       guru_answer_text, guru_answer_audio_url, guru_answer_audio_media_id,
       place_id, place_name, meeting_date, topic_kind, topic_title,
       created_at, updated_at, escalated_at, answered_at
-    ) VALUES (?, ?, ?, ?, 'ai_answered', NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
+    ) VALUES (?, ?, ?, ?, 'ai_answered', ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
     args: [
       input.seeker_phone,
       input.seeker_name ?? null,
       input.question.trim(),
       input.ai_answer,
+      visibility,
       input.place_id ?? null,
       input.place_name ?? null,
       input.meeting_date ?? null,

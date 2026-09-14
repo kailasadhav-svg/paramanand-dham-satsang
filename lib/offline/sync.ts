@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
 import { getAllQuestions, getMeta, setMeta, upsertQuestions } from "./idb";
+import { phonesEqual } from "./phone";
 import type { LocalProfile } from "./profile";
 
 export type SyncResult = {
@@ -15,14 +16,23 @@ export type DialogueScope = {
   meeting_date: string;
 };
 
-/** Shared संवाद for one place + गुरुवार विषय — सर्वांना त्या स्थळाचे प्रश्न. */
+function canSeeLocally(profile: LocalProfile, q: AjapaQuestion): boolean {
+  if (q.visibility === "public") return true;
+  if (profile.role === "software" || profile.role === "guru") return true;
+  return phonesEqual(profile.phone, q.seeker_phone);
+}
+
+/** Place+date संवाद — public सर्वांना; private फक्त मालक/staff. */
 export async function readLocalForDialogue(
   profile: LocalProfile,
   scope: DialogueScope,
 ): Promise<AjapaQuestion[]> {
   const all = await getAllQuestions();
   let list = all.filter(
-    (q) => q.place_id === scope.place_id && q.meeting_date === scope.meeting_date,
+    (q) =>
+      q.place_id === scope.place_id &&
+      q.meeting_date === scope.meeting_date &&
+      canSeeLocally(profile, q),
   );
   if (profile.role === "guru") {
     list = list.filter((q) => q.status === "escalated" || q.status === "guru_answered");
@@ -30,7 +40,7 @@ export async function readLocalForDialogue(
   return list;
 }
 
-/** Pull questions for one place+date संवाद (shared). */
+/** Pull questions for one place+date (server already filters private). */
 export async function syncAjapaFromServer(
   profile: LocalProfile,
   scope?: DialogueScope,

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { generateAjapaAiAnswer } from "@/lib/ajapa/ai";
-import { createAjapaQuestion, listAjapaQuestions } from "@/lib/ajapa/store";
-import type { AjapaStatus } from "@/lib/ajapa/types";
+import {
+  canViewAjapaQuestion,
+  createAjapaQuestion,
+  listAjapaQuestions,
+} from "@/lib/ajapa/store";
+import type { AjapaStatus, AjapaVisibility } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 import { getMeeting, getPlace } from "@/lib/db";
 import { normalizePhone } from "@/lib/offline/phone";
@@ -14,6 +18,9 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
+
+  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const role = actor ? detectStaffRole(actor) : "satsangi";
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as AjapaStatus | null;
@@ -33,14 +40,18 @@ export async function GET(request: Request) {
     return jsonError("अवैध place_id", 400);
   }
 
-  const questions = await listAjapaQuestions({
+  const raw = await listAjapaQuestions({
     status: status || undefined,
     seeker_phone: seeker,
     place_id,
     meeting_date: meetingDate,
     since,
-    limit: limit ? Number(limit) : 100,
+    limit: limit ? Number(limit) : 200,
   });
+
+  // private = फक्त मालक / संचालक / संवादक
+  const questions = raw.filter((q) => canViewAjapaQuestion(q, actor, role));
+
   return NextResponse.json({
     questions,
     server_time: new Date().toISOString(),
@@ -48,8 +59,9 @@ export async function GET(request: Request) {
 }
 
 /**
- * In-app अजपा — संवाद नेहमी जतन केलेल्या सत्संग विषयावर चालतो.
- * place_id + meeting_date आवश्यक; त्या स्थळाचा विषय नसेल तर प्रश्न नाकारला जातो.
+ * साधकाचा प्रश्न — AI नेहमी उत्तर देते.
+ * visibility: private (फक्त स्वतः) | public (स्थळातील सर्वांना).
+ * मधुसुदनदास उत्तर = नंतर Meta WhatsApp OTP.
  */
 export async function POST(request: Request) {
   const auth = await requireApiSession();
@@ -65,11 +77,15 @@ export async function POST(request: Request) {
     seeker_name?: string | null;
     place_id?: number;
     meeting_date?: string;
+    visibility?: AjapaVisibility | string;
   };
   const question = body.question?.trim() || "";
   if (question.length < 3) {
     return jsonError("प्रश्न थोडा मोठा लिहा", 400);
   }
+
+  const visibility: AjapaVisibility =
+    body.visibility === "public" ? "public" : "private";
 
   const placeId = Number(body.place_id);
   const meetingDate = String(body.meeting_date || "").trim();
@@ -97,15 +113,13 @@ export async function POST(request: Request) {
     notes: meeting?.notes ?? null,
   };
 
-  const role = detectStaffRole(actor);
-  void role;
-
   const { answer } = await generateAjapaAiAnswer(question, topic);
   const row = await createAjapaQuestion({
     seeker_phone: actor,
     seeker_name: body.seeker_name?.trim() || null,
     question,
     ai_answer: answer,
+    visibility,
     place_id: placeId,
     place_name: place.name,
     meeting_date: meetingDate,
