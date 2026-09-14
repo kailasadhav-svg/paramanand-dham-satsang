@@ -10,7 +10,8 @@ import {
   OFF_SITE_WARNING,
   ON_SITE_BLESSING,
 } from "@/lib/geo";
-import { canSeeStaffScreens } from "@/lib/roles";
+import { canAppointSatsangi, canSeeStaffScreens } from "@/lib/roles";
+import { displayPhone } from "@/lib/offline/phone";
 
 type Meeting = {
   place_id: number;
@@ -30,6 +31,14 @@ type DutyRow = {
     charansevak_name: string | null;
     charansevak_phone_display: string;
   } | null;
+};
+
+type Member = {
+  id: number;
+  name: string;
+  phone: string;
+  phone_display: string;
+  home_place_id: number | null;
 };
 
 type DutyDraft = { phone: string; name: string };
@@ -56,6 +65,7 @@ async function readGps(): Promise<GeoPos> {
 export default function AttendancePage() {
   const profile = useProfile();
   const staff = canSeeStaffScreens(profile.role);
+  const canAppoint = canAppointSatsangi(profile.role);
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
@@ -75,6 +85,13 @@ export default function AttendancePage() {
   const [dutyBusy, setDutyBusy] = useState<number | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
   const [lastCheckin, setLastCheckin] = useState<string | null>(null);
+  const [onSite, setOnSite] = useState(false);
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [appointBusy, setAppointBusy] = useState(false);
+  const [appointMsg, setAppointMsg] = useState<string | null>(null);
 
   const selectedPlace = useMemo(
     () => places.find((p) => p.id === placeId) || null,
@@ -103,11 +120,18 @@ export default function AttendancePage() {
     });
   }, []);
 
+  const loadMembers = useCallback(async () => {
+    if (!canAppoint) return;
+    const data = await api<{ members: Member[] }>("/api/members");
+    setMembers(data.members);
+  }, [canAppoint]);
+
   useEffect(() => {
     void loadDuties(date).catch((e) =>
       setError(e instanceof Error ? e.message : "नेमणूक लोड नाही"),
     );
-  }, [date, loadDuties]);
+    void loadMembers().catch(() => undefined);
+  }, [date, loadDuties, loadMembers]);
 
   useEffect(() => {
     if (!placeId || !date) return;
@@ -119,12 +143,15 @@ export default function AttendancePage() {
         setChildren(data.meeting.children || 0);
         setTime(data.meeting.meeting_time || DEFAULT_MEETING_TIME);
         if (data.meeting.checkin_ok != null) {
+          const ok = Boolean(data.meeting.checkin_ok);
+          setOnSite(ok);
           setLastCheckin(
-            data.meeting.checkin_ok
+            ok
               ? `✓ स्थळावर (${data.meeting.checkin_distance_m ?? "?"} मी)`
               : `✗ बाहेर (${data.meeting.checkin_distance_m ?? "?"} मी)`,
           );
         } else {
+          setOnSite(false);
           setLastCheckin(null);
         }
       })
@@ -151,6 +178,40 @@ export default function AttendancePage() {
       setError(e instanceof Error ? e.message : "GPS जतन अयशस्वी");
     } finally {
       setPinBusy(false);
+    }
+  }
+
+  async function appointMember() {
+    if (!placeId) {
+      setError("आधी स्थळ निवडा — सत्संगी त्याच स्थळाचा राहील");
+      return;
+    }
+    setAppointBusy(true);
+    setAppointMsg(null);
+    setError(null);
+    try {
+      const data = await api<{
+        member: Member & { home_place_name?: string };
+      }>("/api/members", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newName,
+          phone: newPhone,
+          home_place_id: placeId,
+        }),
+      });
+      setNewName("");
+      setNewPhone("");
+      await loadMembers();
+      setAppointMsg(
+        `सत्संगी जोडला: ${data.member.name} · ${data.member.phone_display} · ${
+          data.member.home_place_name || selectedPlace?.name || ""
+        }`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "सत्संगी जोडणे अयशस्वी");
+    } finally {
+      setAppointBusy(false);
     }
   }
 
@@ -190,8 +251,12 @@ export default function AttendancePage() {
         }),
       });
       setSaved(true);
-      setLastCheckin(geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : null);
+      setOnSite(true);
+      setLastCheckin(
+        geo ? `✓ नोंद (≤${ATTENDANCE_GEO_MAX_METERS} मी)` : "✓ नोंद जतन",
+      );
     } catch (e) {
+      setOnSite(false);
       setError(e instanceof Error ? e.message : OFF_SITE_WARNING);
     } finally {
       setSaving(false);
@@ -369,11 +434,80 @@ export default function AttendancePage() {
         </div>
       ) : null}
 
+      {canAppoint ? (
+        <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+          <h3 className="text-sm font-bold text-saffron-900">
+            नवीन सत्संगी जोडा
+          </h3>
+          <p className="text-[11px] text-temple-muted">
+            नाव + मोबाइल · सध्या निवडलेल्या स्थळाचा (
+            {selectedPlace?.name || "—"}) सत्संगी राहील
+          </p>
+          <input
+            type="text"
+            placeholder="नाव — उदा. मधुकर आढाव"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
+          <input
+            type="tel"
+            inputMode="numeric"
+            placeholder="मोबाइल — उदा. 9021555060"
+            value={newPhone}
+            onChange={(e) => setNewPhone(e.target.value)}
+            className="w-full rounded-xl bg-saffron-50 px-3 py-2 text-sm ring-1 ring-saffron-200"
+          />
+          <button
+            type="button"
+            disabled={appointBusy || !placeId || !newName.trim() || !newPhone.trim()}
+            onClick={() => void appointMember()}
+            className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {appointBusy ? "जोडत आहे…" : "सत्संगी जोडा"}
+          </button>
+          {appointMsg ? (
+            <p className="text-xs font-semibold text-emerald-800">{appointMsg}</p>
+          ) : null}
+          {members.length ? (
+            <ul className="space-y-2 border-t border-saffron-100 pt-2">
+              {members
+                .filter((m) => !placeId || m.home_place_id === placeId)
+                .map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center justify-between gap-2 text-sm"
+                  >
+                    <div>
+                      <p className="font-bold text-saffron-900">{m.name}</p>
+                      <p className="text-xs text-temple-muted">{m.phone_display}</p>
+                    </div>
+                    <a
+                      href={`tel:${displayPhone(m.phone)}`}
+                      className="shrink-0 rounded-full bg-saffron-50 px-3 py-1 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200"
+                    >
+                      कॉल
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="text-[11px] text-temple-muted">अजून सत्संगी यादी रिकामी</p>
+          )}
+        </section>
+      ) : null}
+
       {!staff ? (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-          उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
-          मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
-        </p>
+        onSite ? (
+          <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold leading-relaxed text-emerald-900">
+            {ON_SITE_BLESSING}
+          </p>
+        ) : (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+            उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
+            मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
+          </p>
+        )
       ) : null}
 
       {lastCheckin ? (
@@ -427,7 +561,9 @@ export default function AttendancePage() {
         savedLabel={
           staff
             ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
-            : ON_SITE_BLESSING
+            : onSite
+              ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
+              : ON_SITE_BLESSING
         }
         onSave={() => void saveAttendance()}
       />

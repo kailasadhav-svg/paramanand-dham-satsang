@@ -69,6 +69,11 @@ export function canSeeSoftwareRights(role: StaffRole): boolean {
   return role === "software";
 }
 
+/** नवीन सत्संगी (नाव+मोबाइल) नेमणूक — संचालक / संवादक / चरणसेवक */
+export function canAppointSatsangi(role: StaffRole): boolean {
+  return role === "software" || role === "guru" || role === "charansevak";
+}
+
 export function appDisplayName(role: StaffRole): string {
   if (role === "charansevak") return "परमानंद चरणसेवक";
   if (role === "guru") return "अजपा संवाद";
