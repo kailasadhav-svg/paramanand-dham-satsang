@@ -46,6 +46,16 @@ Home-screen app name: **अजपा संवाद**.
 Install → **Add to Home Screen**. List/search on phone (IndexedDB); server only for sync.  
 See [`docs/LOCAL_FIRST_PWA.md`](docs/LOCAL_FIRST_PWA.md).
 
+## Play Store (Android)
+
+Trusted Web Activity wrapper — see [`docs/PLAY_STORE.md`](docs/PLAY_STORE.md).
+
+```bash
+npm run play:init
+npm run play:build
+```
+
+
 ## Locked product: अजपा WhatsApp Q&A
 
 See [`docs/AJAPA_QA_FLOW.md`](docs/AJAPA_QA_FLOW.md) (locked) and [`docs/AJAPA_WABA_TEMPLATES.md`](docs/AJAPA_WABA_TEMPLATES.md).

@@ -15,3 +15,15 @@ tsbuildinfo
 data/literature/*.docx
 data/literature/*.txt
 data/literature/*.jpg
+
+# Play Store signing (never commit)
+play-store/upload-keystore.jks
+play-store/android.keystore
+play-store/keystore.properties
+play-store/*.jks
+play-store/*.keystore
+play-store/app/build/
+play-store/build/
+play-store/.gradle/
+play-store/local.properties
+play-store/dist/*.aab
