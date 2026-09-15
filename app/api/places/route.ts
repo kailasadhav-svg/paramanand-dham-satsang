@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   getSatsangiByPhone,
   listPlaces,
@@ -15,7 +15,9 @@ export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const all = await listPlaces();
 
@@ -52,7 +54,9 @@ export async function PUT(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
     return jsonError("फक्त संवादक / संचालक स्थळ GPS सेट करू शकतात", 403);
   }

@@ -1,18 +1,37 @@
 import { NextResponse } from "next/server";
-import { getMemberId, getSession } from "@/lib/auth";
+import { getActorPhone, getMemberId, getSession } from "@/lib/auth";
 import { getMemberById, type Member } from "@/lib/members";
 
 export async function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-/** Admin PIN session — existing attendance / topic / questions / report APIs. */
+/** Admin PIN session — attendance / topic / questions / report APIs. */
 export async function requireApiSession() {
   const ok = await getSession();
   if (!ok) {
     return { ok: false as const, response: await jsonError("Unauthorized", 401) };
   }
   return { ok: true as const };
+}
+
+/**
+ * Session + verified actor cookie (set via /api/auth/actor after phone bind).
+ * Does not trust spoofable x-actor-phone headers.
+ */
+export async function requireActorPhone(): Promise<
+  { ok: true; phone: string } | { ok: false; response: NextResponse }
+> {
+  const session = await requireApiSession();
+  if (!session.ok) return session;
+  const phone = await getActorPhone();
+  if (!phone) {
+    return {
+      ok: false as const,
+      response: await jsonError("मोबाइल प्रोफाइल आवश्यक — पुन्हा निवडा", 401),
+    };
+  }
+  return { ok: true as const, phone };
 }
 
 export async function requireMemberApi(): Promise<

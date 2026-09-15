@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MEMBER_COOKIE, SESSION_COOKIE } from "@/lib/auth";
+import { ACTOR_COOKIE, MEMBER_COOKIE, SESSION_COOKIE } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const res = NextResponse.json({ ok: true });
   if (scope === "all" || scope === "admin") {
     res.cookies.set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
+    res.cookies.set(ACTOR_COOKIE, "", { path: "/", maxAge: 0 });
   }
   if (scope === "all" || scope === "member") {
     res.cookies.set(MEMBER_COOKIE, "", { path: "/", maxAge: 0 });

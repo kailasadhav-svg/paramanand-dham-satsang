@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { getDb, getQuestion } from "@/lib/db";
@@ -15,7 +15,9 @@ export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor) return jsonError("मोबाइल आवश्यक", 400);
 
   const { id: idRaw } = await ctx.params;

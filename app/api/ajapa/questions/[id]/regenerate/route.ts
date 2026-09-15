@@ -5,7 +5,7 @@ import {
   updateAjapaAiAnswer,
 } from "@/lib/ajapa/store";
 import { normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -27,7 +27,9 @@ export async function POST(
   const id = Number(idRaw);
   if (!Number.isFinite(id)) return jsonError("अवैध प्रश्न", 400);
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const q = await getAjapaQuestion(id);
   if (!q) return jsonError("प्रश्न सापडला नाही", 404);

@@ -12,7 +12,7 @@ import {
   updateAjapaAiAnswer,
 } from "@/lib/ajapa/store";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +64,9 @@ export async function GET(request: Request) {
     return await jsonError("Invalid status", 400);
   }
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   const mirrorFor = seeker || actor;
 
   let mirrored = 0;
