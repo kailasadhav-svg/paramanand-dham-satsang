@@ -29,14 +29,21 @@ function LoginForm() {
         setPin("");
         return;
       }
-      const next = search.get("next");
+      const nextRaw = search.get("next");
       const profile = loadProfile();
-      const dest =
-        next && next.startsWith("/")
-          ? next
-          : profile
-            ? defaultHomePath(profile.role)
-            : "/ajapa";
+      const nextSafe =
+        nextRaw &&
+        nextRaw.startsWith("/") &&
+        !nextRaw.startsWith("//") &&
+        !nextRaw.includes("\\") &&
+        !nextRaw.includes("@")
+          ? nextRaw
+          : null;
+      const dest = nextSafe
+        ? nextSafe
+        : profile
+          ? defaultHomePath(profile.role)
+          : "/ajapa";
       router.replace(dest);
       router.refresh();
     } finally {

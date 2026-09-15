@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createEscalateOtp } from "@/lib/ajapa/otp";
+import { allowDebugOtp, createEscalateOtp } from "@/lib/ajapa/otp";
 import { displayPhone, normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
 import { getAjapaQuestion, hasMadhusudanAskThisWeek } from "@/lib/ajapa/store";
 import { sendText, whatsappConfigured } from "@/lib/ajapa/whatsapp";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -23,7 +23,9 @@ export async function POST(request: Request, ctx: Ctx) {
   const id = Number(idRaw);
   if (!Number.isFinite(id)) return jsonError("अवैध प्रश्न", 400);
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor) return jsonError("मोबाइल आवश्यक", 400);
 
   const q = await getAjapaQuestion(id);
@@ -88,11 +90,11 @@ export async function POST(request: Request, ctx: Ctx) {
     whatsapp_ok: wa.ok,
     whatsapp_error: wa.ok ? null : wa.error || null,
     auth: "meta_whatsapp_otp",
-    debug_otp: dry ? code : undefined,
+    debug_otp: allowDebugOtp() ? code : undefined,
     message: wa.ok
       ? `Meta WhatsApp OTP · ${displayPhone(q.seeker_phone)} वर पाठवला — अ‍ॅपमध्ये टाका`
       : dry
-        ? `WhatsApp dry-run · टेस्ट OTP: ${code}`
+        ? `WhatsApp dry-run · ${allowDebugOtp() ? `टेस्ट OTP: ${code}` : "OTP पाठवता आला नाही"}`
         : "Meta WhatsApp OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
   });
 }

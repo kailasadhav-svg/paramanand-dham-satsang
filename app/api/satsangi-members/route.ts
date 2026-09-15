@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   getPlace,
   listSatsangiMembers,
@@ -11,16 +11,15 @@ import { canAppointSatsangi, detectStaffRole } from "@/lib/roles";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function actorFromRequest(request: Request): string {
-  return normalizePhone(request.headers.get("x-actor-phone") || "");
-}
 
 /** Appointed सत्संगी list (attendance / प्रश्न place lock). */
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = actorFromRequest(request);
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor || !canAppointSatsangi(detectStaffRole(actor))) {
     return jsonError("फक्त संचालक / संवादक / चरणसेवक यादी पाहू शकतात", 403);
   }
@@ -38,7 +37,9 @@ export async function POST(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = actorFromRequest(request);
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor || !canAppointSatsangi(detectStaffRole(actor))) {
     return jsonError("फक्त संचालक / संवादक / चरणसेवक नेमणूक करू शकतात", 403);
   }

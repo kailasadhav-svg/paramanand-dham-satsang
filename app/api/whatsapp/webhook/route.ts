@@ -1,19 +1,35 @@
 import { NextResponse } from "next/server";
 import { processInboundMessage } from "@/lib/ajapa/bot";
 import type { InboundWaMessage } from "@/lib/ajapa/types";
+import {
+  claimWhatsappMessageId,
+  isWeakWhatsappVerifyToken,
+  verifyMetaSignature,
+  whatsappAppSecret,
+  whatsappVerifyToken,
+} from "@/lib/ajapa/webhook-security";
+import { isVercelRuntime } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Meta webhook verification. */
+/** Meta webhook verification — no default token on Vercel. */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
-  const expected = process.env.WHATSAPP_VERIFY_TOKEN || "ajapa-verify";
+  const expected = whatsappVerifyToken();
 
-  if (mode === "subscribe" && token === expected && challenge) {
+  if (isVercelRuntime() && isWeakWhatsappVerifyToken(expected)) {
+    return NextResponse.json(
+      { error: "WHATSAPP_VERIFY_TOKEN not configured" },
+      { status: 503 },
+    );
+  }
+
+  const effective = expected || (!isVercelRuntime() ? "ajapa-verify-dev-only" : "");
+  if (mode === "subscribe" && token && effective && token === effective && challenge) {
     return new NextResponse(challenge, { status: 200 });
   }
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -22,6 +38,7 @@ export async function GET(request: Request) {
 type WaChange = {
   value?: {
     messages?: {
+      id?: string;
       from?: string;
       type?: string;
       text?: { body?: string };
@@ -55,6 +72,7 @@ function parseInbound(body: unknown): InboundWaMessage[] {
           text,
           audioMediaId: msg.type === "audio" ? msg.audio?.id : undefined,
           profileName: name,
+          messageId: msg.id,
         });
       }
     }
@@ -63,13 +81,42 @@ function parseInbound(body: unknown): InboundWaMessage[] {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  const secret = whatsappAppSecret();
+
+  // Fail closed on Vercel without app secret; local may skip if unset.
+  if (isVercelRuntime() && !secret) {
+    return NextResponse.json(
+      { error: "WHATSAPP_APP_SECRET not configured" },
+      { status: 503 },
+    );
+  }
+  if (secret) {
+    const sig = request.headers.get("x-hub-signature-256");
+    if (!verifyMetaSignature(rawBody, sig)) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+  }
+
+  let body: unknown = null;
+  try {
+    body = rawBody ? JSON.parse(rawBody) : null;
+  } catch {
+    body = null;
+  }
   if (!body) return NextResponse.json({ ok: true });
 
   const messages = parseInbound(body);
   const results = [];
   for (const msg of messages) {
     try {
+      if (msg.messageId) {
+        const fresh = await claimWhatsappMessageId(msg.messageId);
+        if (!fresh) {
+          results.push({ handled: true, duplicate: true, wamid: msg.messageId });
+          continue;
+        }
+      }
       results.push(await processInboundMessage(msg));
     } catch (err) {
       console.error("Ajapa webhook error", err);

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getWaSession, getAjapaQuestion, saveGuruInAppAnswer } from "@/lib/ajapa/store";
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { notifyGuruAnswerReady, sendText } from "@/lib/ajapa/whatsapp";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -25,7 +25,9 @@ export async function POST(request: Request, ctx: Ctx) {
   const id = Number(idRaw);
   if (!Number.isFinite(id)) return jsonError("invalid id", 400);
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor) return jsonError("मोबाइल आवश्यक", 400);
 
   const role = detectStaffRole(actor);

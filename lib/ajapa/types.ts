@@ -36,4 +36,6 @@ export type InboundWaMessage = {
   text?: string;
   audioMediaId?: string;
   profileName?: string;
+  /** WhatsApp message id (wamid) for webhook idempotency */
+  messageId?: string;
 };

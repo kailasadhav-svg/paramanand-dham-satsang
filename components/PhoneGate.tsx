@@ -36,23 +36,64 @@ export function useClearProfile(): () => void {
   return useContext(Ctx)?.clear ?? (() => undefined);
 }
 
-/** After PIN login — phone decides software / guru / चरणसेवक screens. */
+type BindResponse = {
+  ok?: boolean;
+  needs_otp?: boolean;
+  phone?: string;
+  role?: LocalProfile["role"];
+  message?: string;
+  error?: string;
+  debug_otp?: string;
+};
+
+/** After PIN login — verified phone cookie decides software / guru / चरणसेवक screens. */
 export function PhoneGate({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [needsOtp, setNeedsOtp] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [serverBound, setServerBound] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    setProfile(loadProfile());
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      const local = loadProfile();
+      try {
+        const res = await fetch("/api/auth/actor", { credentials: "include" });
+        const data = (await res.json().catch(() => ({}))) as {
+          phone?: string | null;
+          role?: LocalProfile["role"];
+        };
+        if (!cancelled && res.ok && data.phone) {
+          const next = saveProfile({ phone: data.phone });
+          setProfile(next);
+          setServerBound(true);
+          setReady(true);
+          return;
+        }
+      } catch {
+        // fall through to local gate
+      }
+      if (!cancelled) {
+        // Local profile alone is not enough — must re-bind to server cookie.
+        if (local) clearProfile();
+        setProfile(null);
+        setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!ready || !profile) return;
-    // चरणसेवक / सत्संगी: विषय व अहवाल बंद; प्रश्न विचारता येतील
     if (
       profile.role === "charansevak" &&
       ["/topic", "/report"].some((p) => pathname.startsWith(p))
@@ -74,18 +115,52 @@ export function PhoneGate({ children }: { children: ReactNode }) {
     meta.setAttribute("content", name);
   }, [profile]);
 
+  async function bindPhone(opts: { phone: string; otp?: string }) {
+    setBusy(true);
+    setError(null);
+    setHint(null);
+    try {
+      const res = await fetch("/api/auth/actor", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: opts.phone, otp: opts.otp }),
+      });
+      const data = (await res.json().catch(() => ({}))) as BindResponse;
+      if (!res.ok) {
+        setError(data.error || "मोबाइल जोडता आला नाही");
+        return;
+      }
+      if (data.needs_otp) {
+        setNeedsOtp(true);
+        setHint(data.message || "WhatsApp OTP टाका");
+        if (data.debug_otp) setOtp(data.debug_otp);
+        return;
+      }
+      const next = saveProfile({ phone: opts.phone });
+      setProfile(next);
+      setServerBound(true);
+      setNeedsOtp(false);
+      router.replace(defaultHomePath(next.role));
+    } catch {
+      setError("नेटवर्क त्रुटी");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!ready) {
     return <p className="p-4 text-sm text-temple-muted">लोड…</p>;
   }
 
-  if (!profile) {
+  if (!profile || !serverBound) {
     return (
       <div className="mx-auto max-w-lg space-y-4 px-4 py-10">
         <div className="text-center">
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
-          <h1 className="font-display text-3xl text-saffron-900">मोबाइल निवडा</h1>
+          <h1 className="font-display text-3xl text-saffron-900">मोबाइल खात्री</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            क्रमांकानुसार स्क्रीन — सेवक / संवादक / चरणसेवक
+            सेवक / संवादक मोबाइलसाठी WhatsApp OTP लागेल. चरणसेवक थेट जोडता येईल.
           </p>
         </div>
         <form
@@ -96,10 +171,11 @@ export function PhoneGate({ children }: { children: ReactNode }) {
               setError("१० अंकी मोबाइल टाका");
               return;
             }
-            const next = saveProfile({ phone });
-            setProfile(next);
-            setError(null);
-            router.replace(defaultHomePath(next.role));
+            if (needsOtp) {
+              void bindPhone({ phone, otp });
+            } else {
+              void bindPhone({ phone });
+            }
           }}
         >
           <label className="block text-sm font-semibold">
@@ -108,32 +184,53 @@ export function PhoneGate({ children }: { children: ReactNode }) {
               type="tel"
               inputMode="numeric"
               className="mt-1 w-full rounded-xl border border-saffron-200 px-3 py-2 text-base"
-              placeholder="9225118811"
+              placeholder="१० अंकी मोबाइल"
               value={phone}
+              disabled={needsOtp || busy}
               onChange={(ev) => setPhone(ev.target.value)}
             />
           </label>
-          <ul className="space-y-1 text-xs text-temple-muted">
-            <li>
-              · <strong>9225118811</strong> — सेवक (कैलास · सर्व स्क्रीन)
-            </li>
-            <li>
-              · <strong>9850120960</strong> — संवादक (उपस्थिती · अहवाल · संवाद)
-            </li>
-            <li>
-              · <strong>9423078811</strong> — चरणसेवक कैलास (फक्त स्वतःचे · सेवक नाही)
-            </li>
-            <li>
-              · <strong>9136443333</strong> — चरणसेवक मधुसुदनदास (भेद नसेल · फक्त स्वतःचे काम)
-            </li>
-          </ul>
+          {needsOtp ? (
+            <label className="block text-sm font-semibold">
+              WhatsApp OTP
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                className="mt-1 w-full rounded-xl border border-saffron-200 px-3 py-2 text-base tracking-widest"
+                placeholder="६ अंकी कोड"
+                value={otp}
+                disabled={busy}
+                onChange={(ev) => setOtp(ev.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+            </label>
+          ) : null}
+          <p className="text-xs text-temple-muted">
+            अधिकार असलेले नंबर यादीत दाखवत नाही — फक्त तुमचा WhatsApp मोबाइल टाका.
+          </p>
+          {hint ? <p className="text-sm text-saffron-800">{hint}</p> : null}
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
           <button
             type="submit"
-            className="w-full rounded-full bg-saffron-700 py-2.5 text-sm font-semibold text-white"
+            disabled={busy}
+            className="w-full rounded-full bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
           >
-            सुरू करा
+            {busy ? "कृपया थांबा…" : needsOtp ? "OTP खात्री करा" : "सुरू करा"}
           </button>
+          {needsOtp ? (
+            <button
+              type="button"
+              className="w-full text-sm text-temple-muted underline"
+              disabled={busy}
+              onClick={() => {
+                setNeedsOtp(false);
+                setOtp("");
+                setHint(null);
+              }}
+            >
+              मोबाइल बदला
+            </button>
+          ) : null}
         </form>
       </div>
     );
@@ -144,8 +241,10 @@ export function PhoneGate({ children }: { children: ReactNode }) {
       value={{
         profile,
         clear: () => {
+          void fetch("/api/auth/actor", { method: "DELETE", credentials: "include" });
           clearProfile();
           setProfile(null);
+          setServerBound(false);
         },
       }}
     >

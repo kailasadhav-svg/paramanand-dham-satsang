@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   getMeeting,
   getPlace,
@@ -18,9 +18,6 @@ import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function actorFromRequest(request: Request): string {
-  return normalizePhone(request.headers.get("x-actor-phone") || "");
-}
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();
@@ -59,7 +56,9 @@ export async function PUT(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
 
-  const actor = actorFromRequest(request);
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const staff = canSeeStaffScreens(role);
 

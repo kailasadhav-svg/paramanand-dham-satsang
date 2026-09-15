@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { ymdInIndia } from "@/lib/dates";
@@ -38,7 +38,9 @@ export async function POST(request: Request) {
   if (!body.question || !body.question.trim()) {
     return jsonError("प्रश्न लिहा", 400);
   }
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor) {
     return jsonError("मोबाइल प्रोफाइल आवश्यक — पुन्हा लॉगिन करा", 400);
   }

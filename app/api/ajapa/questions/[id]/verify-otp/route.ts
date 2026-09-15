@@ -8,7 +8,7 @@ import {
   hasMadhusudanAskThisWeek,
 } from "@/lib/ajapa/store";
 import { notifyGuruNewQuestion } from "@/lib/ajapa/whatsapp";
-import { jsonError, requireApiSession } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -28,7 +28,9 @@ export async function POST(request: Request, ctx: Ctx) {
   const id = Number(idRaw);
   if (!Number.isFinite(id)) return jsonError("अवैध प्रश्न", 400);
 
-  const actor = normalizePhone(request.headers.get("x-actor-phone") || "");
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const actor = actorAuth.phone;
   if (!actor) return jsonError("मोबाइल आवश्यक", 400);
 
   const body = (await request.json().catch(() => ({}))) as { otp?: string };
