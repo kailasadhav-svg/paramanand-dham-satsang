@@ -9,7 +9,7 @@ import {
   type QuestionWithPlace,
 } from "./db";
 import { formatMarathiDate, formatMarathiShort, weekFromThursday } from "./dates";
-import { ANSWERED_BY_LABEL, TOPIC_LABEL, VAHAK_LABEL_SHORT } from "./labels";
+import { ANSWERED_BY_LABEL, CHINTAN_LABEL, TOPIC_LABEL, VAHAK_LABEL_SHORT } from "./labels";
 import { displayPhone } from "./offline/phone";
 
 export { ANSWERED_BY_LABEL, TOPIC_LABEL } from "./labels";
@@ -79,7 +79,7 @@ export async function buildWeeklyReport(thursdayYmd: string) {
         lines.push(`📖 विषय: ${kind}${title}`.trim());
       }
       if (m.conductor) lines.push(`🎤 विचार वाहक: ${m.conductor}`);
-      if (m.notes) lines.push(`📝 ${m.notes}`);
+      if (m.notes) lines.push(`📝 ${CHINTAN_LABEL}: ${m.notes}`);
     }
 
     const qs = questions.filter((q) => q.place_id === row.place.id);

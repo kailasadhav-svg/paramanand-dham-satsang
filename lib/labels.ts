@@ -10,6 +10,7 @@ export const ANSWERED_BY_LABEL: Record<string, string> = {
 
 /** Member response to the Thursday village topic — never टिपणी / comment / note. */
 export const CHINTAN_LABEL = "चिंतन";
+export const CHINTAN_WRITE_PLACEHOLDER = "चिंतन लिहा…";
 
 export const TOPIC_THURSDAY_HELP =
   "मार्गदर्शक (मधुसुदनदास) गुरुवारी विषय देतात — सर्व गावांना एकच, किंवा गावानुसार वेगळा. अनिवार्य.";
