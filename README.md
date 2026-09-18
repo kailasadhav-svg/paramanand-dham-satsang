@@ -51,7 +51,7 @@ Now in the app:
 
 Now:
 1. **One question per परमानंद चरणसेवक per week** (hard limit on `/api/questions` and WhatsApp `अजपा Q`). मार्गदर्शक unlimited.
-2. **चिंतन is mandatory** for everyone (copy + empty submit rejected).
+2. **चिंतन is mandatory** for everyone (copy + empty submit rejected). First submitted चिंतन from a गाव that Thursday week **locks that place’s विषय** (`topic_kind` / `topic_title` on `meetings`) — even मार्गदर्शक cannot edit. The shared `weekly_questions` row stays separate.
 3. **Village चिंतन PDF** — `GET /api/weekly/chintan-pdf` returns a JSON stub grouped by village. TODO: real PDF.
 4. **Every question gets an automatic परमानंद साहित्य उत्तर first** (literature-grounded retrieval).
 5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
@@ -79,7 +79,7 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 | Tab | Route | Use |
 | --- | --- | --- |
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
-| विषय | `/topic` | Thursday विषय (create/edit **मार्गदर्शक only**); विचार वाहक name; चिंतन follow-up status |
+| विषय | `/topic` | Thursday विषय (create/edit **मार्गदर्शक only**, then **read-only** after that गाव’s first चिंतन); विचार वाहक name; चिंतन follow-up status |
 | चिंतन | `/weekly` | मार्गदर्शक only — replaces प्रश्न in their bottom nav |
 | प्रश्न | `/questions` | Weekly satsang Q&A (manual); hidden for मार्गदर्शक (they do not ask) |
 | संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |

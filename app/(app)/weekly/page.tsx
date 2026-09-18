@@ -15,6 +15,7 @@ import {
   CHINTAN_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_TOPIC_HELP,
+  PLACE_TOPIC_LOCK_SCOPE_HELP,
   TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
@@ -168,6 +169,7 @@ export default function WeeklyAdminPage() {
           <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
         </>
       )}
+      <p className="text-xs leading-relaxed text-temple-muted">{PLACE_TOPIC_LOCK_SCOPE_HELP}</p>
       <div className="flex items-center gap-2">
         <button
           type="button"

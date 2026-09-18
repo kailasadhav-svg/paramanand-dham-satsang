@@ -9,6 +9,7 @@ import {
   detectStaffRole,
   phonesEqual,
 } from "./roles";
+import { placeTopicLockState } from "./topic-lock";
 import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
 import {
   redactChintanRoster,
@@ -38,6 +39,28 @@ export async function actorIsVahak(
 /** Topic create/edit — मार्गदर्शक only. विचार वाहक cannot edit. */
 export async function actorCanEditPlaceTopic(phone: string): Promise<boolean> {
   return canEditAnyPlaceTopic(detectStaffRole(phone));
+}
+
+/** Per-गाव विषय lock: first non-empty चिंतन that week freezes topic_kind / topic_title. */
+export async function getPlaceTopicLock(opts: {
+  placeCode: string | null;
+  weekStart: string;
+}): Promise<{ topic_locked: boolean; chintan_count: number }> {
+  if (!opts.placeCode) return { topic_locked: false, chintan_count: 0 };
+  const question = await getWeeklyQuestion(opts.weekStart);
+  if (!question) return placeTopicLockState([], opts.placeCode);
+  const answers = await listWeeklyAnswers(question.id);
+  return placeTopicLockState(answers, opts.placeCode);
+}
+
+export async function getMeetingTopicLock(opts: {
+  placeName: string;
+  weekStart: string;
+}): Promise<{ topic_locked: boolean; chintan_count: number }> {
+  return getPlaceTopicLock({
+    placeCode: placeCodeFromDbName(opts.placeName),
+    weekStart: opts.weekStart,
+  });
 }
 
 export async function listChintanRoster(opts: {
