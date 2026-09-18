@@ -33,11 +33,7 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           </h1>
           <ProfileChip />
           {subtitle && profile && profile.role !== "charansevak" ? (
-            <p className="mt-0.5 break-words text-sm text-temple-muted">
-              {profile.role === "guru"
-                ? "चिंतन · विषय · प्रश्नोत्तर"
-                : subtitle}
-            </p>
+            <p className="mt-0.5 break-words text-sm text-temple-muted">{subtitle}</p>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -50,9 +46,6 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           </button>
           {profile ? (
             <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
-              {profile.role === "guru" ? (
-                <Link href="/attendance">उपस्थिती</Link>
-              ) : null}
               {profile && canSeeStaffScreens(profile.role) ? (
                 <Link href="/members">चरणसेवक</Link>
               ) : null}

@@ -179,44 +179,6 @@ async function ensureColumn(db: Client, table: string, column: string, typeSql: 
   }
 }
 
-/** Existing rows stay विचार वाहक; UNIQUE becomes (place, Thursday, duty_kind). */
-async function migratePlaceDutiesDutyKind(db: Client) {
-  const cols = await db.execute("PRAGMA table_info(place_duties)");
-  if (cols.rows.some((c) => c.name === "duty_kind")) {
-    await db.execute(
-      "CREATE INDEX IF NOT EXISTS idx_place_duties_kind ON place_duties(duty_kind)",
-    );
-    return;
-  }
-  await db.execute(`CREATE TABLE place_duties_v2 (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      place_id INTEGER NOT NULL REFERENCES places(id),
-      meeting_date TEXT NOT NULL,
-      duty_kind TEXT NOT NULL DEFAULT 'vahak' CHECK (duty_kind IN ('vahak', 'satsang_charansevak')),
-      charansevak_phone TEXT NOT NULL,
-      charansevak_name TEXT,
-      assigned_by_phone TEXT,
-      updated_at TEXT NOT NULL,
-      UNIQUE (place_id, meeting_date, duty_kind)
-    )`);
-  await db.execute(`INSERT INTO place_duties_v2 (
-      id, place_id, meeting_date, duty_kind, charansevak_phone, charansevak_name,
-      assigned_by_phone, updated_at
-    ) SELECT id, place_id, meeting_date, 'vahak', charansevak_phone, charansevak_name,
-      assigned_by_phone, updated_at FROM place_duties`);
-  await db.execute("DROP TABLE place_duties");
-  await db.execute("ALTER TABLE place_duties_v2 RENAME TO place_duties");
-  await db.execute(
-    "CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)",
-  );
-  await db.execute(
-    "CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)",
-  );
-  await db.execute(
-    "CREATE INDEX IF NOT EXISTS idx_place_duties_kind ON place_duties(duty_kind)",
-  );
-}
-
 async function migrate(db: Client) {
   const statements = [
     `CREATE TABLE IF NOT EXISTS places (
@@ -310,16 +272,14 @@ async function migrate(db: Client) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       place_id INTEGER NOT NULL REFERENCES places(id),
       meeting_date TEXT NOT NULL,
-      duty_kind TEXT NOT NULL DEFAULT 'vahak' CHECK (duty_kind IN ('vahak', 'satsang_charansevak')),
       charansevak_phone TEXT NOT NULL,
       charansevak_name TEXT,
       assigned_by_phone TEXT,
       updated_at TEXT NOT NULL,
-      UNIQUE (place_id, meeting_date, duty_kind)
+      UNIQUE (place_id, meeting_date)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
-    `CREATE INDEX IF NOT EXISTS idx_place_duties_kind ON place_duties(duty_kind)`,
     // Table name kept for migrations; rows are appointed परमानंद चरणसेवक.
     `CREATE TABLE IF NOT EXISTS satsangi_members (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -361,7 +321,6 @@ async function migrate(db: Client) {
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_questions_asked_by ON questions(asked_by_phone)",
   );
-  await migratePlaceDutiesDutyKind(db);
 
   await renameAmbashiToShindi(db);
 
@@ -697,21 +656,10 @@ export function attendanceTotal(m: Pick<Meeting, "men" | "women" | "children">):
   return (m.men || 0) + (m.women || 0) + (m.children || 0);
 }
 
-export const DUTY_KIND_VAHAK = "vahak";
-export const DUTY_KIND_SATSANG = "satsang_charansevak";
-export type PlaceDutyKind = typeof DUTY_KIND_VAHAK | typeof DUTY_KIND_SATSANG;
-
-export function asDutyKind(raw: unknown): PlaceDutyKind | null {
-  if (raw == null || raw === "") return DUTY_KIND_VAHAK;
-  if (raw === DUTY_KIND_VAHAK || raw === DUTY_KIND_SATSANG) return raw;
-  return null;
-}
-
 export type PlaceDuty = {
   id: number;
   place_id: number;
   meeting_date: string;
-  duty_kind: PlaceDutyKind;
   charansevak_phone: string;
   charansevak_name: string | null;
   assigned_by_phone: string | null;
@@ -725,7 +673,6 @@ function asPlaceDuty(row: Row): PlaceDuty {
     id: num(row.id),
     place_id: num(row.place_id),
     meeting_date: str(row.meeting_date),
-    duty_kind: asDutyKind(row.duty_kind) ?? DUTY_KIND_VAHAK,
     charansevak_phone: str(row.charansevak_phone),
     charansevak_name: strOrNull(row.charansevak_name),
     assigned_by_phone: strOrNull(row.assigned_by_phone),
@@ -740,24 +687,20 @@ function asPlaceDutyWithPlace(row: Row): PlaceDutyWithPlace {
 export async function listDutiesForPhone(
   phone: string,
   date: string,
-  kind: PlaceDutyKind = DUTY_KIND_VAHAK,
 ): Promise<PlaceDutyWithPlace[]> {
-  const all = await listDutiesOnDate(date, kind);
+  const all = await listDutiesOnDate(date);
   return all.filter((d) => phonesEqual(phone, d.charansevak_phone));
 }
 
-async function listDutiesOnDateRaw(
-  date: string,
-  kind: PlaceDutyKind = DUTY_KIND_VAHAK,
-): Promise<PlaceDutyWithPlace[]> {
+async function listDutiesOnDateRaw(date: string): Promise<PlaceDutyWithPlace[]> {
   const db = await getDb();
   const rs = await db.execute({
     sql: `SELECT d.*, p.name AS place_name
        FROM place_duties d
        JOIN places p ON p.id = d.place_id
-       WHERE d.meeting_date = ? AND d.duty_kind = ?
+       WHERE d.meeting_date = ?
        ORDER BY p.sort_order`,
-    args: [date, kind],
+    args: [date],
   });
   return rs.rows.map(asPlaceDutyWithPlace);
 }
@@ -765,15 +708,14 @@ async function listDutiesOnDateRaw(
 /** After Friday noon: if this Thursday has no वाहक, keep last week's person. */
 async function continuePreviousVahak(date: string): Promise<void> {
   if (!shouldAutoContinueVahak(date)) return;
-  const existing = await listDutiesOnDateRaw(date, DUTY_KIND_VAHAK);
+  const existing = await listDutiesOnDateRaw(date);
   const taken = new Set(existing.map((d) => d.place_id));
-  const prev = await listDutiesOnDateRaw(addDaysYmd(date, -7), DUTY_KIND_VAHAK);
+  const prev = await listDutiesOnDateRaw(addDaysYmd(date, -7));
   for (const duty of prev) {
     if (taken.has(duty.place_id)) continue;
     await upsertDuty({
       place_id: duty.place_id,
       meeting_date: date,
-      duty_kind: DUTY_KIND_VAHAK,
       charansevak_phone: duty.charansevak_phone,
       charansevak_name: duty.charansevak_name,
       assigned_by_phone: "auto-continue",
@@ -781,25 +723,19 @@ async function continuePreviousVahak(date: string): Promise<void> {
   }
 }
 
-export async function listDutiesOnDate(
-  date: string,
-  kind: PlaceDutyKind = DUTY_KIND_VAHAK,
-): Promise<PlaceDutyWithPlace[]> {
-  if (kind === DUTY_KIND_VAHAK) {
-    await continuePreviousVahak(date);
-  }
-  return listDutiesOnDateRaw(date, kind);
+export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace[]> {
+  await continuePreviousVahak(date);
+  return listDutiesOnDateRaw(date);
 }
 
 export async function getDuty(
   placeId: number,
   date: string,
-  kind: PlaceDutyKind = DUTY_KIND_VAHAK,
 ): Promise<PlaceDuty | undefined> {
   const db = await getDb();
   const rs = await db.execute({
-    sql: "SELECT * FROM place_duties WHERE place_id = ? AND meeting_date = ? AND duty_kind = ?",
-    args: [placeId, date, kind],
+    sql: "SELECT * FROM place_duties WHERE place_id = ? AND meeting_date = ?",
+    args: [placeId, date],
   });
   return rs.rows[0] ? asPlaceDuty(rs.rows[0]) : undefined;
 }
@@ -807,22 +743,20 @@ export async function getDuty(
 export async function upsertDuty(input: {
   place_id: number;
   meeting_date: string;
-  duty_kind?: PlaceDutyKind;
   charansevak_phone: string;
   charansevak_name?: string | null;
   assigned_by_phone?: string | null;
 }): Promise<PlaceDuty> {
   const phone = str(input.charansevak_phone).replace(/\D/g, "");
   if (phone.length < 10) throw new Error("invalid phone");
-  const kind = input.duty_kind ?? DUTY_KIND_VAHAK;
   const now = nowIso();
   const db = await getDb();
   await db.execute({
     sql: `INSERT INTO place_duties (
-        place_id, meeting_date, duty_kind, charansevak_phone, charansevak_name,
+        place_id, meeting_date, charansevak_phone, charansevak_name,
         assigned_by_phone, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(place_id, meeting_date, duty_kind) DO UPDATE SET
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(place_id, meeting_date) DO UPDATE SET
         charansevak_phone = excluded.charansevak_phone,
         charansevak_name = excluded.charansevak_name,
         assigned_by_phone = excluded.assigned_by_phone,
@@ -830,27 +764,22 @@ export async function upsertDuty(input: {
     args: [
       input.place_id,
       input.meeting_date,
-      kind,
       phone.length === 10 ? `91${phone}` : phone,
       input.charansevak_name?.trim() || null,
       input.assigned_by_phone || null,
       now,
     ],
   });
-  const saved = await getDuty(input.place_id, input.meeting_date, kind);
+  const saved = await getDuty(input.place_id, input.meeting_date);
   if (!saved) throw new Error("Failed to save duty");
   return saved;
 }
 
-export async function clearDuty(
-  placeId: number,
-  date: string,
-  kind: PlaceDutyKind = DUTY_KIND_VAHAK,
-): Promise<boolean> {
+export async function clearDuty(placeId: number, date: string): Promise<boolean> {
   const db = await getDb();
   const result = await db.execute({
-    sql: "DELETE FROM place_duties WHERE place_id = ? AND meeting_date = ? AND duty_kind = ?",
-    args: [placeId, date, kind],
+    sql: "DELETE FROM place_duties WHERE place_id = ? AND meeting_date = ?",
+    args: [placeId, date],
   });
   return (result.rowsAffected ?? 0) > 0;
 }

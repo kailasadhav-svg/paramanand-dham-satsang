@@ -7,14 +7,15 @@ import {
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
   CHINTAN_WRITE_PLACEHOLDER,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
   VAHAK_LABEL_SHORT,
   VAHAK_APPOINT_HELP,
-  SATSANG_CHARANSEVAK_APPOINT_HELP,
-  SATSANG_CHARANSEVAK_JOB_HELP,
-  SATSANG_CHARANSEVAK_LABEL,
+  VAHAK_APPOINT_UNSET,
+  vahakDutyPersonLabel,
+  VAHAK_NO_TOPIC_EDIT_HELP,
   GUIDE_LABEL,
   GUIDE_MAIN_WORK_HELP,
   GUIDE_QUEUE_LABEL,
@@ -48,12 +49,11 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
       VAHAK_APPOINT_HELP,
-      SATSANG_CHARANSEVAK_JOB_HELP,
-      SATSANG_CHARANSEVAK_APPOINT_HELP,
-      GUIDE_MAIN_WORK_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
       assert.equal(/\bcomment\b/i.test(s), false);
@@ -68,7 +68,19 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP, "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.");
+    assert.equal(
+      VAHAK_NO_TOPIC_EDIT_HELP,
+      "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.",
+    );
+    assert.match(VAHAK_NO_TOPIC_EDIT_HELP, /काम नाही/);
+    assert.match(VAHAK_NO_TOPIC_EDIT_HELP, /फक्त मार्गदर्शक/);
     assert.equal(VAHAK_JOB_HELP.includes("विषय दुरुस्त करतात"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("विषय तयार"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("दुरुस्त"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("दुरुस्ती"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("विषय दुरुस्त करतात"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("विचार वाहक विषय"), false);
     assert.match(TOPIC_THURSDAY_HELP, /गावानुसार/);
     assert.match(GUIDE_TOPIC_HELP, /सर्व गावांना/);
     assert.match(GUIDE_CHINTAN_RANK_HELP, /क्रमवार योग्य तीन/);
@@ -82,38 +94,110 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_APPOINT_HELP, /परमानंद चरणसेवकांपैकी एक/);
   });
 
-  it("names attendance duty सत्संग चरणसेवक, distinct from विचार वाहक", () => {
-    assert.equal(SATSANG_CHARANSEVAK_LABEL, "सत्संग चरणसेवक");
-    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /उपस्थिती/);
-    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /विचार वाहक वेगळे/);
-    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /मार्गदर्शक/);
-    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /मागच्या आठवड्याचे/);
-    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /संगणक नेमत नाहीत/);
-    assert.match(GUIDE_MAIN_WORK_HELP, /चिंतन वाचणे व उत्तर देणे/);
-    assert.match(GUIDE_MAIN_WORK_HELP, /उपस्थिती नोंद सत्संग चरणसेवकांचे काम/);
-    assert.match(GUIDE_MAIN_WORK_HELP, /प्रश्न विचारणे मुख्य काम नाही/);
-    const attendance = readFileSync(
-      new URL("../app/(app)/attendance/page.tsx", import.meta.url),
-      "utf8",
+  it("formats a compact one-line विचार वाहक appointment", () => {
+    assert.equal(vahakDutyPersonLabel(null), VAHAK_APPOINT_UNSET);
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: "राम देशमुख",
+        charansevak_phone_display: "9021555060",
+      }),
+      "राम देशमुख · 9021555060",
     );
-    const appointUi = readFileSync(
-      new URL("../components/DutyAppointSection.tsx", import.meta.url),
-      "utf8",
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: "  ",
+        charansevak_phone_display: "9021555060",
+      }),
+      "9021555060",
     );
-    const nav = readFileSync(new URL("../components/BottomNav.tsx", import.meta.url), "utf8");
-    const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
-    assert.match(attendance, /CompactDutyStrip/);
-    assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
-    assert.match(attendance, /उपस्थिती आकडे/);
-    assert.match(attendance, /satsang_charansevak/);
-    assert.match(appointUi, /CompactDutyStrip/);
-    assert.match(appointUi, /नेमणूक स्थळ/);
-    assert.match(appointUi, /इतर स्थळांच्या नेमणूका/);
-    assert.equal(attendance.includes("गुरुवारी परमानंद विचार वाहक नेमणूक"), false);
-    assert.match(attendance, /VAHAK_LABEL\} नेमणूक/);
-    assert.match(nav, /guideOnly: true/);
-    assert.match(nav, /hideForGuide: true/);
-    assert.match(roles, /if \(role === "guru"\) return "\/weekly"/);
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: null,
+        charansevak_phone_display: "",
+      }),
+      VAHAK_APPOINT_UNSET,
+    );
+  });
+
+  it("cannot be skimmed as विचार वाहक editing विषय", () => {
+    const skimAsVahakEditsTopic = [
+      "विषय दुरुस्त करतात",
+      "विषय तयार करतात",
+      "विचार वाहक विषय दुरुस्त",
+      "विचार वाहक विषय तयार",
+      "परमानंद विचार वाहक विषय",
+    ];
+    const copy = [
+      VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
+      VAHAK_APPOINT_HELP,
+      TOPIC_THURSDAY_HELP,
+      GUIDE_TOPIC_HELP,
+    ];
+    for (const s of copy) {
+      for (const bad of skimAsVahakEditsTopic) {
+        assert.equal(s.includes(bad), false, `${s} contains ${bad}`);
+      }
+      for (const sent of s.split(/(?<=[।.])\s*/).filter(Boolean)) {
+        if (/या आठवड्याचे परमानंद विचार वाहक/.test(sent)) {
+          assert.equal(/विषय/.test(sent), false, sent);
+          assert.equal(/दुरुस्त/.test(sent), false, sent);
+        }
+      }
+    }
+    const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
+    const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    for (const [rel, text] of [
+      ["topic", topic],
+      ["weekly", weekly],
+    ] as const) {
+      assert.match(text, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
+      assert.match(text, /VAHAK_NO_TOPIC_EDIT_HELP/);
+      assert.match(text, /VAHAK_JOB_HELP/);
+      for (const bad of skimAsVahakEditsTopic) {
+        assert.equal(text.includes(bad), false, `${rel} contains ${bad}`);
+      }
+    }
+  });
+
+  it("forbids the old Vahak/software topic-edit copy", () => {
+    const forbidden = [
+      "विषय दुरुस्ती फक्त या स्थळाचे",
+      "या स्थळाचे परमानंद विचार वाहक",
+      "या स्थळाचे {VAHAK_LABEL}",
+      "विचार वाहक किंवा मार्गदर्शक / संगणक",
+      "{VAHAK_LABEL} किंवा मार्गदर्शक / संगणक",
+      "किंवा मार्गदर्शक विषय दुरुस्त",
+      "विषय एडिट",
+      "own place topic",
+    ];
+    const files = [
+      "lib/labels.ts",
+      "app/(app)/topic/page.tsx",
+      "app/(app)/weekly/page.tsx",
+      "app/api/meetings/route.ts",
+      "app/me/page.tsx",
+      "README.md",
+      "docs/AJAPA_QA_FLOW.md",
+      "docs/AJAPA_WABA_TEMPLATES.md",
+      "docs/META_TEMPLATE_STEP_BY_STEP.md",
+      "docs/LOCAL_FIRST_PWA.md",
+    ];
+    for (const rel of files) {
+      const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+      for (const bad of forbidden) {
+        assert.equal(text.includes(bad), false, `${rel} still has ${bad}`);
+      }
+    }
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("या स्थळाचे"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("विचार वाहक"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("संगणक"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("या स्थळाचे"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("संगणक"), false);
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    assert.match(readme, /Never create\/edit विषय/);
+    assert.match(readme, /create\/edit \*\*मार्गदर्शक only\*\*/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {
@@ -141,14 +225,14 @@ describe("चिंतन copy", () => {
     const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weekly, /GUIDE_TOPIC_HELP/);
     assert.match(weekly, /GUIDE_CHINTAN_RANK_HELP/);
-    assert.match(weekly, /GUIDE_MAIN_WORK_HELP/);
     const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
     assert.match(questions, /GUIDE_QUESTION_HELP/);
     const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
     assert.match(ajapa, /GUIDE_QUESTION_HELP/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /GUIDE_TOPIC_HELP/);
-    assert.match(topic, /विषय तयार \/ दुरुस्ती फक्त मार्गदर्शक/);
+    assert.match(topic, /VAHAK_NO_TOPIC_EDIT_HELP/);
+    assert.match(topic, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
     assert.equal(topic.includes("या स्थळाचे"), false);
     assert.match(topic, /CHINTAN_LABEL/);
     assert.match(topic, /CHINTAN_WRITE_PLACEHOLDER/);
@@ -212,10 +296,35 @@ describe("चिंतन copy", () => {
     assert.match(qPage, /QUESTION_ID_HELP/);
     const attendance = readFileSync(new URL("../app/(app)/attendance/page.tsx", import.meta.url), "utf8");
     assert.match(attendance, /ThursdayTithiBar/);
+    assert.match(attendance, /नेमणूक स्थळ \(ड्रॉपडाउन\)/);
+    assert.match(attendance, /aria-label="नेमणूक स्थळ निवडा"/);
+    assert.match(attendance, /इतर स्थळांच्या नेमणुका/);
+    assert.match(attendance, /saveDuty\(selectedDutyRow\.place\)/);
+    assert.equal(
+      attendance.includes("dutyRows.map((row) => {"),
+      false,
+      "vahak appoint should not repeat a full form per place",
+    );
+    assert.equal(
+      attendance.includes('staff ? "उपस्थिती · एडिट"'),
+      false,
+      "staff attendance heading must still name सत्संग चरणसेवक",
+    );
+    assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL/);
+    assert.match(attendance, /VAHAK_APPOINT_HELP/);
+    assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
+    assert.match(attendance, /canSeeGuideScreens/);
+    assert.match(attendance, /href="\/weekly"/);
+    assert.match(attendance, /href="\/questions"/);
+    assert.equal(GUIDE_MAIN_WORK_HELP.includes("सत्संग चरणसेवक"), true);
+    assert.match(GUIDE_MAIN_WORK_HELP, /चिंतनावर उत्तर/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /ThursdayTithiBar/);
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weeklyPage, /ThursdayTithiBar/);
+    assert.match(weeklyPage, /VAHAK_NO_TOPIC_EDIT_HELP/);
+    assert.match(weeklyPage, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
+    assert.equal(weeklyPage.includes("या स्थळाचे"), false);
     const report = readFileSync(new URL("../app/(app)/report/page.tsx", import.meta.url), "utf8");
     assert.match(report, /ThursdayTithiBar/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
@@ -234,16 +343,16 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
       VAHAK_LABEL,
       VAHAK_LABEL_SHORT,
       VAHAK_APPOINT_HELP,
-      SATSANG_CHARANSEVAK_LABEL,
-      SATSANG_CHARANSEVAK_JOB_HELP,
-      SATSANG_CHARANSEVAK_APPOINT_HELP,
-      GUIDE_MAIN_WORK_HELP,
+      VAHAK_APPOINT_UNSET,
       GUIDE_LABEL,
+      GUIDE_MAIN_WORK_HELP,
       GUIDE_QUEUE_LABEL,
       GUIDE_CHINTAN_RANK_HELP,
       GUIDE_QUESTION_HELP,

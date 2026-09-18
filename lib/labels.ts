@@ -69,8 +69,15 @@ export const WEEKLY_ARCHIVE_VAHAK_HELP =
 export const VAHAK_LABEL = "परमानंद विचार वाहक";
 export const VAHAK_LABEL_SHORT = "विचार वाहक";
 
+/** Village topic create/edit — मार्गदर्शक only. Never Vahak or संगणक. */
+export const TOPIC_EDIT_GUIDE_ONLY_HELP = "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.";
+
+/** Own sentence so it cannot be skimmed as «विचार वाहक विषय दुरुस्त करतात». */
+export const VAHAK_NO_TOPIC_EDIT_HELP =
+  "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.";
+
 export const VAHAK_JOB_HELP =
-  "या आठवड्याचे परमानंद विचार वाहक सर्वांचे चिंतन जमा करतात, पाठपुरावा करतात आणि लिहिण्यास मदत करतात. स्थिती: आले / बाकी. विषय तयार/दुरुस्ती फक्त मार्गदर्शक. पूर्ण चिंतन फक्त मार्गदर्शक (मधुसुदनदास) पाहतात. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
+  "या आठवड्याचे परमानंद विचार वाहक सर्वांचे चिंतन जमा करतात, पाठपुरावा करतात आणि लिहिण्यास मदत करतात. स्थिती: आले / बाकी. पूर्ण चिंतन फक्त मार्गदर्शक (मधुसुदनदास) पाहतात. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
 
 export const GUIDE_LABEL = "मार्गदर्शक चरणसेवक";
 export const GUIDE_LABEL_SHORT = "मार्गदर्शक";
@@ -86,12 +93,19 @@ export const GUIDE_ANSWER_LABEL = "मार्गदर्शक उत्त�
 export const VAHAK_APPOINT_HELP =
   "मार्गदर्शक प्रत्येक गुरुवारी विचार वाहक नेमतात. नसेल तर त्या सत्संगाच्या शुक्रवारी सकाळी ६–१२ वाजता सत्संग चरणसेवक नेमू शकतात. शुक्रवार दुपारी १२ नंतरही रिकामे असेल तर मागच्या सत्संगाचा विचार वाहक चालू राहतो. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
 
-export const SATSANG_CHARANSEVAK_JOB_HELP =
-  "सत्संग चरणसेवक त्या गुरुवारी स्थळी उपस्थिती नोंद करतात. विचार वाहक वेगळे — चिंतन जमा. दोन्ही नेमणूक स्वतंत्र.";
+export const VAHAK_APPOINT_UNSET = "नेमलेले नाही";
 
-export const SATSANG_CHARANSEVAK_APPOINT_HELP =
-  "मार्गदर्शक प्रत्येक गुरुवारी सत्संग चरणसेवक नेमतात. मागच्या आठवड्याचे सत्संग चरणसेवकही रिकाम्या स्थळी नेमू शकतात. संगणक नेमत नाहीत.";
-
-/** मार्गदर्शक home focus — not attendance recording, not asking questions. */
+/** मार्गदर्शक home focus — attendance recording is सत्संग चरणसेवक work. */
 export const GUIDE_MAIN_WORK_HELP =
-  "मार्गदर्शक मुख्य काम: चिंतन वाचणे व उत्तर देणे, विषय, प्रश्नोत्तर. उपस्थिती नोंद सत्संग चरणसेवकांचे काम. प्रश्न विचारणे मुख्य काम नाही.";
+  "उपस्थिती नोंद सत्संग चरणसेवकांचे काम. मार्गदर्शक मुख्य काम: चिंतनावर उत्तर, विषय, प्रश्नोत्तर.";
+
+/** Compact one-line label for a place’s appointed विचार वाहक. */
+export function vahakDutyPersonLabel(
+  duty: { charansevak_name: string | null; charansevak_phone_display: string } | null,
+): string {
+  if (!duty) return VAHAK_APPOINT_UNSET;
+  const name = duty.charansevak_name?.trim();
+  const phone = duty.charansevak_phone_display?.trim();
+  if (name && phone) return `${name} · ${phone}`;
+  return name || phone || VAHAK_APPOINT_UNSET;
+}

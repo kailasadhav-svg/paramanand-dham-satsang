@@ -47,7 +47,6 @@ export const SEEKER_DEMO_PHONES = (
  *   Cannot create or edit the village topic (मार्गदर्शक only).
  * - संगणक चरणसेवक — software (KAILAS)
  * - मार्गदर्शक चरणसेवक — Madhusudandas: topics, all चिंतन, approve app access, appoint Vahak
- *   and सत्संग चरणसेवक. Main work is चिंतन answers / topics / Q&A — not recording attendance.
  *
  * मार्गदर्शक product powers (see labels.GUIDE_*_HELP; shown on guru screens):
  * 1. All member questions route to them (अजपा / प्रश्नोत्तर inbox).
@@ -164,15 +163,6 @@ export function canAppointVahak(
     return isFridayVahakAppointWindowForWeek(opts.meetingDate, opts.now);
   }
   return isFridayVahakAppointWindow(opts.now);
-}
-
-/**
- * Appoint सत्संग चरणसेवक (attendance duty) for a place/Thursday.
- * मार्गदर्शक anytime. संगणक never. Previous week’s सत्संग चरणसेवक may fill
- * an empty slot — enforced in /api/duties with the stored duty row.
- */
-export function canAppointSatsangCharansevak(role: StaffRole): boolean {
-  return canSeeGuideScreens(role);
 }
 
 /** @deprecated Use canApproveCharansevak — same guru-only rule. */

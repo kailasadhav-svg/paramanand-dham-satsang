@@ -9,10 +9,12 @@ import {
   CHINTAN_LABEL,
   CHINTAN_WRITE_PLACEHOLDER,
   GUIDE_TOPIC_HELP,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_APPOINT_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
+  VAHAK_NO_TOPIC_EDIT_HELP,
 } from "@/lib/labels";
 
 type Meeting = {
@@ -106,6 +108,9 @@ export default function TopicPage() {
       <h2 className="text-lg font-bold">विषय व {VAHAK_LABEL}</h2>
       <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
       <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_TOPIC_HELP}</p>
+      <p className="text-xs font-semibold leading-relaxed text-temple-muted">
+        {VAHAK_NO_TOPIC_EDIT_HELP}
+      </p>
       <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
       {places.length === 0 ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-sm text-temple-muted">
@@ -182,7 +187,7 @@ export default function TopicPage() {
         <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
       ) : (
         <p className="text-sm text-temple-muted">
-          विषय तयार / दुरुस्ती फक्त मार्गदर्शक. {VAHAK_LABEL} फक्त चिंतन पाठपुरावा व आले / बाकी पाहतात.
+          {TOPIC_EDIT_GUIDE_ONLY_HELP} {VAHAK_LABEL} फक्त चिंतन पाठपुरावा व आले / बाकी पाहतात.
         </p>
       )}
     </div>

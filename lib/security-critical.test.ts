@@ -13,7 +13,6 @@ import { isProductionReady } from "./health.ts";
 import {
   canApproveCharansevak,
   canAppointSatsangi,
-  canAppointSatsangCharansevak,
   canAppointVahak,
   canEditAnyPlaceTopic,
   canEditWeeklyQuestion,
@@ -385,8 +384,6 @@ describe("app access approval — परमानंद चरणसेवक", 
     assert.equal(canApproveCharansevak(detectStaffRole("9423078811")), false);
     assert.equal(canAppointSatsangi("charansevak"), false);
     assert.equal(canAppointVahak("software", { hasDuty: false }), false);
-    assert.equal(canAppointSatsangCharansevak("software"), false);
-    assert.equal(canAppointSatsangCharansevak("charansevak"), false);
     assert.equal(canSeeGuideScreens("software"), false);
   });
 

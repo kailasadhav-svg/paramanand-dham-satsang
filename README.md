@@ -16,15 +16,10 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 | Role | Marathi | Who |
 | --- | --- | --- |
 | Base member | परमानंद चरणसेवक | everyone |
-| Attendance | सत्संग चरणसेवक | records Thursday satsang counts; one per place per Thursday (`place_duties.duty_kind=satsang_charansevak`); Friday 06:00–12:00 IST may appoint विचार वाहक if none |
-| Weekly conductor | परमानंद विचार वाहक | always one of परमानंद चरणसेवक; one per place per Thursday (`place_duties.duty_kind=vahak`) |
+| Attendance | सत्संग चरणसेवक | records Thursday satsang counts; Friday 06:00–12:00 IST may appoint विचार वाहक if none |
+| Weekly conductor | परमानंद विचार वाहक | always one of परमानंद चरणसेवक; one per place per Thursday (`place_duties`) |
 | Software | संगणक चरणसेवक | KAILAS · 9225118811 |
-| Guide / super admin | मार्गदर्शक चरणसेवक | मधुसुदनदास · 9850120960 — **home `/weekly` (चिंतन)**. Topics, all चिंतन, Q&A answers, appoint Vahak / सत्संग चरणसेवक. Does **not** primarily record attendance or ask questions. |
-
-सत्संग चरणसेवक appointment (attendance duty, distinct from विचार वाहक):
-1. मार्गदर्शक may appoint from a compact strip on `/attendance` (not their home screen).
-2. Previous Thursday’s सत्संग चरणसेवक may fill an empty slot.
-3. संगणक does not appoint.
+| Guide / super admin | मार्गदर्शक चरणसेवक | मधुसुदनदास · 9850120960 — topics, all चिंतन, approve app access, appoint Vahak |
 
 विचार वाहक appointment cascade (one परमानंद चरणसेवक per place per Thursday):
 1. मार्गदर्शक appoints (main weekly duty).
@@ -34,18 +29,17 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
 
 Isolation (role-scoped screens/data do not leak):
-- **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak or सत्संग चरणसेवक appoint.
-- **मार्गदर्शक** — home `/weekly`. Topics, all चिंतन text, Q&A answers, approve app access, appoint विचार वाहक, compact appoint सत्संग चरणसेवक. Attendance counters are collapsed; recording is सत्संग चरणसेवक work.
-- **परमानंद विचार वाहक** — own place topic + चिंतन status only (never bodies).
+- **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak appoint.
+- **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all member questions.
+- **परमानंद विचार वाहक** — चिंतन collect / follow-up / help; आले vs बाकी names only (never चिंतन text). Never create/edit विषय — मार्गदर्शक only.
 - **सत्संग चरणसेवक** — attendance counts; Friday 06:00–12:00 IST Vahak window if empty.
 
 ## मार्गदर्शक चरणसेवक powers (मधुसुदनदास)
 
 Now in the app:
-- **Home after login:** `/weekly` (चिंतन roster + bodies)
 - All-seeker अजपा answers (`/ajapa`) and village प्रश्नोत्तर (`/questions`)
-- Per-place Thursday topic (`/topic`, `/weekly`)
-- Approve app access; appoint विचार वाहक; compact सत्संग चरणसेवक strip on `/attendance` (header link, not bottom-nav home)
+- Full चिंतन bodies (`/weekly`); per-place Thursday topic (`/topic`, `/weekly`)
+- Approve app access; appoint विचार वाहक
 
 ## Weekly question + चिंतन rules
 
@@ -78,9 +72,8 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 
 | Tab | Route | Use |
 | --- | --- | --- |
-| चिंतन | `/weekly` | मार्गदर्शक home — roster + bodies |
-| उपस्थिती | `/attendance` | सत्संग चरणसेवक / संगणक counts; मार्गदर्शक via header |
-| विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
+| उपस्थिती | `/attendance` | Place + Thursday + counts |
+| विषय | `/topic` | Thursday विषय (create/edit **मार्गदर्शक only**); विचार वाहक name; चिंतन follow-up status |
 | प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
 | संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |

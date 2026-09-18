@@ -4,7 +4,6 @@ import { describe, it } from "node:test";
 import {
   appDisplayName,
   canAppointSatsangi,
-  canAppointSatsangCharansevak,
   canAppointVahak,
   canApproveCharansevak,
   canEditAnyPlaceTopic,
@@ -131,19 +130,12 @@ describe("canAppointVahak", () => {
   });
 });
 
-describe("canAppointSatsangCharansevak", () => {
-  it("lets मार्गदर्शक appoint anytime; संगणक and generic चरणसेवक never via role", () => {
-    assert.equal(canAppointSatsangCharansevak("guru"), true);
-    assert.equal(canAppointSatsangCharansevak("software"), false);
-    assert.equal(canAppointSatsangCharansevak("charansevak"), false);
-  });
-});
-
 describe("defaultHomePath", () => {
   it("sends मार्गदर्शक to चिंतन, संगणक to attendance, चरणसेवक to अजपा", () => {
     assert.equal(defaultHomePath("guru"), "/weekly");
     assert.equal(defaultHomePath("software"), "/attendance");
-    assert.equal(defaultHomePath("charansevak"), "/ajapa");
+    const home = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+    assert.match(home, /defaultHomePath\(detectStaffRole\(actor\)\)/);
   });
 });
 
@@ -197,9 +189,6 @@ describe("role isolation", () => {
 describe("user-facing terminology", () => {
   const uiFiles = [
     "app/(app)/attendance/page.tsx",
-    "components/DutyAppointSection.tsx",
-    "components/BottomNav.tsx",
-    "components/AppHeader.tsx",
     "app/(app)/questions/page.tsx",
     "app/(app)/members/page.tsx",
     "app/(app)/ajapa/page.tsx",

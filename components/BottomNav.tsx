@@ -3,20 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProfileOptional } from "@/components/PhoneGate";
-import { canSeeGuideScreens, canSeeStaffScreens } from "@/lib/roles";
+import { canSeeStaffScreens } from "@/lib/roles";
 
 type NavItem = {
   href: string;
   label: string;
   icon: (p: { active: boolean }) => React.ReactNode;
   staffOnly?: boolean;
-  guideOnly?: boolean;
-  hideForGuide?: boolean;
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/weekly", label: "चिंतन", icon: ChintanIcon, guideOnly: true },
-  { href: "/attendance", label: "उपस्थिती", icon: UsersIcon, hideForGuide: true },
+  { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
   { href: "/topic", label: "विषय", icon: BookIcon },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
   { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
@@ -27,13 +24,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const profile = useProfileOptional();
   const staff = profile ? canSeeStaffScreens(profile.role) : false;
-  const guide = profile ? canSeeGuideScreens(profile.role) : false;
-  const items = ITEMS.filter((i) => {
-    if (i.staffOnly && !staff) return false;
-    if (i.guideOnly && !guide) return false;
-    if (i.hideForGuide && guide) return false;
-    return true;
-  });
+  const items = ITEMS.filter((i) => (i.staffOnly ? staff : true));
   const cols =
     items.length >= 5
       ? "grid-cols-5"
@@ -71,15 +62,6 @@ export function BottomNav() {
         })}
       </ul>
     </nav>
-  );
-}
-
-function ChintanIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#c74407" : "#7a5a42"} strokeWidth="1.8">
-      <path d="M4 5h16v12H8l-4 4z" />
-      <path d="M8 9h8M8 13h5" />
-    </svg>
   );
 }
 

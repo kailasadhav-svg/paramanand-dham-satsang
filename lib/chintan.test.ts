@@ -101,16 +101,12 @@ describe("विचार वाहक label", () => {
 });
 
 describe("one विचार वाहक per place per Thursday", () => {
-  it("keeps UNIQUE(place_id, meeting_date, duty_kind) on place_duties", () => {
+  it("keeps UNIQUE(place_id, meeting_date) on place_duties", () => {
     const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     assert.match(
       schema,
-      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date, duty_kind\)/,
+      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date\)/,
     );
-    assert.match(schema, /duty_kind TEXT NOT NULL DEFAULT 'vahak'/);
-    assert.match(schema, /satsang_charansevak/);
-    assert.match(schema, /ON CONFLICT\(place_id, meeting_date, duty_kind\)/);
-    assert.match(schema, /migratePlaceDutiesDutyKind/);
   });
 
   it("redacts roster answers on the weekly API path", () => {
@@ -132,6 +128,8 @@ describe("one विचार वाहक per place per Thursday", () => {
     );
     assert.match(meetings, /फक्त मार्गदर्शक विषय तयार \/ दुरुस्त करू शकतात/);
     assert.equal(meetings.includes("विचार वाहक किंवा मार्गदर्शक विषय"), false);
+    assert.equal(meetings.includes("या स्थळाचे परमानंद विचार वाहक"), false);
+    assert.equal(meetings.includes("मार्गदर्शक / संगणक विषय"), false);
     const places = readFileSync(new URL("../app/api/places/route.ts", import.meta.url), "utf8");
     assert.match(places, /can_edit_topic: false/);
     assert.equal(/is_vahak: true[\s\S]*can_edit_topic: true/.test(places), false);
