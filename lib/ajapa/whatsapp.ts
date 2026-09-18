@@ -369,6 +369,9 @@ export async function sendSmart(opts: {
  * OTP delivery for app login / escalate.
  * Prefer Meta AUTHENTICATION OTP template (already approved on WABA), then
  * Utility templates, then free-form text inside a 24h session.
+ *
+ * WHATSAPP_OTP_TEMPLATE may be a single name or comma-separated list.
+ * Languages tried: WHATSAPP_OTP_LANG first, then en / en_US / mr / hi.
  */
 export async function sendOtpMessage(opts: {
   to: string;
@@ -381,26 +384,55 @@ export async function sendOtpMessage(opts: {
     return { ok: false, error: "invalid OTP code" };
   }
 
-  const primary =
-    process.env.WHATSAPP_OTP_TEMPLATE?.trim() || "ajapa_app_otp";
+  const envNames = (process.env.WHATSAPP_OTP_TEMPLATE || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  // Prefer explicit env names; otherwise try a short list of common AUTH OTP names.
+  const candidateNames = (
+    envNames.length
+      ? envNames
+      : [
+          "ajapa_app_otp",
+          "otp",
+          "otp_verification",
+          "authentication_code",
+          "verify_code",
+        ]
+  ).filter((name, i, arr) => name && arr.indexOf(name) === i);
+
   const authMode =
     process.env.WHATSAPP_OTP_AUTH !== "0" &&
     process.env.WHATSAPP_OTP_AUTH !== "false";
-  const utilityFallbacks = ["ajapa_app_otp", "ajapa_welcome_code"].filter(
-    (name, i, arr) => name && name !== primary && arr.indexOf(name) === i,
-  );
+
+  const preferredLang =
+    process.env.WHATSAPP_OTP_LANG ||
+    process.env.WHATSAPP_OTP_LANGUAGE ||
+    "";
+  const languages = [preferredLang, "en", "en_US", "mr", "hi"]
+    .map((s) => s.trim())
+    .filter((lang, i, arr) => lang && arr.indexOf(lang) === i);
 
   let lastErr = "OTP template send failed";
 
-  // 1) Approved Meta AUTHENTICATION OTP template (body + copy-code button)
+  // 1) Approved Meta AUTHENTICATION OTP templates (body + copy-code button)
   if (authMode) {
-    const auth = await sendAuthenticationOtpTemplate({
-      to: opts.to,
-      name: primary,
-      code,
-    });
-    if (auth.ok) return auth;
-    lastErr = ("error" in auth ? auth.error : null) || lastErr;
+    for (const name of candidateNames) {
+      for (const languageCode of languages) {
+        const auth = await sendAuthenticationOtpTemplate({
+          to: opts.to,
+          name,
+          code,
+          languageCode,
+        });
+        if (auth.ok) return auth;
+        lastErr = ("error" in auth ? auth.error : null) || lastErr;
+        // Wrong template name → stop trying languages for this name quickly
+        if (/not exist|does not exist|template name|invalid parameter/i.test(lastErr)) {
+          break;
+        }
+      }
+    }
   }
 
   // 2) Open session → free-form text is allowed
@@ -417,12 +449,17 @@ export async function sendOtpMessage(opts: {
   }
 
   // 3) Utility templates (custom Marathi body)
-  for (const name of [primary, ...utilityFallbacks].filter(
+  for (const name of ["ajapa_app_otp", "ajapa_welcome_code", ...envNames].filter(
     (n, i, a) => n && a.indexOf(n) === i,
   )) {
-    const tpl = await sendTemplate(opts.to, name, [code]);
-    if (tpl.ok) return tpl;
-    lastErr = ("error" in tpl ? tpl.error : null) || lastErr;
+    for (const languageCode of languages) {
+      const tpl = await sendTemplate(opts.to, name, [code], languageCode);
+      if (tpl.ok) return tpl;
+      lastErr = ("error" in tpl ? tpl.error : null) || lastErr;
+      if (/not exist|does not exist|template name|invalid parameter/i.test(lastErr)) {
+        break;
+      }
+    }
   }
 
   // 4) Last resort free-form
