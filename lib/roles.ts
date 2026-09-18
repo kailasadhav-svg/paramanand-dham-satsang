@@ -165,6 +165,15 @@ export function canAppointVahak(
   return isFridayVahakAppointWindow(opts.now);
 }
 
+/**
+ * Appoint सत्संग चरणसेवक (attendance duty) for a place/Thursday.
+ * मार्गदर्शक anytime. संगणक never. Previous week’s सत्संग चरणसेवक may fill
+ * an empty slot — enforced in /api/duties with the stored duty row.
+ */
+export function canAppointSatsangCharansevak(role: StaffRole): boolean {
+  return canSeeGuideScreens(role);
+}
+
 /** @deprecated Use canApproveCharansevak — same guru-only rule. */
 export function canAppointSatsangi(role: StaffRole): boolean {
   return canApproveCharansevak(role);

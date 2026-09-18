@@ -16,6 +16,9 @@ import {
   VAHAK_APPOINT_UNSET,
   vahakDutyPersonLabel,
   VAHAK_NO_TOPIC_EDIT_HELP,
+  SATSANG_CHARANSEVAK_APPOINT_HELP,
+  SATSANG_CHARANSEVAK_JOB_HELP,
+  SATSANG_CHARANSEVAK_LABEL,
   GUIDE_LABEL,
   GUIDE_MAIN_WORK_HELP,
   GUIDE_QUEUE_LABEL,
@@ -295,11 +298,20 @@ describe("चिंतन copy", () => {
     assert.match(qPage, /handwritten/);
     assert.match(qPage, /QUESTION_ID_HELP/);
     const attendance = readFileSync(new URL("../app/(app)/attendance/page.tsx", import.meta.url), "utf8");
+    const dutyUi = readFileSync(
+      new URL("../components/DutyAppointSection.tsx", import.meta.url),
+      "utf8",
+    );
     assert.match(attendance, /ThursdayTithiBar/);
-    assert.match(attendance, /नेमणूक स्थळ \(ड्रॉपडाउन\)/);
-    assert.match(attendance, /aria-label="नेमणूक स्थळ निवडा"/);
-    assert.match(attendance, /इतर स्थळांच्या नेमणुका/);
-    assert.match(attendance, /saveDuty\(selectedDutyRow\.place\)/);
+    assert.match(attendance, /DutyAppointSection/);
+    assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL\} नेमणूक/);
+    assert.match(attendance, /VAHAK_LABEL\} नेमणूक/);
+    assert.match(attendance, /DUTY_KIND_SATSANG/);
+    assert.match(attendance, /DUTY_KIND_VAHAK/);
+    assert.match(attendance, /ariaLabel="नेमणूक स्थळ निवडा"/);
+    assert.match(attendance, /ariaLabel="सत्संग चरणसेवक नेमणूक स्थळ निवडा"/);
+    assert.match(dutyUi, /नेमणूक स्थळ \(ड्रॉपडाउन\)/);
+    assert.match(dutyUi, /इतर स्थळांच्या नेमणुका/);
     assert.equal(
       attendance.includes("dutyRows.map((row) => {"),
       false,
@@ -312,6 +324,11 @@ describe("चिंतन copy", () => {
     );
     assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL/);
     assert.match(attendance, /VAHAK_APPOINT_HELP/);
+    assert.match(attendance, /SATSANG_CHARANSEVAK_APPOINT_HELP/);
+    assert.equal(SATSANG_CHARANSEVAK_LABEL, "सत्संग चरणसेवक");
+    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /उपस्थिती नोंद/);
+    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /विचार वाहक वेगळे/);
+    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /संगणक नेमत नाहीत/);
     assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
     assert.match(attendance, /canSeeGuideScreens/);
     assert.match(attendance, /href="\/weekly"/);
@@ -351,6 +368,9 @@ describe("चिंतन copy", () => {
       VAHAK_LABEL_SHORT,
       VAHAK_APPOINT_HELP,
       VAHAK_APPOINT_UNSET,
+      SATSANG_CHARANSEVAK_APPOINT_HELP,
+      SATSANG_CHARANSEVAK_JOB_HELP,
+      SATSANG_CHARANSEVAK_LABEL,
       GUIDE_LABEL,
       GUIDE_MAIN_WORK_HELP,
       GUIDE_QUEUE_LABEL,

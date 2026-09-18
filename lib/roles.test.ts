@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   appDisplayName,
   canAppointSatsangi,
+  canAppointSatsangCharansevak,
   canAppointVahak,
   canApproveCharansevak,
   canEditAnyPlaceTopic,
@@ -130,6 +131,14 @@ describe("canAppointVahak", () => {
   });
 });
 
+describe("canAppointSatsangCharansevak", () => {
+  it("lets मार्गदर्शक appoint anytime; संगणक and generic चरणसेवक never via role", () => {
+    assert.equal(canAppointSatsangCharansevak("guru"), true);
+    assert.equal(canAppointSatsangCharansevak("software"), false);
+    assert.equal(canAppointSatsangCharansevak("charansevak"), false);
+  });
+});
+
 describe("defaultHomePath", () => {
   it("sends मार्गदर्शक to चिंतन, संगणक to attendance, चरणसेवक to अजपा", () => {
     assert.equal(defaultHomePath("guru"), "/weekly");
@@ -202,6 +211,7 @@ describe("user-facing terminology", () => {
     "app/layout.tsx",
     "components/MemberHeader.tsx",
     "components/AppHeader.tsx",
+    "components/DutyAppointSection.tsx",
     "lib/installSlots.ts",
     "lib/api-guard.ts",
     "app/api/satsangi-members/route.ts",

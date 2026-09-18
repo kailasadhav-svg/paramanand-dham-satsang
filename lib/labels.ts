@@ -95,6 +95,12 @@ export const VAHAK_APPOINT_HELP =
 
 export const VAHAK_APPOINT_UNSET = "नेमलेले नाही";
 
+export const SATSANG_CHARANSEVAK_JOB_HELP =
+  "सत्संग चरणसेवक त्या गुरुवारी स्थळी उपस्थिती नोंद करतात. विचार वाहक वेगळे — चिंतन जमा. दोन्ही नेमणूक स्वतंत्र.";
+
+export const SATSANG_CHARANSEVAK_APPOINT_HELP =
+  "मार्गदर्शक प्रत्येक गुरुवारी सत्संग चरणसेवक नेमतात. मागच्या आठवड्याचे सत्संग चरणसेवकही रिकाम्या स्थळी नेमू शकतात. संगणक नेमत नाहीत.";
+
 /** मार्गदर्शक home focus — attendance recording is सत्संग चरणसेवक work. */
 export const GUIDE_MAIN_WORK_HELP =
   "उपस्थिती नोंद सत्संग चरणसेवकांचे काम. मार्गदर्शक मुख्य काम: चिंतनावर उत्तर, विषय, प्रश्नोत्तर.";
