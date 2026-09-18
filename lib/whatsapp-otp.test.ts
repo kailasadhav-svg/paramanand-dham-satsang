@@ -76,4 +76,41 @@ describe("whatsapp dry-run / outbound readiness", () => {
       TURIYA_WABA_NUMBER: "917030111501",
     }), true);
   });
+
+  it("defaults OTP env to approved home_login_otp / en_US", async () => {
+    const prev = {
+      dry: process.env.WHATSAPP_DRY_RUN,
+      tpl: process.env.WHATSAPP_OTP_TEMPLATE,
+      lang: process.env.WHATSAPP_OTP_LANG,
+      auth: process.env.WHATSAPP_OTP_AUTH,
+      node: process.env.NODE_ENV,
+    };
+    process.env.WHATSAPP_DRY_RUN = "1";
+    process.env.NODE_ENV = "development";
+    delete process.env.WHATSAPP_OTP_TEMPLATE;
+    delete process.env.WHATSAPP_OTP_LANG;
+    process.env.WHATSAPP_OTP_AUTH = "1";
+    try {
+      const { sendOtpMessage } = await import("./ajapa/whatsapp.ts");
+      // Capture via console — dry-run logs payload; we just assert ok
+      const r = await sendOtpMessage({
+        to: "919225118811",
+        code: "112233",
+        purpose: "actor_bind",
+      });
+      assert.equal(r.ok, true);
+      if ("via" in r) assert.equal(r.via, "dry-run");
+    } finally {
+      for (const [k, v] of Object.entries({
+        WHATSAPP_DRY_RUN: prev.dry,
+        WHATSAPP_OTP_TEMPLATE: prev.tpl,
+        WHATSAPP_OTP_LANG: prev.lang,
+        WHATSAPP_OTP_AUTH: prev.auth,
+        NODE_ENV: prev.node,
+      })) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
 });

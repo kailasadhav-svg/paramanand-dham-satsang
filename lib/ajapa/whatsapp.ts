@@ -313,7 +313,7 @@ export async function sendAuthenticationOtpTemplate(opts: {
     opts.languageCode ||
     process.env.WHATSAPP_OTP_LANG ||
     process.env.WHATSAPP_OTP_LANGUAGE ||
-    "en";
+    "en_US";
   return postMessage({
     to: opts.to,
     type: "template",
@@ -388,17 +388,11 @@ export async function sendOtpMessage(opts: {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  // Prefer explicit env names; otherwise try a short list of common AUTH OTP names.
+  // Team Dhyeyapurti APPROVED AUTHENTICATION OTP (Turiya getTemplateList): home_login_otp / en_US
   const candidateNames = (
     envNames.length
       ? envNames
-      : [
-          "ajapa_app_otp",
-          "otp",
-          "otp_verification",
-          "authentication_code",
-          "verify_code",
-        ]
+      : ["home_login_otp", "ajapa_app_otp", "otp", "otp_verification", "verify_code"]
   ).filter((name, i, arr) => name && arr.indexOf(name) === i);
 
   const authMode =
@@ -409,7 +403,8 @@ export async function sendOtpMessage(opts: {
     process.env.WHATSAPP_OTP_LANG ||
     process.env.WHATSAPP_OTP_LANGUAGE ||
     "";
-  const languages = [preferredLang, "en", "en_US", "mr", "hi"]
+  // home_login_otp is en_US on Meta; keep that first when env unset
+  const languages = [preferredLang, "en_US", "en", "mr", "hi"]
     .map((s) => s.trim())
     .filter((lang, i, arr) => lang && arr.indexOf(lang) === i);
 

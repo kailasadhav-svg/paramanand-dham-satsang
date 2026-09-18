@@ -157,14 +157,14 @@ WHATSAPP_TOKEN=…                # Meta Graph (meta provider)
 WHATSAPP_PHONE_NUMBER_ID=…
 # TURIYA_API_KEY=…              # only if WHATSAPP_PROVIDER=turiya
 WHATSAPP_DRY_RUN=0              # must be off on VPS — production ignores dry-run anyway
-WHATSAPP_OTP_TEMPLATE=…         # exact approved Meta AUTHENTICATION OTP template name
+WHATSAPP_OTP_TEMPLATE=home_login_otp   # APPROVED AUTHENTICATION (Turiya)
 WHATSAPP_OTP_AUTH=1             # body + copy-code button (Meta OTP format)
-WHATSAPP_OTP_LANG=en            # match template language (en / en_US / mr)
+WHATSAPP_OTP_LANG=en_US
 ```
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
 
-If Meta AUTHENTICATION OTP is already approved in Turiya/Meta, set `WHATSAPP_OTP_TEMPLATE` to that exact template name and keep `WHATSAPP_OTP_AUTH=1`. Utility fallback: `ajapa_welcome_code`. See `docs/AJAPA_WABA_TEMPLATES.md`.
+Live OTP uses Meta AUTHENTICATION template **`home_login_otp`** (`en_US`, copy-code) already approved on Team Dhyeyapurti WABA. See `docs/AJAPA_WABA_TEMPLATES.md`.
 
 `GET /api/health` returns `{ ok, db, secrets, whatsapp: { outbound_ok, provider, dry_run }, production_ready }` when the store is reachable.
 

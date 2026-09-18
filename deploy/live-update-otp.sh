@@ -29,8 +29,17 @@ if [[ -f .env.local ]]; then
   sed -i 's/^WHATSAPP_DRY_RUN=.*/WHATSAPP_DRY_RUN=0/' .env.local || true
   grep -q '^WHATSAPP_DRY_RUN=' .env.local || echo 'WHATSAPP_DRY_RUN=0' >> .env.local
   grep -q '^WHATSAPP_OTP_AUTH=' .env.local || echo 'WHATSAPP_OTP_AUTH=1' >> .env.local
-  # Keep existing WHATSAPP_OTP_TEMPLATE if set; otherwise leave blank so code tries common names.
-  grep -q '^WHATSAPP_OTP_LANG=' .env.local || echo 'WHATSAPP_OTP_LANG=en' >> .env.local
+  # Locked to approved Team Dhyeyapurti AUTHENTICATION OTP
+  if grep -q '^WHATSAPP_OTP_TEMPLATE=' .env.local; then
+    sed -i 's/^WHATSAPP_OTP_TEMPLATE=.*/WHATSAPP_OTP_TEMPLATE=home_login_otp/' .env.local
+  else
+    echo 'WHATSAPP_OTP_TEMPLATE=home_login_otp' >> .env.local
+  fi
+  if grep -q '^WHATSAPP_OTP_LANG=' .env.local; then
+    sed -i 's/^WHATSAPP_OTP_LANG=.*/WHATSAPP_OTP_LANG=en_US/' .env.local
+  else
+    echo 'WHATSAPP_OTP_LANG=en_US' >> .env.local
+  fi
 fi
 
 echo "=== env check (redacted) ==="

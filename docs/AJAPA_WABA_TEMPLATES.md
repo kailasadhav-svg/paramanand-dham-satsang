@@ -102,28 +102,32 @@ AI उत्तर थोडक्यात: {{4}}
 
 **बटणे:** `समजलं` · `अ‍ॅप उघडा`
 
-### ६b) `ajapa_app_otp` — अ‍ॅप लॉगिन / escalate OTP (आवश्यक)
+### ६b) `home_login_otp` — अ‍ॅप लॉगिन OTP (LIVE · APPROVED)
 
-*संगणक (`9225118811`) व मार्गदर्शक (`9850120960`) मोबाइल खात्रीसाठी.*  
-*२४तास session बाहेर free-form OTP Meta नाकारते — AUTHENTICATION / Utility टेम्प्लेट हवा.*
+*Team Dhyeyapurti / Turiya `getTemplateList` — status **APPROVED**, category **AUTHENTICATION**, language **`en_US`**.*  
+*संगणक (`9225118811`) व मार्गदर्शक (`9850120960`) मोबाइल खात्रीसाठी हेच वापरा.*
 
-**Preferred:** Meta portal मध्ये आधीच **Approved AUTHENTICATION OTP** (copy code) असल्यास  
-`WHATSAPP_OTP_TEMPLATE=<exact_template_name>` + `WHATSAPP_OTP_AUTH=1` + `WHATSAPP_OTP_LANG=en` (किंवा टेम्प्लेटची language).
+| Field | Value |
+|-------|--------|
+| Template name | `home_login_otp` |
+| Library | `verify_code_1` |
+| Language | `en_US` |
+| Body | `*{{1}}* is your verification code. For your security, do not share this code.` |
+| Footer | `Expires in 10 minutes.` |
+| Button | Copy code (Meta stores as URL subtype) |
+
+**Env (locked):**
+```
+WHATSAPP_OTP_TEMPLATE=home_login_otp
+WHATSAPP_OTP_AUTH=1
+WHATSAPP_OTP_LANG=en_US
+```
 
 App send shape (AUTHENTICATION):
 - body parameter = OTP  
 - button `sub_type=url` index `0` parameter = same OTP  
 
-**Utility fallback मजकूर (`ajapa_app_otp`):**
-```
-परमानंद धाम · अ‍ॅप OTP: {{1}}
-अ‍ॅपमध्ये टाका. १० मिनिटे वैध.
-
-|| हरि ॐ परमानंद विश्वव्यापकम् ||
-```
-
-**बटणे:** Utility = नाही · AUTHENTICATION = Copy code (Meta)  
-**Env:** `WHATSAPP_OTP_TEMPLATE` (fallback Utility: `ajapa_welcome_code`)
+Utility fallback (जर AUTH fail): `ajapa_app_otp` / `ajapa_welcome_code` (mr).
 
 ---
 

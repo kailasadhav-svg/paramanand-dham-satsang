@@ -63,7 +63,7 @@ Add Template फॉर्ममध्ये **Name → Body → Buttons** टॅ
 | 4 | `ajapa_answer_ready` | उत्तर पाहा · अ‍ॅप उघडा | {{1}}=राम |
 | 5 | `ajapa_weekly_question` | उत्तर देईन · अ‍ॅप उघडा | {{1}}=अजपा जप कसा स्थिर ठेवावा? |
 | 6 | `ajapa_welcome_code` | समजलं · अ‍ॅप उघडा | {{1}}=1960 |
-| 6b | `ajapa_app_otp` | (नाही) | {{1}}=123456 — **OTP लॉगिनसाठी आवश्यक** |
+| 6b | `home_login_otp` | Copy code | **APPROVED AUTH** en_US — अ‍ॅप OTP (वापरा) |
 | 7 | `satsang_wed_notice` | अ‍ॅप उघडा · समजलं | अजपा · श्वास आणि नाम |
 | 8 | `satsang_thu_reminder` | उपस्थिती नोंदवा · अ‍ॅप उघडा | नाशिक · ८:०० · रामदास · अजपा |
 | 9 | `satsang_weekly_report` | पूर्ण अहवाल · अ‍ॅप उघडा | तारीख · उपस्थिती · विषय · सार |
