@@ -13,7 +13,12 @@ import {
   verifyActorBindOtp,
 } from "@/lib/ajapa/otp";
 import { normalizePhone } from "@/lib/ajapa/phone";
-import { sendText, whatsappConfigured } from "@/lib/ajapa/whatsapp";
+import { getWaSession } from "@/lib/ajapa/store";
+import {
+  sendOtpMessage,
+  whatsappConfigured,
+  whatsappOutboundReady,
+} from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
@@ -80,14 +85,21 @@ export async function POST(request: Request) {
     let waOk = false;
     let waError: string | null = null;
     if (whatsappConfigured()) {
-      const wa = await sendText(
-        phone,
-        `परमानंद धाम · अ‍ॅप लॉगिन\n\nमोबाइल खात्री OTP: *${code}*\n\nअ‍ॅपमध्ये टाका (१० मिनिटे वैध).`,
-      );
+      const session = await getWaSession(phone);
+      const wa = await sendOtpMessage({
+        to: phone,
+        code,
+        lastInboundAt: session?.last_inbound_at ?? null,
+        purpose: "actor_bind",
+      });
       waOk = Boolean(wa.ok);
-      waError = wa.ok ? null : ("error" in wa ? wa.error : "send failed");
+      waError = wa.ok ? null : "error" in wa ? wa.error : "send failed";
     } else {
-      waError = "WhatsApp not configured";
+      const outbound = whatsappOutboundReady();
+      waError = outbound.reason || "WhatsApp not configured";
+      if (outbound.dry_run_ignored) {
+        waError = `${waError} (WHATSAPP_DRY_RUN production मध्ये बंद — खरे credentials हवे)`;
+      }
     }
     return NextResponse.json({
       ok: true,
@@ -102,7 +114,9 @@ export async function POST(request: Request) {
         ? "WhatsApp OTP पाठवला — कोड टाका"
         : allowDebugOtp()
           ? `टेस्ट OTP: ${code}`
-          : "OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
+          : waError
+            ? `OTP पाठवता आला नाही: ${waError.slice(0, 160)}`
+            : "OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
     });
   }
 

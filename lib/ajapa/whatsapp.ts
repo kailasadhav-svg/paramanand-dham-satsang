@@ -1,37 +1,101 @@
 import type { AjapaQuestion } from "./types";
-import { GUIDE_QUEUE_LABEL } from "@/lib/labels";
+import { GUIDE_QUEUE_LABEL } from "../labels.ts";
+import { isServingProduction } from "../runtime.ts";
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v21.0";
 
 export type WaSendResult =
-  | { ok: true; id?: string }
+  | { ok: true; id?: string; via?: "meta" | "turiya" | "dry-run" }
   | { ok: false; error: string; skipped?: boolean };
 
-function cfg() {
+type WaCfg = {
+  provider: "meta" | "turiya";
+  token: string;
+  phoneNumberId: string;
+  apiBase: string;
+  dryRun: boolean;
+  forceTemplates: boolean;
+  turiyaKey: string;
+  turiyaWaba: string;
+  turiyaBase: string;
+};
+
+/** Dry-run only in local/dev — never silently swallow sends on VPS / Vercel. */
+export function whatsappDryRunEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = env.WHATSAPP_DRY_RUN === "1" || env.WHATSAPP_DRY_RUN === "true";
+  if (!raw) return false;
+  if (isServingProduction(env)) return false;
+  return true;
+}
+
+function cfg(env: NodeJS.ProcessEnv = process.env): WaCfg {
+  const providerRaw = (env.WHATSAPP_PROVIDER || "meta").toLowerCase();
+  const provider = providerRaw === "turiya" ? "turiya" : "meta";
   return {
-    token: process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || "",
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
+    provider,
+    token: env.WHATSAPP_TOKEN || env.WHATSAPP_ACCESS_TOKEN || "",
+    phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID || "",
     apiBase: (
-      process.env.WHATSAPP_API_BASE || `https://graph.facebook.com/${GRAPH_VERSION}`
+      env.WHATSAPP_API_BASE || `https://graph.facebook.com/${GRAPH_VERSION}`
     ).replace(/\/$/, ""),
-    dryRun: process.env.WHATSAPP_DRY_RUN === "1" || process.env.WHATSAPP_DRY_RUN === "true",
-    forceTemplates: process.env.WHATSAPP_FORCE_TEMPLATES === "1",
+    dryRun: whatsappDryRunEnabled(env),
+    forceTemplates: env.WHATSAPP_FORCE_TEMPLATES === "1",
+    turiyaKey: env.TURIYA_API_KEY || "",
+    turiyaWaba: env.TURIYA_WABA_NUMBER || "917030111501",
+    turiyaBase: (env.TURIYA_API_BASE || "https://app.turiyainfotech.com").replace(
+      /\/$/,
+      "",
+    ),
   };
 }
 
-export function whatsappConfigured(): boolean {
-  const c = cfg();
-  return Boolean(c.token && c.phoneNumberId) || c.dryRun;
+/** True when outbound WhatsApp can actually deliver (or safe local dry-run). */
+export function whatsappConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  const c = cfg(env);
+  if (c.dryRun) return true;
+  if (c.provider === "turiya") return Boolean(c.turiyaKey && c.turiyaWaba);
+  return Boolean(c.token && c.phoneNumberId);
 }
 
-async function postMessage(body: Record<string, unknown>): Promise<WaSendResult> {
-  const c = cfg();
-  if (c.dryRun) {
-    console.info("[whatsapp:dry-run]", JSON.stringify(body).slice(0, 800));
-    return { ok: true, id: "dry-run" };
+/** Production health: outbound send credentials present (ignores dry-run). */
+export function whatsappOutboundReady(env: NodeJS.ProcessEnv = process.env): {
+  ok: boolean;
+  provider: "meta" | "turiya";
+  dry_run_ignored: boolean;
+  reason?: string;
+} {
+  const c = cfg(env);
+  const dryIgnored =
+    (env.WHATSAPP_DRY_RUN === "1" || env.WHATSAPP_DRY_RUN === "true") &&
+    isServingProduction(env);
+  if (c.provider === "turiya") {
+    if (c.turiyaKey && c.turiyaWaba) {
+      return { ok: true, provider: "turiya", dry_run_ignored: dryIgnored };
+    }
+    return {
+      ok: false,
+      provider: "turiya",
+      dry_run_ignored: dryIgnored,
+      reason: "TURIYA_API_KEY (and TURIYA_WABA_NUMBER) required",
+    };
   }
+  if (c.token && c.phoneNumberId) {
+    return { ok: true, provider: "meta", dry_run_ignored: dryIgnored };
+  }
+  return {
+    ok: false,
+    provider: "meta",
+    dry_run_ignored: dryIgnored,
+    reason: "WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID required",
+  };
+}
+
+async function postMeta(body: Record<string, unknown>): Promise<WaSendResult> {
+  const c = cfg();
   if (!c.token || !c.phoneNumberId) {
-    return { ok: false, error: "WhatsApp not configured", skipped: true };
+    return { ok: false, error: "WhatsApp Meta not configured", skipped: true };
   }
   const url = `${c.apiBase}/${c.phoneNumberId}/messages`;
   const res = await fetch(url, {
@@ -48,11 +112,116 @@ async function postMessage(body: Record<string, unknown>): Promise<WaSendResult>
   });
   if (!res.ok) {
     const err = await res.text().catch(() => "");
-    console.error("WhatsApp send failed", res.status, err.slice(0, 500));
+    console.error("WhatsApp Meta send failed", res.status, err.slice(0, 500));
     return { ok: false, error: err || `HTTP ${res.status}` };
   }
   const data = (await res.json()) as { messages?: { id?: string }[] };
-  return { ok: true, id: data.messages?.[0]?.id };
+  return { ok: true, id: data.messages?.[0]?.id, via: "meta" };
+}
+
+/**
+ * Turiya Infotech BSP (SMSGatewayCenter-style): Key/apikey header + form fields.
+ * Used when WHATSAPP_PROVIDER=turiya.
+ */
+async function postTuriya(opts: {
+  to: string;
+  text?: string;
+  templateName?: string;
+  templateParams?: string[];
+}): Promise<WaSendResult> {
+  const c = cfg();
+  if (!c.turiyaKey || !c.turiyaWaba) {
+    return { ok: false, error: "WhatsApp Turiya not configured", skipped: true };
+  }
+  const form = new FormData();
+  form.set("wabaNumber", c.turiyaWaba);
+  form.set("mobile", opts.to.replace(/\D/g, ""));
+  form.set("output", "json");
+  form.set("sendMethod", "quick");
+  if (opts.templateName) {
+    form.set("msgType", "text");
+    form.set("templateName", opts.templateName);
+    const msg =
+      opts.templateParams && opts.templateParams.length
+        ? opts.templateParams.join("||")
+        : opts.text || "";
+    form.set("msg", msg);
+  } else {
+    form.set("msgType", "text");
+    form.set("msg", (opts.text || "").slice(0, 4096));
+  }
+
+  const url = `${c.turiyaBase}/WAApi/send`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Key: c.turiyaKey,
+      apikey: c.turiyaKey,
+    },
+    body: form,
+  });
+  const raw = await res.text().catch(() => "");
+  if (!res.ok) {
+    console.error("WhatsApp Turiya send failed", res.status, raw.slice(0, 500));
+    return { ok: false, error: raw || `HTTP ${res.status}` };
+  }
+  let id: string | undefined;
+  try {
+    const data = JSON.parse(raw) as {
+      status?: string;
+      Status?: string;
+      messageId?: string;
+      id?: string;
+      error?: string;
+      reason?: string;
+    };
+    const status = String(data.status || data.Status || "").toLowerCase();
+    if (status && status !== "success" && status !== "ok" && status !== "true") {
+      return {
+        ok: false,
+        error: data.error || data.reason || raw.slice(0, 300) || status,
+      };
+    }
+    id = data.messageId || data.id;
+  } catch {
+    // Some BSP responses are plain text "success"
+    if (/fail|error|invalid/i.test(raw) && !/success/i.test(raw)) {
+      return { ok: false, error: raw.slice(0, 300) };
+    }
+  }
+  return { ok: true, id, via: "turiya" };
+}
+
+async function postMessage(body: Record<string, unknown>): Promise<WaSendResult> {
+  const c = cfg();
+  if (c.dryRun) {
+    console.info("[whatsapp:dry-run]", JSON.stringify(body).slice(0, 800));
+    return { ok: true, id: "dry-run", via: "dry-run" };
+  }
+
+  if (c.provider === "turiya") {
+    const to = String(body.to || "");
+    if (body.type === "template") {
+      const tpl = body.template as {
+        name?: string;
+        components?: { parameters?: { text?: string }[] }[];
+      };
+      const params =
+        tpl.components?.flatMap((comp) =>
+          (comp.parameters || []).map((p) => String(p.text || "")),
+        ) || [];
+      return postTuriya({
+        to,
+        templateName: tpl.name,
+        templateParams: params,
+        text: params[0],
+      });
+    }
+    const textBody = body.text as { body?: string } | undefined;
+    return postTuriya({ to, text: textBody?.body || "" });
+  }
+
+  return postMeta(body);
 }
 
 const MESSAGE_FOOTER = "\n\n|| हरि ॐ परमानंद विश्वव्यापकम् ||";
@@ -146,6 +315,58 @@ export async function sendSmart(opts: {
   const tpl = await sendTemplate(opts.to, opts.templateName, opts.templateParams);
   if (tpl.ok) return tpl;
   return sendText(opts.to, opts.text);
+}
+
+/**
+ * OTP delivery for app login / escalate.
+ * Outside the 24h session Meta rejects free-form text — use Utility template first.
+ */
+export async function sendOtpMessage(opts: {
+  to: string;
+  code: string;
+  lastInboundAt?: string | null;
+  purpose?: "actor_bind" | "escalate";
+}): Promise<WaSendResult> {
+  const code = String(opts.code || "").replace(/\D/g, "").slice(0, 8);
+  if (code.length < 4) {
+    return { ok: false, error: "invalid OTP code" };
+  }
+
+  const primary =
+    process.env.WHATSAPP_OTP_TEMPLATE?.trim() || "ajapa_app_otp";
+  const fallbacks = [primary, "ajapa_welcome_code"].filter(
+    (name, i, arr) => name && arr.indexOf(name) === i,
+  );
+
+  const sessionOpen = within24h(opts.lastInboundAt) && !cfg().forceTemplates;
+  if (sessionOpen) {
+    const label =
+      opts.purpose === "escalate"
+        ? "मधुसुदनदास उत्तर OTP"
+        : "अ‍ॅप लॉगिन OTP";
+    const text = `परमानंद धाम · ${label}\n\nमोबाइल खात्री OTP: *${code}*\n\nअ‍ॅपमध्ये टाका (१० मिनिटे वैध).`;
+    const live = await sendText(opts.to, text);
+    if (live.ok) return live;
+  }
+
+  let lastErr = "OTP template send failed";
+  for (const name of fallbacks) {
+    const tpl = await sendTemplate(opts.to, name, [code]);
+    if (tpl.ok) return tpl;
+    lastErr = ("error" in tpl ? tpl.error : null) || lastErr;
+  }
+
+  // Last resort: free-form (works in dry-run / open session / some BSPs)
+  const text = `परमानंद धाम\n\nOTP: *${code}*\n\nअ‍ॅपमध्ये टाका (१० मिनिटे वैध).`;
+  const fallback = await sendText(opts.to, text);
+  if (fallback.ok) return fallback;
+  return {
+    ok: false,
+    error:
+      ("error" in fallback ? fallback.error : null) ||
+      lastErr ||
+      "OTP WhatsApp पाठवता आला नाही",
+  };
 }
 
 export function truncateParam(text: string, max = 200): string {

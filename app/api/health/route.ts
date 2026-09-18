@@ -8,6 +8,10 @@ import {
 } from "@/lib/ajapa/webhook-security";
 import { isProductionReady } from "@/lib/health";
 import {
+  whatsappDryRunEnabled,
+  whatsappOutboundReady,
+} from "@/lib/ajapa/whatsapp";
+import {
   cookieSecureEnabled,
   isServingProduction,
   productionFileStoreBlockedReason,
@@ -52,11 +56,21 @@ export async function GET() {
     secrets,
   });
 
+  const outbound = whatsappOutboundReady();
+  const whatsapp = {
+    outbound_ok: outbound.ok,
+    provider: outbound.provider,
+    dry_run: whatsappDryRunEnabled(),
+    dry_run_ignored_in_production: outbound.dry_run_ignored,
+    ...(outbound.reason ? { outbound_reason: outbound.reason } : {}),
+  };
+
   const body = {
     ok: db.ok,
     name: "अजपा संवाद",
     db,
     secrets,
+    whatsapp,
     production_ready,
     ...(storeBlocked && !db.ok ? { error: storeBlocked } : {}),
     ...(!storeBlocked && db.error ? { error: db.error } : {}),

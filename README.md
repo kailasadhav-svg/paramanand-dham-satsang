@@ -151,11 +151,20 @@ ADMIN_PIN=…          # unique, not 1960
 SESSION_SECRET=…     # long random
 WHATSAPP_VERIFY_TOKEN=…
 WHATSAPP_APP_SECRET=…
+# Outbound OTP (संगणक 9225118811 / मार्गदर्शक 9850120960):
+WHATSAPP_PROVIDER=meta          # or turiya
+WHATSAPP_TOKEN=…                # Meta Graph (meta provider)
+WHATSAPP_PHONE_NUMBER_ID=…
+# TURIYA_API_KEY=…              # only if WHATSAPP_PROVIDER=turiya
+WHATSAPP_DRY_RUN=0              # must be off on VPS — production ignores dry-run anyway
+WHATSAPP_OTP_TEMPLATE=ajapa_app_otp
 ```
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
 
-`GET /api/health` returns `{ ok, db: { store: "file" | "turso" }, production_ready }` when the store is reachable.
+Create Meta/Turiya Utility template **`ajapa_app_otp`** (`{{1}}` = ६ अंकी OTP) before staff login works outside a 24h WhatsApp session. See `docs/AJAPA_WABA_TEMPLATES.md`.
+
+`GET /api/health` returns `{ ok, db, secrets, whatsapp: { outbound_ok, provider, dry_run }, production_ready }` when the store is reachable.
 
 ### Vercel / multi-instance production
 
