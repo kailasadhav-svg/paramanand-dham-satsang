@@ -87,8 +87,8 @@ npm start
 
 ## Data & auth
 
-- Local: SQLite file `data/satsang.db` via `@libsql/client` (created on first request; gitignored)
-- Production (Vercel): **Turso** (libSQL over HTTP). A SQLite file on Vercel serverless is ephemeral and must not be used for attendance / Q&A.
+- Local and preferred VPS production: SQLite file `data/satsang.db` via `@libsql/client` (created on first request; gitignored). On the single-server host (`satsang.dhyeyapurti.in`) set `ALLOW_FILE_STORE=1` so app and DB stay on the same disk.
+- Turso (libSQL over HTTP) is only for multi-instance or Vercel. A SQLite file on Vercel serverless is ephemeral and must not be used for attendance / Q&A.
 - Cookie session after PIN (`satsang_session`); member session is a separate cookie (`satsang_member`)
 - Change PIN with env `ADMIN_PIN`
 - Optional `SESSION_SECRET` for cookie HMAC
@@ -100,7 +100,24 @@ SESSION_SECRET=change-me-in-production
 COOKIE_SECURE=false
 ```
 
-### Vercel production
+### VPS production (preferred)
+
+On a single VPS with a persistent disk (nginx → Node, `satsang.dhyeyapurti.in`):
+
+```
+ALLOW_FILE_STORE=1
+COOKIE_SECURE=true
+ADMIN_PIN=…          # unique, not 1960
+SESSION_SECRET=…     # long random
+WHATSAPP_VERIFY_TOKEN=…
+WHATSAPP_APP_SECRET=…
+```
+
+SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
+
+`GET /api/health` returns `{ ok, db: { store: "file" | "turso" }, production_ready }` when the store is reachable.
+
+### Vercel / multi-instance production
 
 1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new) (or `npx vercel --prod` while logged in).
 2. Create a Turso database (free):
@@ -126,7 +143,7 @@ COOKIE_SECURE=false
 4. Redeploy after saving env vars. On Vercel, allow phone browsers to open the URL without an extra login gate.
 5. Short aliases on the production host: `/a` → attendance, `/t` → topic, `/q` → questions, `/j` → ajapa, `/r` → report.
 
-`GET /api/health` returns `{ ok, db: { store: "turso" | "file" } }` when the store is reachable.
+`GET /api/health` returns `{ ok, db: { store: "turso" | "file" }, production_ready }`. File SQLite on Vercel is never production-ready.
 
 ## Stack
 
