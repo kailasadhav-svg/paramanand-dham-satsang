@@ -43,10 +43,12 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           >
             बाहेर पडा
           </button>
-          {profile && profile.role !== "charansevak" ? (
+          {profile ? (
             <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
-              <Link href="/members">सेवक</Link>
-              <Link href="/weekly">आठवडा</Link>
+              {profile.role !== "charansevak" ? (
+                <Link href="/members">सेवक</Link>
+              ) : null}
+              <Link href="/weekly">चिंतन</Link>
             </nav>
           ) : null}
           {profile ? (

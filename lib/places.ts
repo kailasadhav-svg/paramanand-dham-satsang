@@ -46,6 +46,12 @@ export function placeName(code: string): string {
   return BY_CODE.get(resolved as PlaceCode)?.name ?? resolved;
 }
 
+/** Map a DB `places.name` (e.g. नाशिक) onto the registration place code. */
+export function placeCodeFromDbName(name: string): PlaceCode | null {
+  const hit = PLACE_OPTIONS.find((p) => p.name === name || p.label === name);
+  return hit?.code ?? parsePlaceInput(name);
+}
+
 /** Match a typed/WhatsApp place (label, full name, or code). */
 export function parsePlaceInput(raw: string): PlaceCode | null {
   const t = raw.trim().toLowerCase().replace(/\s+/g, "");

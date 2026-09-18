@@ -458,10 +458,10 @@ export default function AttendancePage() {
       {canAssign ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
           <h3 className="text-sm font-bold text-saffron-900">
-            गुरुवारी चरणसेवक नेमणूक (एडिट)
+            गुरुवारी परमानंद विचार वाहक नेमणूक (एडिट)
           </h3>
           <p className="text-[11px] text-temple-muted">
-            9850120960 व 9225118811 ठरवतील · नाव/मोबाइल बदलून पुन्हा जतन करा
+            प्रत्येक स्थळी आठवड्यात एकच विचार वाहक · 9850120960 व 9225118811 ठरवतील
           </p>
           {dutyRows.map((row) => {
             const draft = drafts[row.place.id] || { phone: "", name: "" };
@@ -514,7 +514,7 @@ export default function AttendancePage() {
       ) : null}
 
       {assignedLabel ? (
-        <p className="text-xs text-temple-muted">चरणसेवक: {assignedLabel}</p>
+        <p className="text-xs text-temple-muted">विचार वाहक: {assignedLabel}</p>
       ) : null}
 
       {staff && placeId ? (

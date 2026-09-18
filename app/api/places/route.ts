@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   getSatsangiByPhone,
+  listDutiesForPhone,
   listPlaces,
   updatePlaceCoords,
 } from "@/lib/db";
-import { normalizePhone } from "@/lib/offline/phone";
+import { defaultThursdayYmd } from "@/lib/dates";
 import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -20,9 +21,23 @@ export async function GET(request: Request) {
   const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const all = await listPlaces();
+  const { searchParams } = new URL(request.url);
+  const date = searchParams.get("date") || defaultThursdayYmd();
 
-  // Appointed परमानंद चरणसेवक → फक्त त्यांचे home स्थळ (प्रश्न / उपस्थिती)
   if (actor && !canSeeStaffScreens(role)) {
+    const duties = await listDutiesForPhone(actor, date);
+    if (duties.length) {
+      const ids = new Set(duties.map((d) => d.place_id));
+      const places = all.filter((p) => ids.has(p.id));
+      return NextResponse.json({
+        places,
+        default_place_id: places[0]?.id ?? null,
+        place_locked: true,
+        is_vahak: true,
+        can_edit_topic: true,
+        member_name: duties[0]?.charansevak_name ?? null,
+      });
+    }
     try {
       const member = await getSatsangiByPhone(actor);
       if (member?.home_place_id) {
@@ -32,6 +47,8 @@ export async function GET(request: Request) {
             places: [home],
             default_place_id: home.id,
             place_locked: true,
+            is_vahak: false,
+            can_edit_topic: false,
             member_name: member.name,
           });
         }
@@ -46,10 +63,12 @@ export async function GET(request: Request) {
     places: all,
     default_place_id: nashik?.id ?? all[0]?.id ?? null,
     place_locked: false,
+    is_vahak: false,
+    can_edit_topic: actor ? canSeeStaffScreens(role) : false,
   });
 }
 
-/** संवादक / संचालक: सत्संग स्थळाचे GPS सेट करा */
+/** संवादक / सेवक: सत्संग स्थळाचे GPS सेट करा */
 export async function PUT(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
@@ -58,7 +77,7 @@ export async function PUT(request: Request) {
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
   if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
-    return jsonError("फक्त संवादक / संचालक स्थळ GPS सेट करू शकतात", 403);
+    return jsonError("फक्त संवादक / सेवक स्थळ GPS सेट करू शकतात", 403);
   }
 
   const body = (await request.json().catch(() => ({}))) as {

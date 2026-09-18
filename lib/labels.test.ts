@@ -7,6 +7,9 @@ import {
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
   TOPIC_THURSDAY_HELP,
+  VAHAK_JOB_HELP,
+  VAHAK_LABEL,
+  VAHAK_LABEL_SHORT,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -22,11 +25,20 @@ describe("चिंतन copy", () => {
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
       TOPIC_THURSDAY_HELP,
+      VAHAK_JOB_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
       assert.equal(/\bcomment\b/i.test(s), false);
       assert.equal(/\bnote\b/i.test(s), false);
     }
+  });
+
+  it("names the weekly conductor परमानंद विचार वाहक", () => {
+    assert.equal(VAHAK_LABEL, "परमानंद विचार वाहक");
+    assert.equal(VAHAK_LABEL_SHORT, "विचार वाहक");
+    assert.match(VAHAK_JOB_HELP, /पाठपुरावा/);
+    assert.match(VAHAK_JOB_HELP, /चिंतन/);
+    assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {

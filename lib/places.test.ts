@@ -7,6 +7,7 @@ import {
   canonicalizePlaceCode,
   isPlaceCode,
   parsePlaceInput,
+  placeCodeFromDbName,
   placeLabel,
   placeName,
 } from "./places.ts";
@@ -41,6 +42,14 @@ describe("place codes", () => {
     assert.equal(parsePlaceInput("shindi"), "shindi");
     assert.equal(parsePlaceInput("अंबाशी"), "shindi");
     assert.equal(parsePlaceInput("ambashi"), "shindi");
+  });
+
+  it("maps DB place names onto member place codes for विचार वाहक roster", () => {
+    assert.equal(placeCodeFromDbName("नाशिक"), "nashik");
+    assert.equal(placeCodeFromDbName("शिंदी"), "shindi");
+    assert.equal(placeCodeFromDbName("श्री क्षेत्र रानअंत्री"), "ranantri");
+    assert.equal(placeCodeFromDbName("वरखेड"), "varkhed");
+    assert.equal(placeCodeFromDbName("बरटाळा"), "bartala");
   });
 });
 

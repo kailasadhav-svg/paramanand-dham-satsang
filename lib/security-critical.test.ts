@@ -13,6 +13,7 @@ import { isProductionReady } from "./health.ts";
 import {
   canApproveCharansevak,
   canAppointSatsangi,
+  canSeeChintanBody,
   canSeeStaffScreens,
   detectStaffRole,
 } from "./roles.ts";
@@ -319,5 +320,16 @@ describe("app access approval — परमानंद चरणसेवक", 
     assert.equal(canSeeStaffScreens("software"), true);
     assert.equal(canSeeStaffScreens("guru"), true);
     assert.equal(canSeeStaffScreens("charansevak"), false);
+  });
+});
+
+describe("चिंतन body visibility", () => {
+  it("is guru-only — सेवक and विचार वाहक (चरणसेवक) see status, never the text", () => {
+    assert.equal(canSeeChintanBody("guru"), true);
+    assert.equal(canSeeChintanBody(detectStaffRole("9850120960")), true);
+    assert.equal(canSeeChintanBody("software"), false);
+    assert.equal(canSeeChintanBody("charansevak"), false);
+    assert.equal(canSeeChintanBody(detectStaffRole("9225118811")), false);
+    assert.equal(canSeeChintanBody(detectStaffRole("9423078811")), false);
   });
 });

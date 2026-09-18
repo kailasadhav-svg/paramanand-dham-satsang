@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
 import { DEFAULT_MEETING_TIME } from "./dates";
+import { phonesEqual } from "./offline/phone";
 import { renameAmbashiToShindi } from "./place-rename";
 import {
   productionFileStoreBlockedReason,
@@ -681,6 +682,14 @@ function asPlaceDuty(row: Row): PlaceDuty {
 
 function asPlaceDutyWithPlace(row: Row): PlaceDutyWithPlace {
   return { ...asPlaceDuty(row), place_name: str(row.place_name) };
+}
+
+export async function listDutiesForPhone(
+  phone: string,
+  date: string,
+): Promise<PlaceDutyWithPlace[]> {
+  const all = await listDutiesOnDate(date);
+  return all.filter((d) => phonesEqual(phone, d.charansevak_phone));
 }
 
 export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace[]> {

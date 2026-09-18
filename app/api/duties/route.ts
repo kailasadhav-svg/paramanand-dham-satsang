@@ -89,7 +89,7 @@ export async function PUT(request: Request) {
     !body.charansevak_phone ||
     String(body.charansevak_phone).replace(/\D/g, "").length < 10
   ) {
-    return jsonError("चरणसेवक मोबाइल आवश्यक", 400);
+    return jsonError("विचार वाहक मोबाइल आवश्यक", 400);
   }
 
   const duty = await upsertDuty({

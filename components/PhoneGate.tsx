@@ -96,7 +96,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
     if (!ready || !profile) return;
     if (
       profile.role === "charansevak" &&
-      ["/topic", "/report", "/members", "/weekly"].some((p) => pathname.startsWith(p))
+      ["/report", "/members"].some((p) => pathname.startsWith(p))
     ) {
       router.replace("/ajapa");
     }

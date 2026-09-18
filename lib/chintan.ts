@@ -1,0 +1,121 @@
+import { listDutiesForPhone, getDuty } from "./db";
+import { listMembers } from "./members";
+import { placeCodeFromDbName, type PlaceCode } from "./places";
+import {
+  canSeeChintanBody,
+  canSeeStaffScreens,
+  detectStaffRole,
+  phonesEqual,
+} from "./roles";
+import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
+
+export type ChintanStatusRow = {
+  member_id: number;
+  member_name: string;
+  place_code: PlaceCode | string;
+  place_label: string;
+  submitted: boolean;
+  answer?: string;
+};
+
+export function redactChintanRoster(
+  rows: ChintanStatusRow[],
+  seeBody: boolean,
+): ChintanStatusRow[] {
+  return rows.map((r) => {
+    const out: ChintanStatusRow = {
+      member_id: r.member_id,
+      member_name: r.member_name,
+      place_code: r.place_code,
+      place_label: r.place_label,
+      submitted: r.submitted,
+    };
+    if (seeBody && r.submitted && r.answer != null) out.answer = r.answer;
+    return out;
+  });
+}
+
+export async function actorIsVahak(
+  phone: string,
+  date: string,
+  placeId?: number,
+): Promise<boolean> {
+  if (placeId != null) {
+    const duty = await getDuty(placeId, date);
+    if (!duty) return false;
+    return phonesEqual(phone, duty.charansevak_phone);
+  }
+  const duties = await listDutiesForPhone(phone, date);
+  return duties.length > 0;
+}
+
+export async function actorCanEditPlaceTopic(
+  phone: string,
+  placeId: number,
+  date: string,
+): Promise<boolean> {
+  const role = detectStaffRole(phone);
+  if (canSeeStaffScreens(role)) return true;
+  return actorIsVahak(phone, date, placeId);
+}
+
+export async function listChintanRoster(opts: {
+  weekStart: string;
+  placeCodes?: string[] | null;
+}): Promise<ChintanStatusRow[]> {
+  const members = await listMembers();
+  const question = await getWeeklyQuestion(opts.weekStart);
+  const answers = question ? await listWeeklyAnswers(question.id) : [];
+  const byId = new Map(answers.map((a) => [a.member_id, a]));
+  const codes = opts.placeCodes?.length ? new Set(opts.placeCodes) : null;
+  return members
+    .filter((m) => !codes || codes.has(m.place_code))
+    .map((m) => {
+      const hit = byId.get(m.id);
+      return {
+        member_id: m.id,
+        member_name: m.name,
+        place_code: m.place_code,
+        place_label: m.place_label,
+        submitted: Boolean(hit?.answer?.trim()),
+        answer: hit?.answer,
+      };
+    });
+}
+
+export async function chintanViewForActor(opts: {
+  phone: string;
+  weekStart: string;
+}): Promise<{
+  can_edit_question: boolean;
+  can_see_bodies: boolean;
+  is_vahak: boolean;
+  vahak_place_ids: number[];
+  roster: ChintanStatusRow[];
+}> {
+  const role = detectStaffRole(opts.phone);
+  const staff = canSeeStaffScreens(role);
+  const seeBody = canSeeChintanBody(role);
+  const duties = await listDutiesForPhone(opts.phone, opts.weekStart);
+  const isVahak = duties.length > 0;
+  const vahakPlaceIds = duties.map((d) => d.place_id);
+  let placeCodes: string[] | null = null;
+  if (!staff && isVahak) {
+    placeCodes = duties
+      .map((d) => placeCodeFromDbName(d.place_name))
+      .filter((c): c is PlaceCode => Boolean(c));
+  } else if (!staff) {
+    placeCodes = [];
+  }
+  const raw = await listChintanRoster({
+    weekStart: opts.weekStart,
+    placeCodes,
+  });
+  return {
+    can_edit_question: staff,
+    can_see_bodies: seeBody,
+    is_vahak: isVahak,
+    vahak_place_ids: vahakPlaceIds,
+    roster: redactChintanRoster(raw, seeBody),
+  };
+}

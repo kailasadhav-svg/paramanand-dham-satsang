@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
-import { TOPIC_THURSDAY_HELP } from "@/lib/labels";
+import {
+  TOPIC_THURSDAY_HELP,
+  VAHAK_JOB_HELP,
+  VAHAK_LABEL,
+} from "@/lib/labels";
 
 type Meeting = {
   topic_kind: "atmaprabha" | "upadesh" | null;
@@ -16,6 +20,9 @@ type Meeting = {
 export default function TopicPage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
+  const [placeLocked, setPlaceLocked] = useState(false);
+  const [isVahak, setIsVahak] = useState(false);
+  const [canEditTopic, setCanEditTopic] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
   const [kind, setKind] = useState<"atmaprabha" | "upadesh">("atmaprabha");
   const [title, setTitle] = useState("");
@@ -26,11 +33,29 @@ export default function TopicPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void api<{ places: Place[] }>("/api/places").then((data) => {
+    void api<{
+      places: Place[];
+      default_place_id?: number | null;
+      place_locked?: boolean;
+      is_vahak?: boolean;
+      can_edit_topic?: boolean;
+    }>(`/api/places?date=${date}`).then((data) => {
       setPlaces(data.places);
-      setPlaceId((id) => (id === "" && data.places[0] ? data.places[0].id : id));
+      setPlaceLocked(Boolean(data.place_locked));
+      setIsVahak(Boolean(data.is_vahak));
+      setCanEditTopic(Boolean(data.can_edit_topic));
+      setPlaceId((id) => {
+        if (id !== "" && data.places.some((p) => p.id === id)) return id;
+        if (
+          data.default_place_id != null &&
+          data.places.some((p) => p.id === data.default_place_id)
+        ) {
+          return data.default_place_id;
+        }
+        return data.places[0]?.id ?? "";
+      });
     });
-  }, []);
+  }, [date]);
 
   useEffect(() => {
     if (!placeId || !date) return;
@@ -46,7 +71,7 @@ export default function TopicPage() {
   }, [placeId, date]);
 
   async function save() {
-    if (!placeId) return;
+    if (!placeId || !canEditTopic) return;
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -72,35 +97,44 @@ export default function TopicPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">विषय व संचालक</h2>
+      <h2 className="text-lg font-bold">विषय व {VAHAK_LABEL}</h2>
       <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
+      <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
+      {places.length === 0 ? (
+        <p className="rounded-xl bg-saffron-50 px-3 py-2 text-sm text-temple-muted">
+          या गुरुवारी विचार वाहक नेमलेले नाही. संवादक नेमणूक करतील.
+        </p>
+      ) : null}
       <PlaceDateBar
         places={places}
         placeId={placeId}
         date={date}
         onPlace={setPlaceId}
         onDate={setDate}
+        locked={placeLocked}
       />
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setKind("atmaprabha")}
+          disabled={!canEditTopic}
           className={`rounded-2xl py-3 font-semibold ring-1 ${
             kind === "atmaprabha"
               ? "bg-saffron-700 text-white ring-saffron-700"
               : "bg-white ring-saffron-200"
-          }`}
+          } disabled:opacity-60`}
         >
           आत्मप्रभा
         </button>
         <button
           type="button"
           onClick={() => setKind("upadesh")}
+          disabled={!canEditTopic}
           className={`rounded-2xl py-3 font-semibold ring-1 ${
             kind === "upadesh"
               ? "bg-saffron-700 text-white ring-saffron-700"
               : "bg-white ring-saffron-200"
-          }`}
+          } disabled:opacity-60`}
         >
           उपदेश
         </button>
@@ -112,15 +146,17 @@ export default function TopicPage() {
           onChange={(e) => setTitle(e.target.value)}
           className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
           placeholder="उदा. भगवद्गीता / सत्संग कथा"
+          disabled={!canEditTopic}
         />
       </label>
       <label className="block text-xs font-semibold text-temple-muted">
-        संचालक
+        {VAHAK_LABEL}
         <input
           value={conductor}
           onChange={(e) => setConductor(e.target.value)}
           className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
           placeholder="नाव"
+          disabled={isVahak || !canEditTopic}
         />
       </label>
       <label className="block text-xs font-semibold text-temple-muted">
@@ -131,10 +167,17 @@ export default function TopicPage() {
           rows={3}
           placeholder="गावाला दिला विषय — अधिक मजकूर"
           aria-label="विषय तपशील"
+          disabled={!canEditTopic}
           className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
         />
       </label>
-      <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
+      {canEditTopic ? (
+        <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
+      ) : (
+        <p className="text-sm text-temple-muted">
+          विषय दुरुस्ती फक्त या स्थळाचे {VAHAK_LABEL} किंवा संवादक / सेवक.
+        </p>
+      )}
     </div>
   );
 }

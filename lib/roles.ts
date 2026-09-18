@@ -78,6 +78,11 @@ export function canApproveCharansevak(role: StaffRole): boolean {
   return role === "guru";
 }
 
+/** Full member चिंतन text — only मधुसुदनदास / संवादक. */
+export function canSeeChintanBody(role: StaffRole): boolean {
+  return role === "guru";
+}
+
 /** @deprecated Use canApproveCharansevak — same guru-only rule. */
 export function canAppointSatsangi(role: StaffRole): boolean {
   return canApproveCharansevak(role);

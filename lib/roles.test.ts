@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   canAppointSatsangi,
   canApproveCharansevak,
+  canSeeChintanBody,
   canSeeStaffScreens,
   detectStaffRole,
   roleLabelMarathi,
@@ -35,6 +36,14 @@ describe("canApproveCharansevak", () => {
     // चरणसेवक still use /attendance for counts; they are not staff editors.
     assert.equal(canSeeStaffScreens("charansevak"), false);
     assert.equal(canSeeStaffScreens("guru"), true);
+  });
+});
+
+describe("canSeeChintanBody", () => {
+  it("is true only for guru (मधुसुदनदास)", () => {
+    assert.equal(canSeeChintanBody("guru"), true);
+    assert.equal(canSeeChintanBody("software"), false);
+    assert.equal(canSeeChintanBody("charansevak"), false);
   });
 });
 

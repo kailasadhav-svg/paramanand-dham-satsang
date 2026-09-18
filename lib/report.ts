@@ -78,7 +78,7 @@ export async function buildWeeklyReport(thursdayYmd: string) {
         const title = m.topic_title ? ` — ${m.topic_title}` : "";
         lines.push(`📖 विषय: ${kind}${title}`.trim());
       }
-      if (m.conductor) lines.push(`🎤 संचालक: ${m.conductor}`);
+      if (m.conductor) lines.push(`🎤 विचार वाहक: ${m.conductor}`);
       if (m.notes) lines.push(`📝 ${m.notes}`);
     }
 
