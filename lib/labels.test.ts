@@ -13,6 +13,9 @@ import {
   VAHAK_APPOINT_HELP,
   GUIDE_LABEL,
   GUIDE_QUEUE_LABEL,
+  GUIDE_CHINTAN_RANK_HELP,
+  GUIDE_QUESTION_HELP,
+  GUIDE_TOPIC_HELP,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -44,7 +47,11 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
-    assert.equal(GUIDE_LABEL, "मार्गदर्शक चरणसेवक");
+    assert.match(TOPIC_THURSDAY_HELP, /गावानुसार/);
+    assert.match(GUIDE_TOPIC_HELP, /सर्व गावांना/);
+    assert.match(GUIDE_CHINTAN_RANK_HELP, /क्रमवार योग्य तीन/);
+    assert.match(GUIDE_QUESTION_HELP, /एकसमान/);
+    assert.match(GUIDE_QUESTION_HELP, /मार्गदर्शक चरणसेवकांकडे/);
     assert.ok(GUIDE_QUEUE_LABEL.length <= 20, "WhatsApp button title must be ≤20");
     assert.equal(GUIDE_QUEUE_LABEL, "मार्गदर्शकांकडे");
     assert.match(VAHAK_APPOINT_HELP, /शुक्रवार/);
@@ -63,12 +70,25 @@ describe("चिंतन copy", () => {
       "app/(app)/weekly/page.tsx",
       "app/(app)/topic/page.tsx",
       "lib/weekly.ts",
+      "lib/roles.ts",
     ];
     for (const rel of files) {
       const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
       assert.equal(text.includes("टिपणी"), false, `${rel} still has टिपणी`);
       assert.equal(text.includes("CHINTAN_LABEL") || text.includes("चिंतन") || rel.endsWith("topic/page.tsx"), true);
     }
+    const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    assert.match(weekly, /GUIDE_TOPIC_HELP/);
+    assert.match(weekly, /GUIDE_CHINTAN_RANK_HELP/);
+    const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
+    assert.match(questions, /GUIDE_QUESTION_HELP/);
+    const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
+    assert.match(ajapa, /GUIDE_QUESTION_HELP/);
+    const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
+    assert.match(topic, /GUIDE_TOPIC_HELP/);
+    const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
+    assert.match(roles, /क्रमवार योग्य तीन/);
+    assert.match(roles, /एकसमान/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
     assert.match(me, /चिंतन लिहा/);
     assert.match(me, /aria-label="चिंतन"/);

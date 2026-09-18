@@ -12,7 +12,19 @@ export const ANSWERED_BY_LABEL: Record<string, string> = {
 export const CHINTAN_LABEL = "चिंतन";
 
 export const TOPIC_THURSDAY_HELP =
-  "मधुसुदनदास प्रत्येक गावाला गुरुवारी विषय देतात — अनिवार्य.";
+  "मार्गदर्शक (मधुसुदनदास) गुरुवारी विषय देतात — सर्व गावांना एकच, किंवा गावानुसार वेगळा. अनिवार्य.";
+
+/** मार्गदर्शक: topic authority. Per-village save exists; same-for-all bulk is upcoming. */
+export const GUIDE_TOPIC_HELP =
+  "विषय अधिकार: एकच विषय सर्व गावांना, किंवा प्रत्येक गावाला वेगळा. आत्ता गावानुसार जतन होते.";
+
+/** मार्गदर्शक: rank top 3 चिंतन — UI not built yet. */
+export const GUIDE_CHINTAN_RANK_HELP =
+  "आलेल्या चिंतनातून क्रमवार योग्य तीन निवडता येतील — लवकरच. पूर्ण मजकूर फक्त मार्गदर्शक पाहतात.";
+
+/** मार्गदर्शक: all questions + similar dashboard — inbox exists; एकसमान tools upcoming. */
+export const GUIDE_QUESTION_HELP =
+  "सर्व परमानंद चरणसेवकांचे प्रश्न मार्गदर्शक चरणसेवकांकडे येतात. डॅशबोर्ड: एकूण + एकसमान. एकसमानांना एकच उत्तर किंवा प्रत्येकास वेगळे — लवकरच.";
 
 export const CHINTAN_DEADLINE_HELP =
   "परमानंद चरणसेवकांनी पुढील बुधवार रात्री १२:०० पर्यंत चिंतन पाठवावे. चिंतन नसल्यास दररोज आठवण येईल.";
