@@ -120,76 +120,71 @@ async function postMeta(body: Record<string, unknown>): Promise<WaSendResult> {
 }
 
 /**
- * Turiya Infotech BSP (SMSGatewayCenter-style): Key/apikey header + form fields.
- * Used when WHATSAPP_PROVIDER=turiya.
+ * Turiya Infotech / Dove Soft directApi — same path as Team Dhyeyapurti bot
+ * (`/REST/directApi/message`, Key + wabaNumber headers, Meta-shaped JSON).
  */
-async function postTuriya(opts: {
-  to: string;
-  text?: string;
-  templateName?: string;
-  templateParams?: string[];
-}): Promise<WaSendResult> {
+async function postTuriya(body: Record<string, unknown>): Promise<WaSendResult> {
   const c = cfg();
   if (!c.turiyaKey || !c.turiyaWaba) {
     return { ok: false, error: "WhatsApp Turiya not configured", skipped: true };
   }
-  const form = new FormData();
-  form.set("wabaNumber", c.turiyaWaba);
-  form.set("mobile", opts.to.replace(/\D/g, ""));
-  form.set("output", "json");
-  form.set("sendMethod", "quick");
-  if (opts.templateName) {
-    form.set("msgType", "text");
-    form.set("templateName", opts.templateName);
-    const msg =
-      opts.templateParams && opts.templateParams.length
-        ? opts.templateParams.join("||")
-        : opts.text || "";
-    form.set("msg", msg);
-  } else {
-    form.set("msgType", "text");
-    form.set("msg", (opts.text || "").slice(0, 4096));
+  const host = c.turiyaBase.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const url = `https://${host}/REST/directApi/message`;
+  const payload = {
+    ...body,
+    to: String(body.to || "").replace(/\D/g, ""),
+  };
+  // Match TDP send_template language.policy for AUTHENTICATION OTP reliability
+  if (payload.type === "template" && payload.template && typeof payload.template === "object") {
+    const tpl = payload.template as Record<string, unknown>;
+    const lang = (tpl.language as Record<string, unknown> | undefined) || {};
+    tpl.language = { policy: "deterministic", ...lang };
+    payload.template = tpl;
   }
 
-  const url = `${c.turiyaBase}/WAApi/send`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       Key: c.turiyaKey,
-      apikey: c.turiyaKey,
+      wabaNumber: c.turiyaWaba.replace(/\D/g, ""),
+      "Content-Type": "application/json",
+      Accept: "application/json, */*",
+      "User-Agent":
+        "Mozilla/5.0 (compatible; ParamanandDhamSatsang/1.0; +https://satsang.dhyeyapurti.in)",
     },
-    body: form,
+    body: JSON.stringify(payload),
   });
   const raw = await res.text().catch(() => "");
   if (!res.ok) {
     console.error("WhatsApp Turiya send failed", res.status, raw.slice(0, 500));
-    return { ok: false, error: raw || `HTTP ${res.status}` };
+    return { ok: false, error: raw.slice(0, 300) || `HTTP ${res.status}` };
   }
-  let id: string | undefined;
   try {
     const data = JSON.parse(raw) as {
       status?: string;
-      Status?: string;
       messageId?: string;
+      message_id?: string;
       id?: string;
       error?: string;
-      reason?: string;
     };
-    const status = String(data.status || data.Status || "").toLowerCase();
-    if (status && status !== "success" && status !== "ok" && status !== "true") {
+    const status = String(data.status || "").toLowerCase();
+    if (status === "error" || status === "fail" || status === "failed" || status === "false" || data.error) {
       return {
         ok: false,
-        error: data.error || data.reason || raw.slice(0, 300) || status,
+        error: data.error || raw.slice(0, 300) || status,
       };
     }
-    id = data.messageId || data.id;
+    return {
+      ok: true,
+      id: data.messageId || data.message_id || data.id,
+      via: "turiya",
+    };
   } catch {
-    // Some BSP responses are plain text "success"
     if (/fail|error|invalid/i.test(raw) && !/success/i.test(raw)) {
       return { ok: false, error: raw.slice(0, 300) };
     }
+    return { ok: true, via: "turiya" };
   }
-  return { ok: true, id, via: "turiya" };
 }
 
 async function postMessage(body: Record<string, unknown>): Promise<WaSendResult> {
@@ -200,35 +195,7 @@ async function postMessage(body: Record<string, unknown>): Promise<WaSendResult>
   }
 
   if (c.provider === "turiya") {
-    const to = String(body.to || "");
-    if (body.type === "template") {
-      const tpl = body.template as {
-        name?: string;
-        components?: {
-          type?: string;
-          parameters?: { text?: string }[];
-        }[];
-      };
-      // Prefer body parameters; AUTHENTICATION also repeats code on button.
-      const bodyComp = tpl.components?.find(
-        (comp) => String(comp.type || "").toLowerCase() === "body",
-      );
-      const params =
-        (bodyComp?.parameters || []).map((p) => String(p.text || "")) ||
-        tpl.components?.flatMap((comp) =>
-          (comp.parameters || []).map((p) => String(p.text || "")),
-        ) ||
-        [];
-      const uniqueParams = [...new Set(params.filter(Boolean))];
-      return postTuriya({
-        to,
-        templateName: tpl.name,
-        templateParams: uniqueParams,
-        text: uniqueParams[0],
-      });
-    }
-    const textBody = body.text as { body?: string } | undefined;
-    return postTuriya({ to, text: textBody?.body || "" });
+    return postTuriya(body);
   }
 
   return postMeta(body);
