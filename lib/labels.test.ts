@@ -303,9 +303,14 @@ describe("चिंतन copy", () => {
       "utf8",
     );
     assert.match(attendance, /ThursdayTithiBar/);
-    assert.match(attendance, /DutyAppointSection/);
-    assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL\} नेमणूक/);
-    assert.match(attendance, /VAHAK_LABEL\} नेमणूक/);
+    assert.match(attendance, /primary/);
+    assert.match(attendance, /उपस्थिती आकडे · सत्संग चरणसेवक मुख्य/);
+    assert.match(attendance, /<details/);
+    assert.ok(
+      attendance.indexOf("SATSANG_CHARANSEVAK_LABEL} नेमणूक") <
+        attendance.indexOf("VAHAK_LABEL} नेमणूक"),
+      "सत्संग चरणसेवक नेमणूक must appear before विचार वाहक नेमणूक",
+    );
     assert.match(attendance, /DUTY_KIND_SATSANG/);
     assert.match(attendance, /DUTY_KIND_VAHAK/);
     assert.match(attendance, /ariaLabel="नेमणूक स्थळ निवडा"/);

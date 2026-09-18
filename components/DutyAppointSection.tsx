@@ -24,6 +24,7 @@ export function DutyAppointSection({
   busyPlaceId,
   message,
   ariaLabel = "नेमणूक स्थळ निवडा",
+  primary = false,
 }: {
   title: string;
   help: string;
@@ -37,6 +38,7 @@ export function DutyAppointSection({
   busyPlaceId: number | null;
   message: string | null;
   ariaLabel?: string;
+  primary?: boolean;
 }) {
   const selected = places.find((p) => p.id === selectedPlaceId) || null;
   const draft = selected
@@ -45,8 +47,16 @@ export function DutyAppointSection({
   const others = places.filter((p) => p.id !== selectedPlaceId);
 
   return (
-    <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-      <h3 className="text-sm font-bold text-saffron-900">{title}</h3>
+    <section
+      className={`space-y-3 rounded-2xl p-3 ${
+        primary
+          ? "bg-saffron-50 ring-2 ring-saffron-400"
+          : "bg-white ring-1 ring-saffron-200"
+      }`}
+    >
+      <h3 className={`font-bold text-saffron-900 ${primary ? "text-base" : "text-sm"}`}>
+        {title}
+      </h3>
       <p className="text-[11px] text-temple-muted">{help}</p>
       <label className="block text-xs font-semibold text-temple-muted">
         नेमणूक स्थळ (ड्रॉपडाउन)

@@ -398,6 +398,111 @@ export default function AttendancePage() {
   const placeHasGps =
     selectedPlace?.latitude != null && selectedPlace?.longitude != null;
 
+  const attendanceEditors = (
+    <>
+      {staff && placeId ? (
+        <div className="rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+          <p className="text-xs font-semibold text-saffron-900">स्थळ GPS (एडिट)</p>
+          <p className="mt-1 text-xs text-temple-muted">
+            {placeHasGps
+              ? `${selectedPlace?.latitude?.toFixed(5)}, ${selectedPlace?.longitude?.toFixed(5)}`
+              : "अजून सेट नाही"}
+          </p>
+          <button
+            type="button"
+            disabled={pinBusy}
+            onClick={() => void pinPlaceHere()}
+            className="mt-2 rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {pinBusy
+              ? "GPS…"
+              : placeHasGps
+                ? "GPS पुन्हा सेट / दुरुस्त करा"
+                : "इथेच स्थळ चिन्हांकित करा"}
+          </button>
+          {placeHasGps ? (
+            <p className="mt-1 text-[11px] text-temple-muted">
+              चुकीच्या जागी सेट झाले असेल तर स्थळावर उभे राहून पुन्हा दाबा
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!staff ? (
+        onSite ? (
+          <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold leading-relaxed text-emerald-900">
+            {ON_SITE_BLESSING}
+          </p>
+        ) : (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+            उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
+            मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
+          </p>
+        )
+      ) : null}
+
+      {lastCheckin ? (
+        <p className="text-xs font-semibold text-saffron-800">{lastCheckin}</p>
+      ) : null}
+
+      <div className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
+        <p className="text-xs font-semibold text-saffron-900">वेळ · एडिट</p>
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => markDirty(setTime)(e.target.value)}
+          className="w-full rounded-xl bg-saffron-50 px-3 py-3 text-lg font-bold ring-1 ring-saffron-200"
+        />
+        <div className="flex flex-wrap gap-2">
+          {["19:30", "20:00", "20:30", "21:00"].map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => markDirty(setTime)(t)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                time === t
+                  ? "bg-saffron-700 text-white"
+                  : "bg-saffron-50 text-saffron-900 ring-1 ring-saffron-200"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
+        <div>
+          <p className="text-xs font-semibold text-temple-muted">
+            {staff ? "एकूण उपस्थिती" : "एकूण परमानंद चरणसेवक"}
+          </p>
+          <p className="text-[11px] text-temple-muted">+/− किंवा आकडा टाइप · एडिट</p>
+        </div>
+        <p className="text-3xl font-bold tabular-nums text-saffron-800">{total}</p>
+      </div>
+      <div className="space-y-2">
+        <NumberStepper compact label="पुरुष" value={men} onChange={markDirty(setMen)} />
+        <NumberStepper compact label="स्त्रिया" value={women} onChange={markDirty(setWomen)} />
+        <NumberStepper compact label="बालके" value={children} onChange={markDirty(setChildren)} />
+      </div>
+      <SaveBar
+        sticky={!guide}
+        saving={saving}
+        saved={saved}
+        error={error}
+        label={saved ? "दुरुस्ती पुन्हा जतन करा" : "जतन / दुरुस्ती करा"}
+        savedLabel={
+          staff
+            ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
+            : onSite
+              ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
+              : ON_SITE_BLESSING
+        }
+        onSave={() => void saveAttendance()}
+      />
+    </>
+  );
+
   if (!staff && places.length === 0) {
     return (
       <div className="space-y-3">
@@ -415,14 +520,18 @@ export default function AttendancePage() {
       <ThursdayTithiBar ymd={date} />
       <div>
         <h2 className="text-lg font-bold">
-          {staff
-            ? `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL} · एडिट`
-            : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}
+          {guide
+            ? `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL} नेमणूक`
+            : staff
+              ? `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL} · एडिट`
+              : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}
         </h2>
         <p className="text-xs text-temple-muted">
-          {staff
-            ? `${SATSANG_CHARANSEVAK_LABEL} काम: स्थळी उपस्थिती नोंदवा. चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा`
-            : "या स्थळी किती परमानंद चरणसेवक आले ते नोंदवा. चुकले तर संख्या / वेळ पुन्हा बदलून जतन करा."}
+          {guide
+            ? `${SATSANG_CHARANSEVAK_LABEL} नेमा — उपस्थिती आकडे त्यांचे काम.`
+            : staff
+              ? `${SATSANG_CHARANSEVAK_LABEL} काम: स्थळी उपस्थिती नोंदवा. चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा`
+              : "या स्थळी किती परमानंद चरणसेवक आले ते नोंदवा. चुकले तर संख्या / वेळ पुन्हा बदलून जतन करा."}
         </p>
       </div>
 
@@ -458,6 +567,51 @@ export default function AttendancePage() {
         onPlace={markDirty(setPlaceId)}
         onDate={markDirty(setDate)}
       />
+
+      {canAssignSatsang ? (
+        <DutyAppointSection
+          primary
+          title={`गुरुवारी ${SATSANG_CHARANSEVAK_LABEL} नेमणूक (एडिट)`}
+          help={`${SATSANG_CHARANSEVAK_APPOINT_HELP} ${SATSANG_CHARANSEVAK_JOB_HELP} प्रत्येक स्थळी आठवड्यात एकच सत्संग चरणसेवक. स्थळ ड्रॉपडाउनमधून निवडा — फक्त त्या स्थळाचा नाव + मोबाइल फॉर्म दिसतो.`}
+          places={dutyPlaces}
+          selectedPlaceId={satsangPlaceId}
+          onSelectPlace={(id) => {
+            setSatsangPlaceId(id);
+            setSatsangMsg(null);
+          }}
+          dutyByPlaceId={satsangByPlace}
+          drafts={satsangDrafts}
+          onDraftChange={(placeId, draft) =>
+            setSatsangDrafts((d) => ({ ...d, [placeId]: draft }))
+          }
+          onSave={(place) => void saveDuty(place, DUTY_KIND_SATSANG)}
+          busyPlaceId={satsangBusy}
+          message={satsangMsg}
+          ariaLabel="सत्संग चरणसेवक नेमणूक स्थळ निवडा"
+        />
+      ) : null}
+
+      {canAssign ? (
+        <DutyAppointSection
+          title={`गुरुवारी ${VAHAK_LABEL} नेमणूक (एडिट)`}
+          help={`${VAHAK_APPOINT_HELP} प्रत्येक स्थळी आठवड्यात एकच विचार वाहक. स्थळ ड्रॉपडाउनमधून निवडा — फक्त त्या स्थळाचा नाव + मोबाइल फॉर्म दिसतो.`}
+          places={dutyPlaces}
+          selectedPlaceId={dutyPlaceId}
+          onSelectPlace={(id) => {
+            setDutyPlaceId(id);
+            setDutyMsg(null);
+          }}
+          dutyByPlaceId={vahakByPlace}
+          drafts={drafts}
+          onDraftChange={(placeId, draft) =>
+            setDrafts((d) => ({ ...d, [placeId]: draft }))
+          }
+          onSave={(place) => void saveDuty(place, DUTY_KIND_VAHAK)}
+          busyPlaceId={dutyBusy}
+          message={dutyMsg}
+          ariaLabel="नेमणूक स्थळ निवडा"
+        />
+      ) : null}
 
       {!canApprove && !staff ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-[11px] leading-relaxed text-temple-muted">
@@ -549,50 +703,6 @@ export default function AttendancePage() {
         </section>
       ) : null}
 
-      {canAssignSatsang ? (
-        <DutyAppointSection
-          title={`गुरुवारी ${SATSANG_CHARANSEVAK_LABEL} नेमणूक (एडिट)`}
-          help={`${SATSANG_CHARANSEVAK_APPOINT_HELP} ${SATSANG_CHARANSEVAK_JOB_HELP} प्रत्येक स्थळी आठवड्यात एकच सत्संग चरणसेवक. स्थळ ड्रॉपडाउनमधून निवडा — फक्त त्या स्थळाचा नाव + मोबाइल फॉर्म दिसतो.`}
-          places={dutyPlaces}
-          selectedPlaceId={satsangPlaceId}
-          onSelectPlace={(id) => {
-            setSatsangPlaceId(id);
-            setSatsangMsg(null);
-          }}
-          dutyByPlaceId={satsangByPlace}
-          drafts={satsangDrafts}
-          onDraftChange={(placeId, draft) =>
-            setSatsangDrafts((d) => ({ ...d, [placeId]: draft }))
-          }
-          onSave={(place) => void saveDuty(place, DUTY_KIND_SATSANG)}
-          busyPlaceId={satsangBusy}
-          message={satsangMsg}
-          ariaLabel="सत्संग चरणसेवक नेमणूक स्थळ निवडा"
-        />
-      ) : null}
-
-      {canAssign ? (
-        <DutyAppointSection
-          title={`गुरुवारी ${VAHAK_LABEL} नेमणूक (एडिट)`}
-          help={`${VAHAK_APPOINT_HELP} प्रत्येक स्थळी आठवड्यात एकच विचार वाहक. स्थळ ड्रॉपडाउनमधून निवडा — फक्त त्या स्थळाचा नाव + मोबाइल फॉर्म दिसतो.`}
-          places={dutyPlaces}
-          selectedPlaceId={dutyPlaceId}
-          onSelectPlace={(id) => {
-            setDutyPlaceId(id);
-            setDutyMsg(null);
-          }}
-          dutyByPlaceId={vahakByPlace}
-          drafts={drafts}
-          onDraftChange={(placeId, draft) =>
-            setDrafts((d) => ({ ...d, [placeId]: draft }))
-          }
-          onSave={(place) => void saveDuty(place, DUTY_KIND_VAHAK)}
-          busyPlaceId={dutyBusy}
-          message={dutyMsg}
-          ariaLabel="नेमणूक स्थळ निवडा"
-        />
-      ) : null}
-
       {assignedSatsangLabel ? (
         <p className="text-xs text-temple-muted">
           {SATSANG_CHARANSEVAK_LABEL}: {assignedSatsangLabel}
@@ -602,106 +712,18 @@ export default function AttendancePage() {
         <p className="text-xs text-temple-muted">विचार वाहक: {assignedLabel}</p>
       ) : null}
 
-      {staff && placeId ? (
-        <div className="rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-          <p className="text-xs font-semibold text-saffron-900">स्थळ GPS (एडिट)</p>
-          <p className="mt-1 text-xs text-temple-muted">
-            {placeHasGps
-              ? `${selectedPlace?.latitude?.toFixed(5)}, ${selectedPlace?.longitude?.toFixed(5)}`
-              : "अजून सेट नाही"}
-          </p>
-          <button
-            type="button"
-            disabled={pinBusy}
-            onClick={() => void pinPlaceHere()}
-            className="mt-2 rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-          >
-            {pinBusy
-              ? "GPS…"
-              : placeHasGps
-                ? "GPS पुन्हा सेट / दुरुस्त करा"
-                : "इथेच स्थळ चिन्हांकित करा"}
-          </button>
-          {placeHasGps ? (
-            <p className="mt-1 text-[11px] text-temple-muted">
-              चुकीच्या जागी सेट झाले असेल तर स्थळावर उभे राहून पुन्हा दाबा
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {!staff ? (
-        onSite ? (
-          <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold leading-relaxed text-emerald-900">
-            {ON_SITE_BLESSING}
-          </p>
-        ) : (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-            उपस्थिती जतन करताना GPS चालू ठेवा. स्थळापासून {ATTENDANCE_GEO_MAX_METERS}{" "}
-            मी बाहेर असल्यास नोंद बंद — «{OFF_SITE_WARNING}»
-          </p>
-        )
-      ) : null}
-
-      {lastCheckin ? (
-        <p className="text-xs font-semibold text-saffron-800">{lastCheckin}</p>
-      ) : null}
-
-      <div className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
-        <p className="text-xs font-semibold text-saffron-900">वेळ · एडिट</p>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => markDirty(setTime)(e.target.value)}
-          className="w-full rounded-xl bg-saffron-50 px-3 py-3 text-lg font-bold ring-1 ring-saffron-200"
-        />
-        <div className="flex flex-wrap gap-2">
-          {["19:30", "20:00", "20:30", "21:00"].map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => markDirty(setTime)(t)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                time === t
-                  ? "bg-saffron-700 text-white"
-                  : "bg-saffron-50 text-saffron-900 ring-1 ring-saffron-200"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
-        <div>
-          <p className="text-xs font-semibold text-temple-muted">
-            {staff ? "एकूण उपस्थिती" : "एकूण परमानंद चरणसेवक"}
-          </p>
-          <p className="text-[11px] text-temple-muted">+/− किंवा आकडा टाइप · एडिट</p>
-        </div>
-        <p className="text-3xl font-bold tabular-nums text-saffron-800">{total}</p>
-      </div>
-      <div className="space-y-2">
-        <NumberStepper compact label="पुरुष" value={men} onChange={markDirty(setMen)} />
-        <NumberStepper compact label="स्त्रिया" value={women} onChange={markDirty(setWomen)} />
-        <NumberStepper compact label="बालके" value={children} onChange={markDirty(setChildren)} />
-      </div>
-      <SaveBar
-        sticky
-        saving={saving}
-        saved={saved}
-        error={error}
-        label={saved ? "दुरुस्ती पुन्हा जतन करा" : "जतन / दुरुस्ती करा"}
-        savedLabel={
-          staff
-            ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
-            : onSite
-              ? "जतन झाले ✓ · चुकल्यास वर आकडा/वेळ बदला व पुन्हा जतन"
-              : ON_SITE_BLESSING
-        }
-        onSave={() => void saveAttendance()}
-      />
+      {guide ? (
+        <details className="rounded-2xl bg-white p-3 ring-1 ring-saffron-100">
+          <summary className="cursor-pointer text-sm font-semibold text-temple-muted">
+            उपस्थिती आकडे · सत्संग चरणसेवक मुख्य
+          </summary>
+          <div className="mt-3 space-y-4">
+            {attendanceEditors}
+          </div>
+        </details>
+      ) : (
+        attendanceEditors
+      )}
     </div>
   );
 }
