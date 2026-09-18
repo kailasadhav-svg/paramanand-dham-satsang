@@ -8,6 +8,22 @@ const nextConfig: NextConfig = {
     "/api/ajapa/questions/[id]/regenerate": ["./data/literature/**/*"],
     "/api/whatsapp/webhook": ["./data/literature/**/*"],
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(self), geolocation=(self)",
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: "/a", destination: "/attendance", permanent: false },

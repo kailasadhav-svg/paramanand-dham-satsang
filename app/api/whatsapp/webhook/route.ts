@@ -8,12 +8,12 @@ import {
   whatsappAppSecret,
   whatsappVerifyToken,
 } from "@/lib/ajapa/webhook-security";
-import { isVercelRuntime } from "@/lib/auth";
+import { isServingProduction } from "@/lib/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Meta webhook verification — no default token on Vercel. */
+/** Meta webhook verification — no default token in production. */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
@@ -21,14 +21,14 @@ export async function GET(request: Request) {
   const challenge = url.searchParams.get("hub.challenge");
   const expected = whatsappVerifyToken();
 
-  if (isVercelRuntime() && isWeakWhatsappVerifyToken(expected)) {
+  if (isServingProduction() && isWeakWhatsappVerifyToken(expected)) {
     return NextResponse.json(
       { error: "WHATSAPP_VERIFY_TOKEN not configured" },
       { status: 503 },
     );
   }
 
-  const effective = expected || (!isVercelRuntime() ? "ajapa-verify-dev-only" : "");
+  const effective = expected || (!isServingProduction() ? "ajapa-verify-dev-only" : "");
   if (mode === "subscribe" && token && effective && token === effective && challenge) {
     return new NextResponse(challenge, { status: 200 });
   }
@@ -84,8 +84,8 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const secret = whatsappAppSecret();
 
-  // Fail closed on Vercel without app secret; local may skip if unset.
-  if (isVercelRuntime() && !secret) {
+  // Fail closed in production without app secret; local may skip if unset.
+  if (isServingProduction() && !secret) {
     return NextResponse.json(
       { error: "WHATSAPP_APP_SECRET not configured" },
       { status: 503 },

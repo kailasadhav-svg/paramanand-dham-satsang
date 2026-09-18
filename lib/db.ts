@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
 import { DEFAULT_MEETING_TIME } from "./dates";
+import {
+  productionFileStoreBlockedReason,
+  remoteDatabaseUrl,
+} from "./runtime";
 
 const DB_PATH = path.join(process.cwd(), "data", "satsang.db");
 
@@ -147,7 +151,7 @@ function asQuestionWithPlace(row: Row): QuestionWithPlace {
 }
 
 function remoteUrl(): string | undefined {
-  return process.env.TURSO_DATABASE_URL || process.env.LIBSQL_URL || undefined;
+  return remoteDatabaseUrl();
 }
 
 function createDbClient(): Client {
@@ -156,10 +160,9 @@ function createDbClient(): Client {
   if (url) {
     return createClient({ url, authToken });
   }
-  if (process.env.VERCEL) {
-    throw new Error(
-      "SQLite files do not persist on Vercel. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN (Turso) in project environment variables.",
-    );
+  const blocked = productionFileStoreBlockedReason();
+  if (blocked) {
+    throw new Error(blocked);
   }
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const fileUrl = `file:${DB_PATH.split(path.sep).join("/")}`;
@@ -595,12 +598,17 @@ export async function listQuestions(opts: {
   unanswered?: boolean;
   from?: string;
   to?: string;
+  asked_by_phone?: string;
 }): Promise<QuestionWithPlace[]> {
   const clauses: string[] = [];
   const params: (string | number)[] = [];
   if (opts.place_id) {
     clauses.push("q.place_id = ?");
     params.push(opts.place_id);
+  }
+  if (opts.asked_by_phone) {
+    clauses.push("q.asked_by_phone = ?");
+    params.push(opts.asked_by_phone);
   }
   if (opts.unanswered) {
     clauses.push("(q.answer IS NULL OR trim(q.answer) = '')");

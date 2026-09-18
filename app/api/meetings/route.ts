@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } from "@/lib/api-guard";
 import {
   getMeeting,
   getPlace,
@@ -12,7 +12,6 @@ import {
   OFF_SITE_WARNING,
   distanceMeters,
 } from "@/lib/geo";
-import { normalizePhone } from "@/lib/offline/phone";
 import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -26,30 +25,34 @@ export async function GET(request: Request) {
   const placeId = Number(searchParams.get("place_id"));
   const date = searchParams.get("date");
   if (!placeId || !date) return jsonError("place_id आणि date आवश्यक", 400);
-  const meeting = await getMeeting(placeId, date);
-  const place = await getPlace(placeId);
-  return NextResponse.json({
-    place,
-    meeting: meeting ?? {
-      place_id: placeId,
-      meeting_date: date,
-      meeting_time: DEFAULT_MEETING_TIME,
-      men: 0,
-      women: 0,
-      children: 0,
-      topic_kind: null,
-      topic_title: null,
-      conductor: null,
-      notes: null,
-      checkin_lat: null,
-      checkin_lng: null,
-      checkin_accuracy_m: null,
-      checkin_distance_m: null,
-      checkin_ok: null,
-      checkin_phone: null,
-      checkin_at: null,
-    },
-  });
+  try {
+    const meeting = await getMeeting(placeId, date);
+    const place = await getPlace(placeId);
+    return NextResponse.json({
+      place,
+      meeting: meeting ?? {
+        place_id: placeId,
+        meeting_date: date,
+        meeting_time: DEFAULT_MEETING_TIME,
+        men: 0,
+        women: 0,
+        children: 0,
+        topic_kind: null,
+        topic_title: null,
+        conductor: null,
+        notes: null,
+        checkin_lat: null,
+        checkin_lng: null,
+        checkin_accuracy_m: null,
+        checkin_distance_m: null,
+        checkin_ok: null,
+        checkin_phone: null,
+        checkin_at: null,
+      },
+    });
+  } catch (err) {
+    return routeErrorResponse(err, "उपस्थिती लोड अयशस्वी");
+  }
 }
 
 export async function PUT(request: Request) {
@@ -151,18 +154,22 @@ export async function PUT(request: Request) {
     };
   }
 
-  const meeting = await upsertMeeting({
-    place_id: Number(body.place_id),
-    meeting_date: String(body.meeting_date),
-    meeting_time: body.meeting_time,
-    men: body.men,
-    women: body.women,
-    children: body.children,
-    topic_kind: body.topic_kind,
-    topic_title: body.topic_title,
-    conductor: body.conductor,
-    notes: body.notes,
-    ...checkin,
-  });
-  return NextResponse.json({ meeting });
+  try {
+    const meeting = await upsertMeeting({
+      place_id: Number(body.place_id),
+      meeting_date: String(body.meeting_date),
+      meeting_time: body.meeting_time,
+      men: body.men,
+      women: body.women,
+      children: body.children,
+      topic_kind: body.topic_kind,
+      topic_title: body.topic_title,
+      conductor: body.conductor,
+      notes: body.notes,
+      ...checkin,
+    });
+    return NextResponse.json({ meeting });
+  } catch (err) {
+    return routeErrorResponse(err, "उपस्थिती जतन अयशस्वी");
+  }
 }

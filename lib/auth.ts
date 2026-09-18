@@ -1,49 +1,25 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import {
+  adminPin,
+  sessionSecret,
+} from "./auth-policy.ts";
+
+export {
+  DEFAULT_ADMIN_PIN,
+  DEFAULT_SESSION_SECRET,
+  adminPin,
+  clearCookieOptions,
+  hasWeakAuthSecrets,
+  isVercelRuntime,
+  productionAuthBlockedReason,
+  sessionCookieOptions,
+  sessionSecret,
+} from "./auth-policy.ts";
 
 export const SESSION_COOKIE = "satsang_session";
 export const MEMBER_COOKIE = "satsang_member";
 export const ACTOR_COOKIE = "satsang_actor";
-
-const DEFAULT_ADMIN_PIN = "1960";
-const DEFAULT_SESSION_SECRET = "paramanand-dham-satsang-session";
-
-export function isVercelRuntime(): boolean {
-  return Boolean(process.env.VERCEL);
-}
-
-export function adminPin(): string {
-  return process.env.ADMIN_PIN || DEFAULT_ADMIN_PIN;
-}
-
-export function sessionSecret(): string {
-  return process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET;
-}
-
-export function hasWeakAuthSecrets(): {
-  weakPin: boolean;
-  weakSessionSecret: boolean;
-} {
-  const pin = process.env.ADMIN_PIN || "";
-  const secret = process.env.SESSION_SECRET || "";
-  return {
-    weakPin: !pin || pin === DEFAULT_ADMIN_PIN,
-    weakSessionSecret:
-      !secret ||
-      secret === DEFAULT_SESSION_SECRET ||
-      secret === "change-me-in-production",
-  };
-}
-
-/** On Vercel, refuse login / actor bind while defaults remain. */
-export function productionAuthBlockedReason(): string | null {
-  if (!isVercelRuntime()) return null;
-  const weak = hasWeakAuthSecrets();
-  if (weak.weakPin || weak.weakSessionSecret) {
-    return "Production secrets missing: set strong ADMIN_PIN and SESSION_SECRET in Vercel env, then redeploy.";
-  }
-  return null;
-}
 
 function safeEqualString(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -126,16 +102,4 @@ export async function requireSession(): Promise<void> {
     (err as Error & { status: number }).status = 401;
     throw err;
   }
-}
-
-export function sessionCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-    secure:
-      process.env.COOKIE_SECURE === "true" ||
-      (process.env.COOKIE_SECURE !== "false" && Boolean(process.env.VERCEL)),
-  };
 }

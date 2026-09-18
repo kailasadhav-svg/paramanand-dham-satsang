@@ -6,40 +6,61 @@ import {
   whatsappAppSecret,
   whatsappVerifyToken,
 } from "@/lib/ajapa/webhook-security";
+import { isProductionReady } from "@/lib/health";
+import {
+  cookieSecureEnabled,
+  isServingProduction,
+  productionFileStoreBlockedReason,
+  remoteDatabaseUrl,
+} from "@/lib/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    const db = await pingDb();
-    const weak = hasWeakAuthSecrets();
-    const verify = whatsappVerifyToken();
-    const secrets = {
-      weak_admin_pin: weak.weakPin,
-      weak_session_secret: weak.weakSessionSecret,
-      whatsapp_verify_token_ok: Boolean(verify) && !isWeakWhatsappVerifyToken(verify),
-      whatsapp_app_secret_set: Boolean(whatsappAppSecret()),
-      vercel: isVercelRuntime(),
-    };
-    const production_ready =
-      !secrets.weak_admin_pin &&
-      !secrets.weak_session_secret &&
-      (!secrets.vercel ||
-        (secrets.whatsapp_verify_token_ok && secrets.whatsapp_app_secret_set));
+  const weak = hasWeakAuthSecrets();
+  const verify = whatsappVerifyToken();
+  const secrets = {
+    weak_admin_pin: weak.weakPin,
+    weak_session_secret: weak.weakSessionSecret,
+    whatsapp_verify_token_ok: Boolean(verify) && !isWeakWhatsappVerifyToken(verify),
+    whatsapp_app_secret_set: Boolean(whatsappAppSecret()),
+    vercel: isVercelRuntime(),
+    production: isServingProduction(),
+    cookie_secure: cookieSecureEnabled(),
+  };
 
-    return NextResponse.json({
-      ok: true,
-      name: "अजपा संवाद",
-      db,
-      secrets,
-      production_ready,
-    });
+  let db: { ok: boolean; store: "turso" | "file"; error?: string } = {
+    ok: false,
+    store: remoteDatabaseUrl() ? "turso" : "file",
+  };
+  try {
+    const ping = await pingDb();
+    db = ping;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "db error";
-    return NextResponse.json(
-      { ok: false, name: "अजपा संवाद", error: message },
-      { status: 503 },
-    );
+    db = {
+      ok: false,
+      store: remoteDatabaseUrl() ? "turso" : "file",
+      error: err instanceof Error ? err.message : "db error",
+    };
   }
+
+  const storeBlocked = productionFileStoreBlockedReason();
+  const production_ready = isProductionReady({
+    dbOk: db.ok,
+    store: db.store,
+    secrets,
+  });
+
+  const body = {
+    ok: db.ok,
+    name: "अजपा संवाद",
+    db,
+    secrets,
+    production_ready,
+    ...(storeBlocked && !db.ok ? { error: storeBlocked } : {}),
+    ...(!storeBlocked && db.error ? { error: db.error } : {}),
+  };
+
+  return NextResponse.json(body, { status: db.ok ? 200 : 503 });
 }
