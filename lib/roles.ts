@@ -1,4 +1,4 @@
-import { normalizePhone } from "@/lib/offline/phone";
+import { normalizePhone } from "./offline/phone.ts";
 
 /** Locked phone → role map (KAILAS / मधुसुदनदास). */
 export const SOFTWARE_PHONES = (

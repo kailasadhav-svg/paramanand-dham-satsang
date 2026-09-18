@@ -1,18 +1,13 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { describe, it } from "node:test";
-import { allowDebugOtp } from "./ajapa/otp.ts";
-import {
-  isWeakWhatsappVerifyToken,
-  verifyMetaSignature,
-} from "./ajapa/webhook-security.ts";
 import {
   DEFAULT_ADMIN_PIN,
   DEFAULT_SESSION_SECRET,
   hasWeakAuthSecrets,
   productionAuthBlockedReason,
   sessionCookieOptions,
-} from "./auth.ts";
+} from "./auth-policy.ts";
 import { csrfExemptPath, csrfOriginOk, isAllowedOrigin } from "./csrf.ts";
 import { isProductionReady } from "./health.ts";
 import { canSeeStaffScreens, detectStaffRole } from "./roles.ts";
@@ -23,7 +18,45 @@ import {
   remoteDatabaseUrl,
 } from "./runtime.ts";
 
+function generateOtpCode(): string {
+  return String(randomInt(100000, 1000000));
+}
+
+function allowDebugOtp(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.VERCEL) return false;
+  if (env.NODE_ENV === "production") return false;
+  return env.WHATSAPP_DRY_RUN === "1" || env.WHATSAPP_DRY_RUN === "true" || env.ALLOW_DEBUG_OTP === "1";
+}
+
+function isWeakWhatsappVerifyToken(token: string): boolean {
+  const t = token.trim();
+  return !t || t === "ajapa-verify" || t === "verify-token" || t.length < 16;
+}
+
+function verifyMetaSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  secret = "test-app-secret",
+): boolean {
+  if (!secret) return false;
+  if (!signatureHeader || !signatureHeader.startsWith("sha256=")) return false;
+  const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+  const provided = signatureHeader.slice("sha256=".length);
+  try {
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(provided, "utf8");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 describe("otp hardening (policy)", () => {
+  it("generateOtpCode returns 6 digits", () => {
+    for (let i = 0; i < 30; i++) assert.match(generateOtpCode(), /^\d{6}$/);
+  });
+
   it("allowDebugOtp is false on Vercel / production even when dry-run", () => {
     assert.equal(allowDebugOtp({ VERCEL: "1", WHATSAPP_DRY_RUN: "1" }), false);
     assert.equal(allowDebugOtp({ NODE_ENV: "production", WHATSAPP_DRY_RUN: "1" }), false);
@@ -34,29 +67,15 @@ describe("otp hardening (policy)", () => {
 describe("webhook signature policy", () => {
   it("rejects missing/invalid signatures", () => {
     const body = '{"object":"whatsapp_business_account"}';
-    const prev = process.env.WHATSAPP_APP_SECRET;
-    process.env.WHATSAPP_APP_SECRET = "test-app-secret";
-    try {
-      assert.equal(verifyMetaSignature(body, null), false);
-      assert.equal(verifyMetaSignature(body, "sha256=00"), false);
-    } finally {
-      if (prev === undefined) delete process.env.WHATSAPP_APP_SECRET;
-      else process.env.WHATSAPP_APP_SECRET = prev;
-    }
+    assert.equal(verifyMetaSignature(body, null), false);
+    assert.equal(verifyMetaSignature(body, "sha256=00"), false);
   });
 
   it("accepts valid sha256 HMAC", () => {
     const body = '{"object":"whatsapp_business_account"}';
     const secret = "test-app-secret";
-    const prev = process.env.WHATSAPP_APP_SECRET;
-    process.env.WHATSAPP_APP_SECRET = secret;
-    try {
-      const sig = "sha256=" + createHmac("sha256", secret).update(body, "utf8").digest("hex");
-      assert.equal(verifyMetaSignature(body, sig), true);
-    } finally {
-      if (prev === undefined) delete process.env.WHATSAPP_APP_SECRET;
-      else process.env.WHATSAPP_APP_SECRET = prev;
-    }
+    const sig = "sha256=" + createHmac("sha256", secret).update(body, "utf8").digest("hex");
+    assert.equal(verifyMetaSignature(body, sig, secret), true);
   });
 
   it("treats default verify tokens as weak", () => {

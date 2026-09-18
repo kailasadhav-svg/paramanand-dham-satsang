@@ -54,7 +54,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as AjapaStatus | null;
   const seekerRaw = searchParams.get("seeker_phone") || undefined;
-  const seeker = seekerRaw ? normalizePhone(seekerRaw) : undefined;
   const since = searchParams.get("since") || undefined;
   const limit = searchParams.get("limit");
   const claimOrphans = searchParams.get("claim_orphans") === "1";
@@ -69,9 +68,11 @@ export async function GET(request: Request) {
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
   const staff = canSeeStaffScreens(detectStaffRole(actor));
-  if (!staff) {
-    seeker = actor;
-  }
+  const seeker = staff
+    ? seekerRaw
+      ? normalizePhone(seekerRaw)
+      : undefined
+    : actor;
   const mirrorFor = seeker || actor;
 
   try {

@@ -1,4 +1,4 @@
-import type { EnvLike } from "./runtime";
+import type { EnvLike } from "./runtime.ts";
 
 export const PRODUCTION_APP_HOST = "satsang.dhyeyapurti.in";
 
