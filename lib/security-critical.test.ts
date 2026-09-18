@@ -178,13 +178,67 @@ describe("health production_ready", () => {
     );
   });
 
-  it("is true only with Turso + strong secrets + WhatsApp webhook secrets", () => {
+  it("is true with Turso + strong secrets + WhatsApp webhook secrets", () => {
     assert.equal(
       isProductionReady({ dbOk: true, store: "turso", secrets: readySecrets }),
       true,
     );
+  });
+
+  it("is true with file store when ALLOW_FILE_STORE / fileStoreAllowed", () => {
     assert.equal(
-      isProductionReady({ dbOk: true, store: "file", secrets: readySecrets }),
+      isProductionReady({
+        dbOk: true,
+        store: "file",
+        secrets: readySecrets,
+        fileStoreAllowed: true,
+      }),
+      true,
+    );
+    const prev = process.env.ALLOW_FILE_STORE;
+    process.env.ALLOW_FILE_STORE = "1";
+    try {
+      assert.equal(
+        isProductionReady({ dbOk: true, store: "file", secrets: readySecrets }),
+        true,
+      );
+    } finally {
+      if (prev === undefined) delete process.env.ALLOW_FILE_STORE;
+      else process.env.ALLOW_FILE_STORE = prev;
+    }
+  });
+
+  it("is false with file store without allow", () => {
+    assert.equal(
+      isProductionReady({
+        dbOk: true,
+        store: "file",
+        secrets: readySecrets,
+        fileStoreAllowed: false,
+      }),
+      false,
+    );
+    const prev = process.env.ALLOW_FILE_STORE;
+    delete process.env.ALLOW_FILE_STORE;
+    try {
+      assert.equal(
+        isProductionReady({ dbOk: true, store: "file", secrets: readySecrets }),
+        false,
+      );
+    } finally {
+      if (prev === undefined) delete process.env.ALLOW_FILE_STORE;
+      else process.env.ALLOW_FILE_STORE = prev;
+    }
+  });
+
+  it("is false on Vercel file store even when fileStoreAllowed", () => {
+    assert.equal(
+      isProductionReady({
+        dbOk: true,
+        store: "file",
+        secrets: { ...readySecrets, vercel: true },
+        fileStoreAllowed: true,
+      }),
       false,
     );
   });
