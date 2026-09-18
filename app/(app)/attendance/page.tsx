@@ -550,12 +550,6 @@ export default function AttendancePage() {
             >
               चिंतन
             </Link>
-            <Link
-              href="/questions"
-              className="rounded-full bg-white px-3 py-1.5 text-saffron-900 ring-1 ring-saffron-200"
-            >
-              प्रश्नोत्तर
-            </Link>
           </div>
         </section>
       ) : null}

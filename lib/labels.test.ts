@@ -337,7 +337,11 @@ describe("चिंतन copy", () => {
     assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
     assert.match(attendance, /canSeeGuideScreens/);
     assert.match(attendance, /href="\/weekly"/);
-    assert.match(attendance, /href="\/questions"/);
+    assert.equal(
+      attendance.includes('href="/questions"'),
+      false,
+      "मार्गदर्शक attendance must not link to प्रश्न",
+    );
     assert.equal(GUIDE_MAIN_WORK_HELP.includes("सत्संग चरणसेवक"), true);
     assert.match(GUIDE_MAIN_WORK_HELP, /चिंतनावर उत्तर/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");

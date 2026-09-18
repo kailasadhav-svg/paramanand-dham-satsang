@@ -80,7 +80,8 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 | --- | --- | --- |
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
 | विषय | `/topic` | Thursday विषय (create/edit **मार्गदर्शक only**); विचार वाहक name; चिंतन follow-up status |
-| प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
+| चिंतन | `/weekly` | मार्गदर्शक only — replaces प्रश्न in their bottom nav |
+| प्रश्न | `/questions` | Weekly satsang Q&A (manual); hidden for मार्गदर्शक (they do not ask) |
 | संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
 

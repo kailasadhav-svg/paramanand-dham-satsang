@@ -3,28 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProfileOptional } from "@/components/PhoneGate";
-import { canSeeStaffScreens } from "@/lib/roles";
+import { visibleBottomNavItems } from "@/lib/bottom-nav";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: (p: { active: boolean }) => React.ReactNode;
-  staffOnly?: boolean;
+const ICONS: Record<string, (p: { active: boolean }) => React.ReactNode> = {
+  "/attendance": UsersIcon,
+  "/topic": BookIcon,
+  "/weekly": ChintanIcon,
+  "/questions": QuestionIcon,
+  "/ajapa": AjapaIcon,
+  "/report": ReportIcon,
 };
-
-const ITEMS: NavItem[] = [
-  { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
-  { href: "/topic", label: "विषय", icon: BookIcon },
-  { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
-  { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
-  { href: "/report", label: "अहवाल", icon: ReportIcon, staffOnly: true },
-];
 
 export function BottomNav() {
   const pathname = usePathname();
   const profile = useProfileOptional();
-  const staff = profile ? canSeeStaffScreens(profile.role) : false;
-  const items = ITEMS.filter((i) => (i.staffOnly ? staff : true));
+  const items = visibleBottomNavItems(profile?.role ?? null);
   const cols =
     items.length >= 5
       ? "grid-cols-5"
@@ -43,7 +36,7 @@ export function BottomNav() {
       >
         {items.map((item) => {
           const active = pathname === item.href;
-          const Icon = item.icon;
+          const Icon = ICONS[item.href] ?? QuestionIcon;
           return (
             <li key={item.href} className="min-w-0">
               <Link
@@ -81,6 +74,15 @@ function BookIcon({ active }: { active: boolean }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#c74407" : "#7a5a42"} strokeWidth="1.8">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15z" />
+    </svg>
+  );
+}
+
+function ChintanIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#c74407" : "#7a5a42"} strokeWidth="1.8">
+      <path d="M12 3c-2.2 3.2-5 5.6-5 9a5 5 0 0 0 10 0c0-3.4-2.8-5.8-5-9z" />
+      <path d="M9 20h6" />
     </svg>
   );
 }
