@@ -14,6 +14,7 @@ import {
   CHINTAN_DEADLINE_HELP,
   CHINTAN_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
+  GUIDE_MAIN_WORK_HELP,
   GUIDE_TOPIC_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
@@ -156,6 +157,9 @@ export default function WeeklyAdminPage() {
         {CHINTAN_DEADLINE_HELP} मुदत: {formatMarathiDate(chintanDeadlineYmd(thursday))} रात्री
         १२:००.
       </p>
+      {canEdit ? (
+        <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_MAIN_WORK_HELP}</p>
+      ) : null}
       {canEdit ? (
         <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_TOPIC_HELP}</p>
       ) : (

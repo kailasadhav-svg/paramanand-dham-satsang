@@ -12,7 +12,11 @@ import {
   VAHAK_LABEL,
   VAHAK_LABEL_SHORT,
   VAHAK_APPOINT_HELP,
+  SATSANG_CHARANSEVAK_APPOINT_HELP,
+  SATSANG_CHARANSEVAK_JOB_HELP,
+  SATSANG_CHARANSEVAK_LABEL,
   GUIDE_LABEL,
+  GUIDE_MAIN_WORK_HELP,
   GUIDE_QUEUE_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_QUESTION_HELP,
@@ -47,6 +51,9 @@ describe("चिंतन copy", () => {
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
       VAHAK_APPOINT_HELP,
+      SATSANG_CHARANSEVAK_JOB_HELP,
+      SATSANG_CHARANSEVAK_APPOINT_HELP,
+      GUIDE_MAIN_WORK_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
       assert.equal(/\bcomment\b/i.test(s), false);
@@ -75,6 +82,40 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_APPOINT_HELP, /परमानंद चरणसेवकांपैकी एक/);
   });
 
+  it("names attendance duty सत्संग चरणसेवक, distinct from विचार वाहक", () => {
+    assert.equal(SATSANG_CHARANSEVAK_LABEL, "सत्संग चरणसेवक");
+    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /उपस्थिती/);
+    assert.match(SATSANG_CHARANSEVAK_JOB_HELP, /विचार वाहक वेगळे/);
+    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /मार्गदर्शक/);
+    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /मागच्या आठवड्याचे/);
+    assert.match(SATSANG_CHARANSEVAK_APPOINT_HELP, /संगणक नेमत नाहीत/);
+    assert.match(GUIDE_MAIN_WORK_HELP, /चिंतन वाचणे व उत्तर देणे/);
+    assert.match(GUIDE_MAIN_WORK_HELP, /उपस्थिती नोंद सत्संग चरणसेवकांचे काम/);
+    assert.match(GUIDE_MAIN_WORK_HELP, /प्रश्न विचारणे मुख्य काम नाही/);
+    const attendance = readFileSync(
+      new URL("../app/(app)/attendance/page.tsx", import.meta.url),
+      "utf8",
+    );
+    const appointUi = readFileSync(
+      new URL("../components/DutyAppointSection.tsx", import.meta.url),
+      "utf8",
+    );
+    const nav = readFileSync(new URL("../components/BottomNav.tsx", import.meta.url), "utf8");
+    const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
+    assert.match(attendance, /CompactDutyStrip/);
+    assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
+    assert.match(attendance, /उपस्थिती आकडे/);
+    assert.match(attendance, /satsang_charansevak/);
+    assert.match(appointUi, /CompactDutyStrip/);
+    assert.match(appointUi, /नेमणूक स्थळ/);
+    assert.match(appointUi, /इतर स्थळांच्या नेमणूका/);
+    assert.equal(attendance.includes("गुरुवारी परमानंद विचार वाहक नेमणूक"), false);
+    assert.match(attendance, /VAHAK_LABEL\} नेमणूक/);
+    assert.match(nav, /guideOnly: true/);
+    assert.match(nav, /hideForGuide: true/);
+    assert.match(roles, /if \(role === "guru"\) return "\/weekly"/);
+  });
+
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {
     assert.equal(chintanDeadlineYmd("2026-09-17"), "2026-09-23");
   });
@@ -100,6 +141,7 @@ describe("चिंतन copy", () => {
     const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weekly, /GUIDE_TOPIC_HELP/);
     assert.match(weekly, /GUIDE_CHINTAN_RANK_HELP/);
+    assert.match(weekly, /GUIDE_MAIN_WORK_HELP/);
     const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
     assert.match(questions, /GUIDE_QUESTION_HELP/);
     const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
@@ -197,6 +239,10 @@ describe("चिंतन copy", () => {
       VAHAK_LABEL,
       VAHAK_LABEL_SHORT,
       VAHAK_APPOINT_HELP,
+      SATSANG_CHARANSEVAK_LABEL,
+      SATSANG_CHARANSEVAK_JOB_HELP,
+      SATSANG_CHARANSEVAK_APPOINT_HELP,
+      GUIDE_MAIN_WORK_HELP,
       GUIDE_LABEL,
       GUIDE_QUEUE_LABEL,
       GUIDE_CHINTAN_RANK_HELP,

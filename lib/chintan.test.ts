@@ -101,12 +101,16 @@ describe("विचार वाहक label", () => {
 });
 
 describe("one विचार वाहक per place per Thursday", () => {
-  it("keeps UNIQUE(place_id, meeting_date) on place_duties", () => {
+  it("keeps UNIQUE(place_id, meeting_date, duty_kind) on place_duties", () => {
     const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     assert.match(
       schema,
-      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date\)/,
+      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date, duty_kind\)/,
     );
+    assert.match(schema, /duty_kind TEXT NOT NULL DEFAULT 'vahak'/);
+    assert.match(schema, /satsang_charansevak/);
+    assert.match(schema, /ON CONFLICT\(place_id, meeting_date, duty_kind\)/);
+    assert.match(schema, /migratePlaceDutiesDutyKind/);
   });
 
   it("redacts roster answers on the weekly API path", () => {

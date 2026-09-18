@@ -1,5 +1,7 @@
 import {
   attendanceTotal,
+  DUTY_KIND_SATSANG,
+  DUTY_KIND_VAHAK,
   listDutiesOnDate,
   listMeetingsOnDate,
   listPlaces,
@@ -9,7 +11,13 @@ import {
   type QuestionWithPlace,
 } from "./db";
 import { formatMarathiDate, formatMarathiShort, weekFromThursday } from "./dates";
-import { ANSWERED_BY_LABEL, CHINTAN_LABEL, TOPIC_LABEL, VAHAK_LABEL_SHORT } from "./labels";
+import {
+  ANSWERED_BY_LABEL,
+  CHINTAN_LABEL,
+  SATSANG_CHARANSEVAK_LABEL,
+  TOPIC_LABEL,
+  VAHAK_LABEL_SHORT,
+} from "./labels";
 import { displayPhone } from "./offline/phone";
 
 export { ANSWERED_BY_LABEL, TOPIC_LABEL } from "./labels";
@@ -22,11 +30,14 @@ export async function buildWeeklyReport(thursdayYmd: string) {
   const week = weekFromThursday(thursdayYmd);
   const places = await listPlaces();
   const meetings = await listMeetingsOnDate(thursdayYmd);
-  const duties = await listDutiesOnDate(thursdayYmd);
+  const duties = await listDutiesOnDate(thursdayYmd, DUTY_KIND_VAHAK);
+  const satsangDuties = await listDutiesOnDate(thursdayYmd, DUTY_KIND_SATSANG);
   const byPlace = new Map<number, MeetingWithPlace>();
   for (const m of meetings) byPlace.set(m.place_id, m);
   const dutyByPlace = new Map<number, PlaceDutyWithPlace>();
   for (const d of duties) dutyByPlace.set(d.place_id, d);
+  const satsangByPlace = new Map<number, PlaceDutyWithPlace>();
+  for (const d of satsangDuties) satsangByPlace.set(d.place_id, d);
 
   const questions = await listQuestions({ from: week.start, to: week.end });
   const unanswered = questions.filter((q) => !q.answer || !q.answer.trim());
@@ -36,9 +47,10 @@ export async function buildWeeklyReport(thursdayYmd: string) {
   const placeRows = places.map((place) => {
     const meeting = byPlace.get(place.id);
     const duty = dutyByPlace.get(place.id) ?? null;
+    const satsangDuty = satsangByPlace.get(place.id) ?? null;
     const total = meeting ? attendanceTotal(meeting) : 0;
     grandTotal += total;
-    return { place, meeting, duty, total };
+    return { place, meeting, duty, satsangDuty, total };
   });
 
   const lines: string[] = [
@@ -52,6 +64,14 @@ export async function buildWeeklyReport(thursdayYmd: string) {
 
   for (const row of placeRows) {
     lines.push(`📍 *${row.place.name}*`);
+    if (row.satsangDuty) {
+      const who =
+        row.satsangDuty.charansevak_name ||
+        displayPhone(row.satsangDuty.charansevak_phone);
+      lines.push(
+        `🙏 ${SATSANG_CHARANSEVAK_LABEL}: ${who} (${displayPhone(row.satsangDuty.charansevak_phone)})`,
+      );
+    }
     if (row.duty) {
       const who =
         row.duty.charansevak_name ||

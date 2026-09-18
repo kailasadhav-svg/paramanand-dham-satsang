@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   appDisplayName,
   canAppointSatsangi,
+  canAppointSatsangCharansevak,
   canAppointVahak,
   canApproveCharansevak,
   canEditAnyPlaceTopic,
@@ -12,6 +13,7 @@ import {
   canSeeChintanBody,
   canSeeGuideScreens,
   canSeeStaffScreens,
+  defaultHomePath,
   detectStaffRole,
   roleLabelMarathi,
 } from "./roles.ts";
@@ -129,6 +131,22 @@ describe("canAppointVahak", () => {
   });
 });
 
+describe("canAppointSatsangCharansevak", () => {
+  it("lets मार्गदर्शक appoint anytime; संगणक and generic चरणसेवक never via role", () => {
+    assert.equal(canAppointSatsangCharansevak("guru"), true);
+    assert.equal(canAppointSatsangCharansevak("software"), false);
+    assert.equal(canAppointSatsangCharansevak("charansevak"), false);
+  });
+});
+
+describe("defaultHomePath", () => {
+  it("sends मार्गदर्शक to चिंतन, संगणक to attendance, चरणसेवक to अजपा", () => {
+    assert.equal(defaultHomePath("guru"), "/weekly");
+    assert.equal(defaultHomePath("software"), "/attendance");
+    assert.equal(defaultHomePath("charansevak"), "/ajapa");
+  });
+});
+
 describe("thursdayContainingYmd", () => {
   it("maps any IST day onto that satsang week's Thursday", () => {
     assert.equal(thursdayContainingYmd("2026-09-17"), "2026-09-17");
@@ -179,6 +197,9 @@ describe("role isolation", () => {
 describe("user-facing terminology", () => {
   const uiFiles = [
     "app/(app)/attendance/page.tsx",
+    "components/DutyAppointSection.tsx",
+    "components/BottomNav.tsx",
+    "components/AppHeader.tsx",
     "app/(app)/questions/page.tsx",
     "app/(app)/members/page.tsx",
     "app/(app)/ajapa/page.tsx",
