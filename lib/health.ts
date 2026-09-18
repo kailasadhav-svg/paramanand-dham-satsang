@@ -1,4 +1,4 @@
-import { allowFileStore } from "./runtime";
+import { allowFileStore } from "./runtime.ts";
 
 export type HealthStore = "turso" | "file";
 

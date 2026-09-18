@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
 import { DEFAULT_MEETING_TIME } from "./dates";
+import { renameAmbashiToShindi } from "./place-rename";
 import {
   productionFileStoreBlockedReason,
   remoteDatabaseUrl,
@@ -326,24 +327,6 @@ async function migrate(db: Client) {
     args: [name, i + 1] as (string | number)[],
   }));
   await db.batch(insert, "write");
-}
-
-/** Keep place ids so attendance, questions, and duties stay linked. */
-export async function renameAmbashiToShindi(db: Client): Promise<void> {
-  const shindi = await db.execute({
-    sql: "SELECT id FROM places WHERE name = ? LIMIT 1",
-    args: ["शिंदी"],
-  });
-  if (!shindi.rows[0]) {
-    await db.execute({
-      sql: "UPDATE places SET name = ? WHERE name = ?",
-      args: ["शिंदी", "अंबाशी"],
-    });
-  }
-  await db.execute({
-    sql: "UPDATE members SET place_code = ? WHERE place_code = ?",
-    args: ["shindi", "ambashi"],
-  });
 }
 
 export async function getDb(): Promise<Client> {
