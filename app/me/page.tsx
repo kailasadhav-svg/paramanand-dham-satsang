@@ -74,7 +74,7 @@ export default function MemberHomePage() {
         <p className="text-sm text-temple-muted">{member.place_label}</p>
         <dl className="grid grid-cols-2 gap-2 pt-2 text-sm">
           <div className="rounded-xl bg-saffron-50 px-3 py-2">
-            <dt className="text-xs text-temple-muted">सेवक क्रमांक</dt>
+            <dt className="text-xs text-temple-muted">चरणसेवक क्रमांक</dt>
             <dd className="font-bold text-saffron-800">{member.id}</dd>
           </div>
           <div className="rounded-xl bg-saffron-50 px-3 py-2">

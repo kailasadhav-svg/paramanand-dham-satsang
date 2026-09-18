@@ -6,7 +6,11 @@ import {
   canAppointSatsangi,
   canAppointVahak,
   canApproveCharansevak,
+  canEditAnyPlaceTopic,
+  canEditWeeklyQuestion,
+  canSeeAllAjapa,
   canSeeChintanBody,
+  canSeeGuideScreens,
   canSeeStaffScreens,
   detectStaffRole,
   roleLabelMarathi,
@@ -92,9 +96,10 @@ describe("canAppointVahak", () => {
     assert.equal(shouldAutoContinueVahak("2026-09-24", fridayMorning), false);
   });
 
-  it("lets मार्गदर्शक / संगणक appoint anytime; चरणसेवक only empty + that Friday window", () => {
+  it("lets मार्गदर्शक appoint anytime; संगणक never; चरणसेवक only empty + that Friday window", () => {
     assert.equal(canAppointVahak("guru", { hasDuty: true, now: thursday }), true);
-    assert.equal(canAppointVahak("software", { hasDuty: true, now: thursday }), true);
+    assert.equal(canAppointVahak("software", { hasDuty: true, now: thursday }), false);
+    assert.equal(canAppointVahak("software", { hasDuty: false, now: fridayMorning, meetingDate: week }), false);
     assert.equal(
       canAppointVahak("charansevak", { hasDuty: false, now: fridayMorning, meetingDate: week }),
       true,
@@ -118,18 +123,48 @@ describe("canAppointVahak", () => {
   });
 });
 
+describe("role isolation", () => {
+  it("keeps GPS/report staff screens for संगणक + मार्गदर्शक", () => {
+    assert.equal(canSeeStaffScreens("software"), true);
+    assert.equal(canSeeStaffScreens("guru"), true);
+    assert.equal(canSeeStaffScreens("charansevak"), false);
+  });
+
+  it("scopes spiritual screens to मार्गदर्शक only", () => {
+    assert.equal(canSeeGuideScreens("guru"), true);
+    assert.equal(canSeeGuideScreens("software"), false);
+    assert.equal(canSeeGuideScreens("charansevak"), false);
+    assert.equal(canEditWeeklyQuestion("guru"), true);
+    assert.equal(canEditWeeklyQuestion("software"), false);
+    assert.equal(canEditAnyPlaceTopic("guru"), true);
+    assert.equal(canEditAnyPlaceTopic("software"), false);
+    assert.equal(canSeeAllAjapa("guru"), true);
+    assert.equal(canSeeAllAjapa("software"), false);
+    assert.equal(canSeeAllAjapa("charansevak"), false);
+  });
+});
+
 describe("user-facing terminology", () => {
   const uiFiles = [
     "app/(app)/attendance/page.tsx",
     "app/(app)/questions/page.tsx",
     "app/(app)/members/page.tsx",
     "app/(app)/ajapa/page.tsx",
+    "app/(app)/report/page.tsx",
     "app/member-login/page.tsx",
     "app/login/page.tsx",
+    "app/register/page.tsx",
+    "app/me/page.tsx",
+    "app/t/[role]/page.tsx",
+    "app/layout.tsx",
     "components/MemberHeader.tsx",
+    "components/AppHeader.tsx",
+    "lib/installSlots.ts",
+    "lib/api-guard.ts",
     "app/api/satsangi-members/route.ts",
     "app/api/ajapa/questions/[id]/request-otp/route.ts",
     "app/api/ajapa/questions/[id]/verify-otp/route.ts",
+    "app/api/ajapa/questions/[id]/answer/route.ts",
     "lib/roles.ts",
   ];
 
@@ -139,5 +174,21 @@ describe("user-facing terminology", () => {
       assert.equal(text.includes("सत्संगी"), false, `${rel} still has सत्संगी`);
       assert.equal(/\bSatsangi\b/.test(text), false, `${rel} still has Satsangi`);
     }
+  });
+
+  it("does not show old संवादक / सेवक role labels in UI", () => {
+    for (const rel of uiFiles) {
+      const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+      assert.equal(text.includes("संवादक"), false, `${rel} still has संवादक`);
+      assert.equal(text.includes("प्रशासक"), false, `${rel} still has प्रशासक`);
+    }
+    const login = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
+    assert.match(login, /मार्गदर्शक चरणसेवक/);
+    assert.match(login, /संगणक चरणसेवक/);
+    assert.match(login, /परमानंद चरणसेवक/);
+    const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
+    assert.match(ajapa, /GUIDE_LABEL/);
+    assert.match(ajapa, /SOFTWARE_LABEL/);
+    assert.match(ajapa, /MEMBER_ROLE_LABEL/);
   });
 });

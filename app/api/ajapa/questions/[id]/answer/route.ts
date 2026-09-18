@@ -3,7 +3,7 @@ import { getWaSession, getAjapaQuestion, saveGuruInAppAnswer } from "@/lib/ajapa
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { notifyGuruAnswerReady, sendText } from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
-import { detectStaffRole } from "@/lib/roles";
+import { canSeeGuideScreens } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,8 +14,8 @@ type Ctx = { params: Promise<{ id: string }> };
 const MAX_AUDIO_CHARS = 3_600_000; // ~2.7MB base64 — ~२ मिनिटे voice
 
 /**
- * संवादक in-app उत्तर: text आणि/किंवा voice (data URL).
- * फक्त guru / software.
+ * मार्गदर्शक in-app उत्तर: text आणि/किंवा voice (data URL).
+ * फक्त guru.
  */
 export async function POST(request: Request, ctx: Ctx) {
   const auth = await requireApiSession();
@@ -30,15 +30,14 @@ export async function POST(request: Request, ctx: Ctx) {
   const actor = actorAuth.phone;
   if (!actor) return jsonError("मोबाइल आवश्यक", 400);
 
-  const role = detectStaffRole(actor);
-  if (role !== "guru" && role !== "software") {
-    return jsonError("फक्त संवादक उत्तर देऊ शकतात", 403);
+  if (!canSeeGuideScreens(detectStaffRole(actor))) {
+    return jsonError("फक्त मार्गदर्शक उत्तर देऊ शकतात", 403);
   }
 
   const q = await getAjapaQuestion(id);
   if (!q) return jsonError("प्रश्न सापडला नाही", 404);
   if (q.status !== "escalated") {
-    return jsonError("फक्त «संवादकांकडे» असलेल्या प्रश्नांना उत्तर देता येते", 400);
+    return jsonError("फक्त «मार्गदर्शकांकडे» असलेल्या प्रश्नांना उत्तर देता येते", 400);
   }
 
   const body = (await request.json().catch(() => ({}))) as {

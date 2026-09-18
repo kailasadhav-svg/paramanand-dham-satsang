@@ -13,7 +13,10 @@ import { isProductionReady } from "./health.ts";
 import {
   canApproveCharansevak,
   canAppointSatsangi,
+  canAppointVahak,
+  canSeeAllAjapa,
   canSeeChintanBody,
+  canSeeGuideScreens,
   canSeeStaffScreens,
   detectStaffRole,
 } from "./roles.ts";
@@ -295,28 +298,32 @@ describe("row isolation for चरणसेवक", () => {
     assert.equal(seeker, actor);
   });
 
-  it("lets संवादक / सेवक list others", () => {
+  it("lets मार्गदर्शक list all seekers; संगणक stays on own row", () => {
+    assert.equal(canSeeAllAjapa(detectStaffRole("9225118811")), false);
+    assert.equal(canSeeAllAjapa(detectStaffRole("9850120960")), true);
     assert.equal(canSeeStaffScreens(detectStaffRole("9225118811")), true);
     assert.equal(canSeeStaffScreens(detectStaffRole("9850120960")), true);
   });
 });
 
 describe("app access approval — परमानंद चरणसेवक", () => {
-  it("only संवादक (guru / मधुसुदनदास super-admin) may approve", () => {
+  it("only मार्गदर्शक (guru / मधुसुदनदास) may approve", () => {
     assert.equal(canApproveCharansevak("guru"), true);
     assert.equal(canApproveCharansevak(detectStaffRole("9850120960")), true);
     assert.equal(canAppointSatsangi("guru"), true);
   });
 
-  it("denies सेवक and चरणसेवक admin appoint/approve power", () => {
+  it("denies संगणक and चरणसेवक appoint/approve power", () => {
     assert.equal(canApproveCharansevak("software"), false);
     assert.equal(canApproveCharansevak("charansevak"), false);
     assert.equal(canApproveCharansevak(detectStaffRole("9225118811")), false);
     assert.equal(canApproveCharansevak(detectStaffRole("9423078811")), false);
     assert.equal(canAppointSatsangi("charansevak"), false);
+    assert.equal(canAppointVahak("software", { hasDuty: false }), false);
+    assert.equal(canSeeGuideScreens("software"), false);
   });
 
-  it("keeps attendance staff screens for सेवक / संवादक, not चरणसेवक", () => {
+  it("keeps attendance staff screens for संगणक / मार्गदर्शक, not चरणसेवक", () => {
     assert.equal(canSeeStaffScreens("software"), true);
     assert.equal(canSeeStaffScreens("guru"), true);
     assert.equal(canSeeStaffScreens("charansevak"), false);
@@ -324,7 +331,7 @@ describe("app access approval — परमानंद चरणसेवक", 
 });
 
 describe("चिंतन body visibility", () => {
-  it("is guru-only — सेवक and विचार वाहक (चरणसेवक) see status, never the text", () => {
+  it("is guru-only — संगणक and विचार वाहक (चरणसेवक) see status, never the text", () => {
     assert.equal(canSeeChintanBody("guru"), true);
     assert.equal(canSeeChintanBody(detectStaffRole("9850120960")), true);
     assert.equal(canSeeChintanBody("software"), false);

@@ -12,6 +12,7 @@ import { VAHAK_APPOINT_HELP } from "@/lib/labels";
 import { displayPhone, phonesEqual } from "@/lib/offline/phone";
 import {
   canAppointVahak,
+  canSeeGuideScreens,
   canSeeStaffScreens,
   detectStaffRole,
 } from "@/lib/roles";
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     date,
     role,
-    can_assign: staff || friday,
+    can_assign: canAppointVahak(role, { hasDuty: false, meetingDate: date }),
     friday_window: friday,
     rows: visible,
   });
@@ -95,8 +96,8 @@ export async function PUT(request: Request) {
   const existing = await getDuty(Number(body.place_id), String(body.meeting_date));
 
   if (body.clear) {
-    if (!canSeeStaffScreens(role)) {
-      return jsonError("फक्त मार्गदर्शक / संगणक नेमणूक काढू शकतात", 403);
+    if (!canSeeGuideScreens(role)) {
+      return jsonError("फक्त मार्गदर्शक नेमणूक काढू शकतात", 403);
     }
     await clearDuty(Number(body.place_id), String(body.meeting_date));
     return NextResponse.json({ ok: true, cleared: true });

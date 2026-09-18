@@ -13,7 +13,7 @@ import {
 } from "@/lib/ajapa/store";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
 import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } from "@/lib/api-guard";
-import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
+import { canSeeAllAjapa, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,8 +67,8 @@ export async function GET(request: Request) {
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
-  const staff = canSeeStaffScreens(detectStaffRole(actor));
-  const seeker = staff
+  const seeAll = canSeeAllAjapa(detectStaffRole(actor));
+  const seeker = seeAll
     ? seekerRaw
       ? normalizePhone(seekerRaw)
       : undefined
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
           days: 21,
           limit: 8,
           default_seeker_phone: mirrorFor,
-          include_null_asker: staff ? claimOrphans : false,
+          include_null_asker: seeAll ? claimOrphans : false,
         });
       } catch (err) {
         console.error("weekly→ajapa backfill failed", err);

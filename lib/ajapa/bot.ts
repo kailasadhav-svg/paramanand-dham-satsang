@@ -149,12 +149,12 @@ async function handleAjapaA(guruPhone: string, seekerPhone: string): Promise<Bot
   if (!q) {
     await sendText(
       guruPhone,
-      `सेवक ${displayPhone(seekerPhone)} साठी प्रलंबित (escalated) प्रश्न नाही.`,
+      `चरणसेवक ${displayPhone(seekerPhone)} साठी प्रलंबित (escalated) प्रश्न नाही.`,
     );
     return { handled: true, replies: ["no escalated"] };
   }
 
-  const preview = `प्रश्न #${q.id} · सेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य —\n${(q.ai_answer || "").slice(0, 1500)}`;
+  const preview = `प्रश्न #${q.id} · चरणसेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य —\n${(q.ai_answer || "").slice(0, 1500)}`;
   await sendText(guruPhone, preview.slice(0, 4000));
   const guruSession = await getWaSession(guruPhone);
   await askGuruReplyMode({
@@ -283,7 +283,7 @@ export async function processInboundMessage(msg: InboundWaMessage): Promise<BotR
   if (/^(?:अजपा|ajapa)\b/i.test(text)) {
     await sendText(
       from,
-      "वापर:\n• चरणसेवक: `अजपा Q` आणि प्रश्न\n• संवादक: `अजपा A` आणि सेवकाचा मोबाइल",
+      "वापर:\n• चरणसेवक: `अजपा Q` आणि प्रश्न\n• मार्गदर्शक: `अजपा A` आणि चरणसेवकाचा मोबाइल",
     );
     return { handled: true, replies: ["help"] };
   }

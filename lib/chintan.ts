@@ -2,8 +2,10 @@ import { listDutiesForPhone, getDuty } from "./db";
 import { listMembers } from "./members";
 import { placeCodeFromDbName, type PlaceCode } from "./places";
 import {
+  canEditAnyPlaceTopic,
+  canEditWeeklyQuestion,
   canSeeChintanBody,
-  canSeeStaffScreens,
+  canSeeGuideScreens,
   detectStaffRole,
   phonesEqual,
 } from "./roles";
@@ -39,7 +41,7 @@ export async function actorCanEditPlaceTopic(
   date: string,
 ): Promise<boolean> {
   const role = detectStaffRole(phone);
-  if (canSeeStaffScreens(role)) return true;
+  if (canEditAnyPlaceTopic(role)) return true;
   return actorIsVahak(phone, date, placeId);
 }
 
@@ -76,17 +78,20 @@ export async function chintanViewForActor(opts: {
   roster: ChintanStatusRow[];
 }> {
   const role = detectStaffRole(opts.phone);
-  const staff = canSeeStaffScreens(role);
+  const guide = canSeeGuideScreens(role);
   const seeBody = canSeeChintanBody(role);
   const duties = await listDutiesForPhone(opts.phone, opts.weekStart);
   const isVahak = duties.length > 0;
   const vahakPlaceIds = duties.map((d) => d.place_id);
   let placeCodes: string[] | null = null;
-  if (!staff && isVahak) {
+  if (guide) {
+    placeCodes = null;
+  } else if (isVahak) {
     placeCodes = duties
       .map((d) => placeCodeFromDbName(d.place_name))
       .filter((c): c is PlaceCode => Boolean(c));
-  } else if (!staff) {
+  } else {
+    // संगणक and ordinary परमानंद चरणसेवक — no other members’ चिंतन.
     placeCodes = [];
   }
   const raw = await listChintanRoster({
@@ -94,7 +99,7 @@ export async function chintanViewForActor(opts: {
     placeCodes,
   });
   return {
-    can_edit_question: staff,
+    can_edit_question: canEditWeeklyQuestion(role),
     can_see_bodies: seeBody,
     is_vahak: isVahak,
     vahak_place_ids: vahakPlaceIds,

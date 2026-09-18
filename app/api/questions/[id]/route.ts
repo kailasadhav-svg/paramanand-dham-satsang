@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireStaffActor, routeErrorResponse } from "@/lib/api-guard";
+import { jsonError, requireGuideActor, routeErrorResponse } from "@/lib/api-guard";
 import { deleteQuestion, updateQuestion } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireStaffActor();
+  const auth = await requireGuideActor();
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   const body = (await request.json().catch(() => ({}))) as {
@@ -34,7 +34,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireStaffActor();
+  const auth = await requireGuideActor();
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   try {

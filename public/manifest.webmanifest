@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "अजपा संवादक",
-  "short_name": "संवादक",
-  "description": "परमानंद धाम · अजपा संवादक",
+  "name": "अजपा संवाद",
+  "short_name": "अजपा संवाद",
+  "description": "परमानंद धाम · अजपा संवाद",
   "start_url": "/i/samvadak?src=pwa",
   "scope": "/",
   "display": "standalone",

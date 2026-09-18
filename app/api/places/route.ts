@@ -7,7 +7,11 @@ import {
   updatePlaceCoords,
 } from "@/lib/db";
 import { defaultThursdayYmd } from "@/lib/dates";
-import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
+import {
+  canEditAnyPlaceTopic,
+  canSeeStaffScreens,
+  detectStaffRole,
+} from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +68,7 @@ export async function GET(request: Request) {
     default_place_id: nashik?.id ?? all[0]?.id ?? null,
     place_locked: false,
     is_vahak: false,
-    can_edit_topic: actor ? canSeeStaffScreens(role) : false,
+    can_edit_topic: actor ? canEditAnyPlaceTopic(role) : false,
   });
 }
 

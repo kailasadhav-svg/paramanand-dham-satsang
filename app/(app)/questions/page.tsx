@@ -6,7 +6,7 @@ import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { ANSWERED_BY_LABEL } from "@/lib/labels";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
-import { canSeeStaffScreens } from "@/lib/roles";
+import { canSeeGuideScreens } from "@/lib/roles";
 
 type Question = {
   id: number;
@@ -19,7 +19,7 @@ type Question = {
 
 export default function QuestionsPage() {
   const profile = useProfile();
-  const staff = canSeeStaffScreens(profile.role);
+  const guide = canSeeGuideScreens(profile.role);
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
   const [placeLocked, setPlaceLocked] = useState(false);
@@ -109,7 +109,7 @@ export default function QuestionsPage() {
   }
 
   async function saveAnswer(q: Question) {
-    if (!staff) return;
+    if (!guide) return;
     setSavingId(q.id);
     setError(null);
     try {
@@ -129,7 +129,7 @@ export default function QuestionsPage() {
   }
 
   async function remove(id: number) {
-    if (!staff) return;
+    if (!guide) return;
     if (!confirm("हा प्रश्न काढायचा?")) return;
     await api(`/api/questions/${id}`, { method: "DELETE" });
     await load();
@@ -161,8 +161,8 @@ export default function QuestionsPage() {
       <div>
         <h2 className="text-lg font-bold">प्रश्नोत्तर</h2>
         <p className="break-words text-xs text-temple-muted">
-          {staff
-            ? "सेवक / संवादक — प्रश्न व उत्तर"
+          {guide
+            ? "मार्गदर्शक चरणसेवक — प्रश्न व उत्तर"
             : "परमानंद चरणसेवक — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
         </p>
       </div>
@@ -174,7 +174,7 @@ export default function QuestionsPage() {
         onDate={setDate}
         locked={placeLocked}
       />
-      {staff ? (
+      {guide ? (
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -214,7 +214,7 @@ export default function QuestionsPage() {
           <li key={q.id} className="card space-y-2 p-3">
             <p className="break-words font-semibold">{q.question}</p>
             <p className="text-xs text-temple-muted">{q.place_name}</p>
-            {staff ? (
+            {guide ? (
               <>
                 <textarea
                   value={q.answer || ""}

@@ -70,7 +70,7 @@ export default function ReportPage() {
           href="/members"
           className="block rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200"
         >
-          {collisionCount} सेवकांना ६-अंकी संकेत दिला (टक्कर) — यादी पाहा
+          {collisionCount} परमानंद चरणसेवकांना ६-अंकी संकेत दिला (टक्कर) — यादी पाहा
         </a>
       ) : null}
       <div className="flex items-center gap-2">

@@ -31,7 +31,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const q = await getAjapaQuestion(id);
   if (!q) return jsonError("प्रश्न सापडला नाही", 404);
   if (q.status !== "ai_answered") {
-    return jsonError("हा प्रश्न आधीच संवादकांकडे / पूर्ण आहे", 400);
+    return jsonError("हा प्रश्न आधीच मार्गदर्शकांकडे / पूर्ण आहे", 400);
   }
 
   if (!phonesEqual(actor, q.seeker_phone)) {
