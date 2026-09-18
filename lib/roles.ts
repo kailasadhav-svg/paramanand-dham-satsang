@@ -46,21 +46,18 @@ export const SEEKER_DEMO_PHONES = (
  * - संगणक चरणसेवक — software (KAILAS)
  * - मार्गदर्शक चरणसेवक — Madhusudandas: topics, all चिंतन, approve app access, appoint Vahak
  *
- * Future (not built here) — मार्गदर्शक product powers:
- * - all member questions route to मार्गदर्शक; dashboard total + एकसमान count;
- *   one shared answer for similars OR per-person answers
- * - rank top 3 submitted चिंतन (क्रमवार योग्य तीन)
- * - same Thursday topic for all villages OR different per village
- * - one question per परमानंद चरणसेवक per week (hard limit); चिंतन mandatory
- * - village-wise combined चिंतन PDF; AI answer first, then escalate if unsatisfied
- * - question id = village + week number + sequence; process FIFO
- * - मार्गदर्शक may upload handwritten-answer photo
- * - week 1 = first Thursday of Jan 2026 (2026-01-01); later Thursdays +1 in-year
- * - Thursday screens: Marathi panchang tithi in the top area
- * - Thursday 17:00: previous week’s immutable per-village चिंतन + प्रश्न-उत्तर
- *   files (मार्गदर्शक owns; no edits after generate). Optional visibility to
- *   that Thursday’s विचार वाहक. Mandatory summary on the चिंतन file (type /
- *   photo / voice). Previous वाहक must read or play that summary at the place.
+ * मार्गदर्शक product powers (see labels.GUIDE_*_HELP; shown on guru screens):
+ * 1. All member questions route to them (अजपा / प्रश्नोत्तर inbox).
+ * 2. Dashboard: total questions + एकसमान (similar/duplicate) count; answer
+ *    similars with ONE shared answer OR per-person answers. (count/shared TBD)
+ * 3. From submitted चिंतन: pick/rank क्रमवार योग्य तीन. (rank UI TBD)
+ * 4. Topic authority: same topic for all villages OR different per village.
+ *    (per-village save exists; same-for-all bulk TBD)
+ *
+ * Also specified, not built: one question/week; चिंतन mandatory; village PDF;
+ * AI-first then escalate; question id = village+week+seq FIFO; handwritten
+ * photo; week 1 = first Thursday 2026-01-01; Thursday panchang tithi;
+ * Thursday 17:00 immutable archive + mandatory summary.
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 

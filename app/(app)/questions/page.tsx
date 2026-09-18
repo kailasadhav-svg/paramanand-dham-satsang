@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
-import { ANSWERED_BY_LABEL } from "@/lib/labels";
+import { ANSWERED_BY_LABEL, GUIDE_QUESTION_HELP } from "@/lib/labels";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 import { canSeeGuideScreens } from "@/lib/roles";
 
@@ -162,7 +162,7 @@ export default function QuestionsPage() {
         <h2 className="text-lg font-bold">प्रश्नोत्तर</h2>
         <p className="break-words text-xs text-temple-muted">
           {guide
-            ? "मार्गदर्शक चरणसेवक — प्रश्न व उत्तर"
+            ? GUIDE_QUESTION_HELP
             : "परमानंद चरणसेवक — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
         </p>
       </div>

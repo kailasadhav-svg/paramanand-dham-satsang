@@ -16,6 +16,7 @@ import { canSeeGuideScreens } from "@/lib/roles";
 import {
   GUIDE_ANSWER_LABEL,
   GUIDE_LABEL,
+  GUIDE_QUESTION_HELP,
   GUIDE_QUEUE_LABEL,
   MEMBER_ROLE_LABEL,
   SOFTWARE_LABEL,
@@ -291,7 +292,7 @@ export default function AjapaPage() {
     profile.role === "software"
       ? "संगणक चरणसेवक — फक्त तुमचे प्रश्न"
       : profile.role === "guru"
-        ? "मार्गदर्शक चरणसेवक — उत्तर द्यावयाचे प्रश्न · मजकूर / व्हॉइस (२ मि)"
+        ? GUIDE_QUESTION_HELP
         : "तुमचे प्रश्न · साहित्य · Meta WhatsApp OTP → मार्गदर्शक";
 
   return (

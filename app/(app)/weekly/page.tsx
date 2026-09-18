@@ -12,6 +12,8 @@ import {
 import {
   CHINTAN_DEADLINE_HELP,
   CHINTAN_LABEL,
+  GUIDE_CHINTAN_RANK_HELP,
+  GUIDE_TOPIC_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
@@ -93,9 +95,11 @@ export default function WeeklyAdminPage() {
         {CHINTAN_DEADLINE_HELP} मुदत: {formatMarathiDate(chintanDeadlineYmd(thursday))} रात्री
         १२:००.
       </p>
-      {isVahak || !canEdit ? (
+      {canEdit ? (
+        <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_TOPIC_HELP}</p>
+      ) : (
         <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
-      ) : null}
+      )}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -163,7 +167,9 @@ export default function WeeklyAdminPage() {
           {VAHAK_LABEL} फक्त स्थिती पाहतात. पूर्ण चिंतन फक्त मधुसुदनदास.
         </p>
       ) : (
-        <p className="text-[11px] text-temple-muted">पूर्ण चिंतन — फक्त मार्गदर्शक (मधुसुदनदास)</p>
+        <p className="text-[11px] text-temple-muted">
+          पूर्ण चिंतन — फक्त मार्गदर्शक (मधुसुदनदास). {GUIDE_CHINTAN_RANK_HELP}
+        </p>
       )}
       <ul className="space-y-2">
         {roster.map((a) => (

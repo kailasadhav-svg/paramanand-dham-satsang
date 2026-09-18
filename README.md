@@ -30,9 +30,22 @@ App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `19
 
 Isolation (role-scoped screens/data do not leak):
 - **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak appoint.
-- **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all-seeker अजपा answers.
+- **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all member questions.
 - **परमानंद विचार वाहक** — own place topic + चिंतन status only (never bodies).
 - **सत्संग चरणसेवक** — attendance counts; Friday 06:00–12:00 IST Vahak window if empty.
+
+## मार्गदर्शक चरणसेवक powers (मधुसुदनदास)
+
+Now in the app:
+- All-seeker अजपा answers (`/ajapa`) and village प्रश्नोत्तर (`/questions`)
+- Full चिंतन bodies (`/weekly`); per-place Thursday topic (`/topic`, `/weekly`)
+- Approve app access; appoint विचार वाहक
+
+Specified — copy is on मार्गदर्शक screens; tools not built yet:
+1. **All member questions route to them.**
+2. **Dashboard:** total questions + **एकसमान** (similar/duplicate) count; answer similars with **one shared answer** or per-person answers.
+3. From submitted चिंतन: pick/rank **क्रमवार योग्य तीन**.
+4. **Topic authority:** same topic for all villages **or** a different topic per village (per-village save exists; same-for-all bulk is upcoming).
 
 ## Seed places
 
@@ -80,9 +93,7 @@ npm run test:ajapa
 - Native iOS/Android apps
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
 
-Future मार्गदर्शक / week archive product (not in this PR):
-- Dashboard: all questions to मार्गदर्शक; एकसमान/duplicate count; one shared answer or per-person
-- Rank top 3 चिंतन; same topic for all villages or per-village topic
+Future week / archive product (not in this PR):
 - One question per परमानंद चरणसेवक per week; चिंतन mandatory; village चिंतन PDF
 - AI answer first; escalate to मार्गदर्शक if unsatisfied
 - Question id = village + week + sequence (FIFO); handwritten-answer photo upload

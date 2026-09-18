@@ -5,6 +5,7 @@ import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
 import {
+  GUIDE_TOPIC_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_APPOINT_HELP,
   VAHAK_JOB_HELP,
@@ -100,6 +101,7 @@ export default function TopicPage() {
     <div className="space-y-4">
       <h2 className="text-lg font-bold">विषय व {VAHAK_LABEL}</h2>
       <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
+      <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_TOPIC_HELP}</p>
       <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
       {places.length === 0 ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-sm text-temple-muted">
