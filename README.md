@@ -52,8 +52,7 @@ Now:
 6. **Question id** = village + year-week + FIFO sequence (computed on list; TODO persist). Week 1 = first Thursday of January 2026 (`2026-01-01`); later Thursdays +1 within the year.
 7. **हस्तलिखित उत्तर photo** — मार्गदर्शक stub `POST /api/questions/[id]/handwritten`. TODO: store image.
 8. **Thursday tithi bar** — Marathi panchang stub + week number at the top of Thursday screens. TODO: live panchang.
-
-Specified — copy is on मार्गदर्शक screens; tools not built yet:
+9. **Thursday 17:00 archive** — previous week’s per-village immutable चिंतन + प्रश्न-उत्तर files (`GET/POST /api/weekly/archive` stub). मार्गदर्शक owns; summary (type/photo/voice) mandatory before visible; previous विचार वाहक must read/play at the place. TODO: cron + persist + media.
 
 Specified — copy is on मार्गदर्शक screens; tools not built yet:
 1. **All member questions route to them.**
@@ -106,9 +105,6 @@ npm run test:ajapa
 
 - Native iOS/Android apps
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
-
-Future week / archive product (not in this PR):
-- Thursday 17:00 immutable previous-week चिंतन + प्रश्न-उत्तर files; mandatory मार्गदर्शक summary (type / photo / voice); previous विचार वाहक reads/plays it at the place
 
 ## Run locally
 

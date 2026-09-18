@@ -50,6 +50,16 @@ export const HANDWRITTEN_PHOTO_HELP =
 export const PANCHANG_TITHI_HELP =
   "गुरुवार पडद्याच्या वर मराठी पंचांग तिथि. आत्ता stub — खरा पंचांग नंतर.";
 
+/** Thursday 17:00 previous-week archive. */
+export const WEEKLY_ARCHIVE_HELP =
+  "प्रत्येक गुरुवारी सायंकाळी ५ वाजता मागच्या आठवड्याच्या गावानुसार चिंतन व प्रश्न-उत्तर फाइल्स तयार होतात. मालकी मधुसुदनदास. तयार झाल्यावर बदल नाहीत.";
+
+export const WEEKLY_ARCHIVE_SUMMARY_HELP =
+  "मार्गदर्शक चिंतन फाइलवर सारांश अनिवार्य: टाइप किंवा छायाचित्र किंवा व्हॉइस. दिसणारे केल्यास त्या गुरुवाराचे विचार वाहक वाचतात/ऐकतात — स्थळी वाचणे/वाजवणे अनिवार्य.";
+
+export const WEEKLY_ARCHIVE_VAHAK_HELP =
+  "मागच्या आठवड्याचे विचार वाहक दिसणारा सारांश स्थळी वाचावा किंवा वाजवावा. गाव प्रशासकांना सत्संगात दाखवणे ऐच्छिक.";
+
 /** One local conductor per place per Thursday (maps existing place_duties / संचालक). */
 export const VAHAK_LABEL = "परमानंद विचार वाहक";
 export const VAHAK_LABEL_SHORT = "विचार वाहक";

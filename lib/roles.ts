@@ -64,7 +64,9 @@ export const SEEKER_DEMO_PHONES = (
  * - मार्गदर्शक handwritten-answer photo: POST /api/questions/[id]/handwritten stub.
  * - Week 1 = first Thursday 2026-01-01; later Thursdays +1 within the year.
  * - Thursday screens: Marathi panchang tithi top bar (stub).
- * - Thursday 17:00 immutable archive + mandatory summary. (not built)
+ * - Thursday 17:00 previous-week immutable चिंतन + प्रश्न-उत्तर archive
+ *   (GET/POST /api/weekly/archive stub). मार्गदर्शक owns; summary mandatory
+ *   (type/photo/voice) before visible; previous विचार वाहक must read/play.
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 

@@ -21,6 +21,9 @@ import {
   QUESTION_ID_HELP,
   HANDWRITTEN_PHOTO_HELP,
   PANCHANG_TITHI_HELP,
+  WEEKLY_ARCHIVE_HELP,
+  WEEKLY_ARCHIVE_SUMMARY_HELP,
+  WEEKLY_ARCHIVE_VAHAK_HELP,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -148,5 +151,11 @@ describe("चिंतन copy", () => {
     assert.match(report, /ThursdayTithiBar/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
     assert.match(me, /ThursdayTithiBar/);
+    assert.match(WEEKLY_ARCHIVE_HELP, /१७:००|५ वाजता/);
+    assert.match(WEEKLY_ARCHIVE_SUMMARY_HELP, /अनिवार्य/);
+    assert.match(WEEKLY_ARCHIVE_VAHAK_HELP, /विचार वाहक/);
+    const weeklyArchiveUi = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    assert.match(weeklyArchiveUi, /WEEKLY_ARCHIVE_HELP/);
+    assert.match(weeklyArchiveUi, /गुरुवार १७:०० संग्रह/);
   });
 });

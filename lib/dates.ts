@@ -165,3 +165,22 @@ export function satsangWeekNumber(
   const days = diffDaysYmd(start, th);
   return { year, week: Math.floor(days / 7) + 1 };
 }
+
+/** गुरुवार १७:०० IST — previous week’s archive is sealed. */
+export const ARCHIVE_HOUR_IST = 17;
+
+export function archiveSourceWeekStart(thisThursdayYmd: string): string {
+  return addDaysYmd(thisThursdayYmd, -7);
+}
+
+/** True at/after `thursdayYmd` 17:00 IST (and any later calendar day). */
+export function isAtOrAfterThursdayArchiveTime(
+  thursdayYmd: string,
+  now = new Date(),
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(thursdayYmd)) return false;
+  const today = ymdInIndia(now);
+  if (today > thursdayYmd) return true;
+  if (today < thursdayYmd) return false;
+  return minutesInIndia(now) >= ARCHIVE_HOUR_IST * 60;
+}
