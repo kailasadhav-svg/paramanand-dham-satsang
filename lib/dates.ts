@@ -122,3 +122,46 @@ export function thursdayContainingYmd(ymd: string): string {
   const [y, m, d] = ymd.split("-").map(Number);
   return defaultThursdayYmd(new Date(Date.UTC(y, m - 1, d, 6, 30, 0)));
 }
+
+/** Product week 1 = first Thursday of January 2026. */
+export const SATSANG_WEEK1_THURSDAY = "2026-01-01";
+
+export function diffDaysYmd(fromYmd: string, toYmd: string): number {
+  const [fy, fm, fd] = fromYmd.split("-").map(Number);
+  const [ty, tm, td] = toYmd.split("-").map(Number);
+  const a = Date.UTC(fy, fm - 1, fd);
+  const b = Date.UTC(ty, tm - 1, td);
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** First Thursday of January in IST for that calendar year. */
+export function firstThursdayOfJanuary(year: number): string {
+  const jan1 = `${year}-01-01`;
+  const [y, m, d] = jan1.split("-").map(Number);
+  const utcNoon = new Date(Date.UTC(y, m - 1, d, 6, 30, 0));
+  const day = weekdayInIndia(utcNoon);
+  const add = (4 - day + 7) % 7;
+  return addDaysYmd(jan1, add);
+}
+
+/**
+ * Satsang week number within the year: week 1 = first Thursday of January.
+ * Returns null before 2026-01-01.
+ */
+export function satsangWeekNumber(
+  thursdayYmd: string,
+): { year: number; week: number } | null {
+  const th = /^\d{4}-\d{2}-\d{2}$/.test(thursdayYmd)
+    ? thursdayContainingYmd(thursdayYmd)
+    : "";
+  if (!th || th < SATSANG_WEEK1_THURSDAY) return null;
+  const calendarYear = Number(th.slice(0, 4));
+  let year = calendarYear;
+  let start = firstThursdayOfJanuary(year);
+  if (th < start) {
+    year -= 1;
+    start = firstThursdayOfJanuary(year);
+  }
+  const days = diffDaysYmd(start, th);
+  return { year, week: Math.floor(days / 7) + 1 };
+}

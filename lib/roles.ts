@@ -60,9 +60,11 @@ export const SEEKER_DEMO_PHONES = (
  * - Village-wise combined चिंतन PDF: JSON stub GET /api/weekly/chintan-pdf (TODO renderer).
  * - Every question gets automatic AI / साहित्य answer first; escalate to
  *   मार्गदर्शक if unsatisfied (अजपा OTP flow).
- * - Question id = village+week+seq FIFO; handwritten photo; week 1 = first
- *   Thursday 2026-01-01; Thursday panchang tithi; Thursday 17:00 immutable
- *   archive + mandatory summary. (not built)
+ * - Question id = village+year-week+seq FIFO (`lib/question-id.ts`; not persisted).
+ * - मार्गदर्शक handwritten-answer photo: POST /api/questions/[id]/handwritten stub.
+ * - Week 1 = first Thursday 2026-01-01; later Thursdays +1 within the year.
+ * - Thursday screens: Marathi panchang tithi top bar (stub).
+ * - Thursday 17:00 immutable archive + mandatory summary. (not built)
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 

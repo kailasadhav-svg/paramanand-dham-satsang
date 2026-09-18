@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { addDaysYmd, defaultThursdayYmd, formatMarathiDate } from "@/lib/dates";
 import { TOPIC_LABEL } from "@/lib/labels";
 
@@ -64,6 +65,7 @@ export default function ReportPage() {
 
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={thursday} />
       <h2 className="text-lg font-bold">साप्ताहिक अहवाल</h2>
       {collisionCount > 0 ? (
         <a

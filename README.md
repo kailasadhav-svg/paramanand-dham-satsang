@@ -49,6 +49,11 @@ Now:
 3. **Village चिंतन PDF** — `GET /api/weekly/chintan-pdf` returns a JSON stub grouped by village. TODO: real PDF.
 4. **Every question gets an automatic AI / परमानंद साहित्य answer first.**
 5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
+6. **Question id** = village + year-week + FIFO sequence (computed on list; TODO persist). Week 1 = first Thursday of January 2026 (`2026-01-01`); later Thursdays +1 within the year.
+7. **हस्तलिखित उत्तर photo** — मार्गदर्शक stub `POST /api/questions/[id]/handwritten`. TODO: store image.
+8. **Thursday tithi bar** — Marathi panchang stub + week number at the top of Thursday screens. TODO: live panchang.
+
+Specified — copy is on मार्गदर्शक screens; tools not built yet:
 
 Specified — copy is on मार्गदर्शक screens; tools not built yet:
 1. **All member questions route to them.**
@@ -103,8 +108,6 @@ npm run test:ajapa
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
 
 Future week / archive product (not in this PR):
-- Question id = village + week + sequence (FIFO); handwritten-answer photo upload
-- Week 1 = first Thursday of January 2026 (`2026-01-01`); Thursday screens show Marathi panchang tithi
 - Thursday 17:00 immutable previous-week चिंतन + प्रश्न-उत्तर files; mandatory मार्गदर्शक summary (type / photo / voice); previous विचार वाहक reads/plays it at the place
 
 ## Run locally

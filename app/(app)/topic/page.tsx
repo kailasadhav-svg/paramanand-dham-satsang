@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
 import {
@@ -99,6 +100,7 @@ export default function TopicPage() {
 
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={date} />
       <h2 className="text-lg font-bold">विषय व {VAHAK_LABEL}</h2>
       <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
       <p className="text-xs leading-relaxed text-temple-muted">{GUIDE_TOPIC_HELP}</p>

@@ -38,6 +38,18 @@ export const ONE_QUESTION_HELP =
 export const QUESTION_AI_FIRST_HELP =
   "प्रत्येक प्रश्नाला आधी परमानंद साहित्य (AI) उत्तर मिळते. समाधान नसेल तर मार्गदर्शक चरणसेवकांकडे पाठवा.";
 
+/** Public question id = village + year-week + FIFO sequence. */
+export const QUESTION_ID_HELP =
+  "प्रश्न क्रमांक: गाव + आठवडा + क्रम (FIFO). आठवडा १ = जानेवारी २०२६ चा पहिला गुरुवार (२०२६-०१-०१).";
+
+/** मार्गदर्शक: photo of handwritten answer — storage TODO. */
+export const HANDWRITTEN_PHOTO_HELP =
+  "मार्गदर्शक प्रत्येक प्रश्नाचे हस्तलिखित उत्तर छायाचित्र अपलोड करू शकतात — लवकरच.";
+
+/** Thursday screens: Marathi panchang tithi in the top area. */
+export const PANCHANG_TITHI_HELP =
+  "गुरुवार पडद्याच्या वर मराठी पंचांग तिथि. आत्ता stub — खरा पंचांग नंतर.";
+
 /** One local conductor per place per Thursday (maps existing place_duties / संचालक). */
 export const VAHAK_LABEL = "परमानंद विचार वाहक";
 export const VAHAK_LABEL_SHORT = "विचार वाहक";

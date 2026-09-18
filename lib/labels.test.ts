@@ -18,6 +18,9 @@ import {
   GUIDE_TOPIC_HELP,
   ONE_QUESTION_HELP,
   QUESTION_AI_FIRST_HELP,
+  QUESTION_ID_HELP,
+  HANDWRITTEN_PHOTO_HELP,
+  PANCHANG_TITHI_HELP,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -127,5 +130,23 @@ describe("चिंतन copy", () => {
     assert.match(pdfRoute, /requireGuideActor/);
     const weeklyLib = readFileSync(new URL("./weekly.ts", import.meta.url), "utf8");
     assert.match(weeklyLib, /चिंतन लिहा/);
+    assert.match(QUESTION_ID_HELP, /FIFO/);
+    assert.match(QUESTION_ID_HELP, /२०२६-०१-०१/);
+    assert.match(HANDWRITTEN_PHOTO_HELP, /हस्तलिखित/);
+    assert.match(PANCHANG_TITHI_HELP, /तिथि/);
+    const qPage = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
+    assert.match(qPage, /ThursdayTithiBar/);
+    assert.match(qPage, /handwritten/);
+    assert.match(qPage, /QUESTION_ID_HELP/);
+    const attendance = readFileSync(new URL("../app/(app)/attendance/page.tsx", import.meta.url), "utf8");
+    assert.match(attendance, /ThursdayTithiBar/);
+    const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
+    assert.match(topic, /ThursdayTithiBar/);
+    const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    assert.match(weeklyPage, /ThursdayTithiBar/);
+    const report = readFileSync(new URL("../app/(app)/report/page.tsx", import.meta.url), "utf8");
+    assert.match(report, /ThursdayTithiBar/);
+    const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
+    assert.match(me, /ThursdayTithiBar/);
   });
 });

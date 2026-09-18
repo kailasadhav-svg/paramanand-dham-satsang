@@ -4,6 +4,7 @@ import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
 import { ONE_QUESTION_HELP } from "@/lib/labels";
+import { assignPublicQuestionIds } from "@/lib/question-id";
 import { canSeeGuideScreens, detectStaffRole } from "@/lib/roles";
 import {
   actorNeedsWeeklyQuestionLimit,
@@ -26,13 +27,16 @@ export async function GET(request: Request) {
   const from = searchParams.get("from") || undefined;
   const to = searchParams.get("to") || undefined;
   try {
-    const questions = await listQuestions({
+    const raw = await listQuestions({
       place_id: placeId ? Number(placeId) : undefined,
-      unanswered,
       from,
       to,
       asked_by_phone: staff ? undefined : actorAuth.phone,
     });
+    const numbered = assignPublicQuestionIds(raw);
+    const questions = unanswered
+      ? numbered.filter((q) => !q.answer || !q.answer.trim())
+      : numbered;
     const around = from || ymdInIndia();
     const asked_this_week = staff
       ? false

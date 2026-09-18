@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SaveBar } from "@/components/FormBits";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { api } from "@/lib/api";
 import {
   addDaysYmd,
@@ -111,6 +112,7 @@ export default function WeeklyAdminPage() {
 
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={thursday} />
       <h2 className="text-lg font-bold">
         {isVahak ? `${VAHAK_LABEL} · ${CHINTAN_LABEL}` : `साप्ताहिक विषय · ${CHINTAN_LABEL}`}
       </h2>
