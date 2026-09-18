@@ -16,10 +16,16 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 | Role | Marathi | Who |
 | --- | --- | --- |
 | Base member | परमानंद चरणसेवक | everyone |
-| Attendance | सत्संग चरणसेवक | records Thursday satsang counts; Friday 06:00–12:00 IST may appoint विचार वाहक if none |
-| Weekly conductor | परमानंद विचार वाहक | always one of परमानंद चरणसेवक; one per place per Thursday (`place_duties`) |
+| Attendance | सत्संग चरणसेवक | records Thursday satsang counts; one per place per Thursday (`place_duties.duty_kind=satsang_charansevak`); Friday 06:00–12:00 IST may appoint विचार वाहक if none |
+| Weekly conductor | परमानंद विचार वाहक | always one of परमानंद चरणसेवक; one per place per Thursday (`place_duties.duty_kind=vahak`) |
 | Software | संगणक चरणसेवक | KAILAS · 9225118811 |
-| Guide / super admin | मार्गदर्शक चरणसेवक | मधुसुदनदास · 9850120960 — topics, all चिंतन, approve app access, appoint Vahak |
+| Guide / super admin | मार्गदर्शक चरणसेवक | मधुसुदनदास · 9850120960 — **home `/weekly` (चिंतन)**. Topics, all चिंतन, Q&A answers, appoint Vahak **and** सत्संग चरणसेवक. Does **not** primarily record attendance. |
+
+सत्संग चरणसेवक appointment (attendance duty — **not** the same row as विचार वाहक):
+1. मार्गदर्शक appoints from a **separate dropdown** on `/attendance` (Vahak form stays as-is).
+2. Previous Thursday’s सत्संग चरणसेवक may fill an empty slot.
+3. संगणक does not appoint.
+4. No auto-continue of last week’s सत्संग चरणसेवक (only explicit fill).
 
 विचार वाहक appointment cascade (one परमानंद चरणसेवक per place per Thursday):
 1. मार्गदर्शक appoints (main weekly duty).
@@ -29,8 +35,8 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
 
 Isolation (role-scoped screens/data do not leak):
-- **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak appoint.
-- **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all member questions.
+- **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak or सत्संग चरणसेवक appoint.
+- **मार्गदर्शक** — home `/weekly`. Topics, all चिंतन text, approve app access, appoint विचार वाहक **and** सत्संग चरणसेवक (two dropdowns). Attendance recording is सत्संग चरणसेवक work.
 - **परमानंद विचार वाहक** — चिंतन collect / follow-up / help; आले vs बाकी names only (never चिंतन text). Never create/edit विषय — मार्गदर्शक only.
 - **सत्संग चरणसेवक** — attendance counts; Friday 06:00–12:00 IST Vahak window if empty.
 
@@ -39,7 +45,7 @@ Isolation (role-scoped screens/data do not leak):
 Now in the app:
 - All-seeker अजपा answers (`/ajapa`) and village प्रश्नोत्तर (`/questions`)
 - Full चिंतन bodies (`/weekly`); per-place Thursday topic (`/topic`, `/weekly`)
-- Approve app access; appoint विचार वाहक
+- Approve app access; appoint विचार वाहक **and** सत्संग चरणसेवक (separate `place_duties` rows)
 
 ## Weekly question + चिंतन rules
 
@@ -133,6 +139,17 @@ npm start
 - Change PIN with env `ADMIN_PIN`
 - Optional `SESSION_SECRET` for cookie HMAC
 - On Vercel, login cookies are marked `Secure` automatically. Locally, keep `COOKIE_SECURE=false` unless you use HTTPS.
+
+### `place_duties` migration (VPS)
+
+Live rows today store `charansevak_name` / `charansevak_phone` with `UNIQUE(place_id, meeting_date)`. The attendance UI already labels that duty **परमानंद विचार वाहक**. This deploy does **not** rename those rows.
+
+On first request, `ensurePlaceDutiesDutyKind`:
+1. Rebuilds `place_duties` adding `duty_kind`.
+2. Copies every existing row as `duty_kind='vahak'`.
+3. Changes uniqueness to `UNIQUE(place_id, meeting_date, duty_kind)` so one Vahak **and** one सत्संग चरणसेवक can exist per place per Thursday.
+4. Leaves सत्संग चरणसेवक empty until मार्गदर्शक (or last week’s सत्संग चरणसेवक filling an empty slot) appoints from the new dropdown.
+5. Does **not** auto-continue last week’s सत्संग चरणसेवक. Vahak Friday window + auto-continue stay scoped to `duty_kind=vahak`.
 
 ```
 ADMIN_PIN=1960

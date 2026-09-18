@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } from "@/lib/api-guard";
 import {
+  DUTY_KIND_SATSANG,
+  getDuty,
   getMeeting,
   getPlace,
   upsertMeeting,
@@ -13,6 +15,8 @@ import {
   OFF_SITE_WARNING,
   distanceMeters,
 } from "@/lib/geo";
+import { SATSANG_CHARANSEVAK_LABEL } from "@/lib/labels";
+import { phonesEqual } from "@/lib/offline/phone";
 import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -76,6 +80,17 @@ export async function PUT(request: Request) {
     return jsonError("place_id आणि meeting_date आवश्यक", 400);
   }
   if (!staff) {
+    const satsang = await getDuty(
+      Number(body.place_id),
+      String(body.meeting_date),
+      DUTY_KIND_SATSANG,
+    );
+    if (!actor || !satsang || !phonesEqual(satsang.charansevak_phone, actor)) {
+      return jsonError(
+        `फक्त या स्थळाचे ${SATSANG_CHARANSEVAK_LABEL} उपस्थिती नोंद करू शकतात`,
+        403,
+      );
+    }
     // Duty assignment is the source of truth — विचार वाहक cannot rename themselves.
     delete body.conductor;
   }

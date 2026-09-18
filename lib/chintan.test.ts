@@ -101,11 +101,11 @@ describe("विचार वाहक label", () => {
 });
 
 describe("one विचार वाहक per place per Thursday", () => {
-  it("keeps UNIQUE(place_id, meeting_date) on place_duties", () => {
+  it("keeps UNIQUE(place_id, meeting_date, duty_kind) on place_duties", () => {
     const schema = readFileSync(new URL("./db.ts", import.meta.url), "utf8");
     assert.match(
       schema,
-      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date\)/,
+      /CREATE TABLE IF NOT EXISTS place_duties[\s\S]*UNIQUE \(place_id, meeting_date, duty_kind\)/,
     );
   });
 
