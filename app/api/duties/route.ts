@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   DUTY_KIND_SATSANG,
+  DUTY_KIND_VAHAK,
   asDutyKind,
   clearDuty,
   getDuty,
