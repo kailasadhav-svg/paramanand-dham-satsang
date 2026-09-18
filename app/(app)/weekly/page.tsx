@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import { SaveBar } from "@/components/FormBits";
 import { api } from "@/lib/api";
-import { addDaysYmd, defaultThursdayYmd, formatMarathiDate } from "@/lib/dates";
+import {
+  addDaysYmd,
+  chintanDeadlineYmd,
+  defaultThursdayYmd,
+  formatMarathiDate,
+} from "@/lib/dates";
+import {
+  CHINTAN_DEADLINE_HELP,
+  CHINTAN_LABEL,
+  TOPIC_THURSDAY_HELP,
+} from "@/lib/labels";
 import { placeLabel } from "@/lib/places";
 
 type AnswerRow = {
@@ -59,7 +69,12 @@ export default function WeeklyAdminPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">साप्ताहिक प्रश्न</h2>
+      <h2 className="text-lg font-bold">साप्ताहिक विषय</h2>
+      <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
+      <p className="text-xs leading-relaxed text-temple-muted">
+        {CHINTAN_DEADLINE_HELP} मुदत: {formatMarathiDate(chintanDeadlineYmd(thursday))} रात्री
+        १२:००.
+      </p>
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -86,13 +101,14 @@ export default function WeeklyAdminPage() {
         </button>
       </div>
       <label className="block text-xs font-semibold text-temple-muted">
-        प्रश्न
+        विषय
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={4}
           className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
-          placeholder="या आठवड्याचा प्रश्न"
+          placeholder="या आठवड्याचा विषय"
+          aria-label="विषय"
         />
       </label>
       <label className="block text-xs font-semibold text-temple-muted">
@@ -105,7 +121,9 @@ export default function WeeklyAdminPage() {
         />
       </label>
       <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
-      <h3 className="pt-2 font-semibold">उत्तरे ({answers.length})</h3>
+      <h3 className="pt-2 font-semibold">
+        {CHINTAN_LABEL} ({answers.length})
+      </h3>
       <ul className="space-y-2">
         {answers.map((a) => (
           <li key={a.id} className="card p-3 text-sm">
@@ -118,7 +136,7 @@ export default function WeeklyAdminPage() {
         ))}
       </ul>
       {answers.length === 0 ? (
-        <p className="text-sm text-temple-muted">अद्याप उत्तरे नाहीत</p>
+        <p className="text-sm text-temple-muted">अद्याप चिंतन नाही</p>
       ) : null}
     </div>
   );
