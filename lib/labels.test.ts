@@ -6,6 +6,7 @@ import {
   CHINTAN_DEADLINE_HELP,
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
+  CHINTAN_WRITE_PLACEHOLDER,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
@@ -31,6 +32,7 @@ import {
 describe("चिंतन copy", () => {
   it("uses चिंतन, never टिपणी, in the shared strings", () => {
     assert.equal(CHINTAN_LABEL, "चिंतन");
+    assert.equal(CHINTAN_WRITE_PLACEHOLDER, "चिंतन लिहा…");
     assert.match(CHINTAN_DEADLINE_HELP, /अनिवार्य/);
     assert.match(CHINTAN_MISSING_REMINDER, /अनिवार्य/);
     assert.match(CHINTAN_DEADLINE_HELP, /बुधवार रात्री १२:००/);
@@ -39,6 +41,7 @@ describe("चिंतन copy", () => {
     assert.match(TOPIC_THURSDAY_HELP, /गुरुवारी विषय/);
     for (const s of [
       CHINTAN_LABEL,
+      CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
       TOPIC_THURSDAY_HELP,
@@ -81,13 +84,18 @@ describe("चिंतन copy", () => {
       "app/me/page.tsx",
       "app/(app)/weekly/page.tsx",
       "app/(app)/topic/page.tsx",
+      "components/FormBits.tsx",
       "lib/weekly.ts",
       "lib/roles.ts",
+      "lib/report.ts",
     ];
     for (const rel of files) {
       const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
       assert.equal(text.includes("टिपणी"), false, `${rel} still has टिपणी`);
-      assert.equal(text.includes("CHINTAN_LABEL") || text.includes("चिंतन") || rel.endsWith("topic/page.tsx"), true);
+      assert.equal(
+        text.includes("CHINTAN_LABEL") || text.includes("चिंतन") || rel.endsWith("FormBits.tsx"),
+        true,
+      );
     }
     const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weekly, /GUIDE_TOPIC_HELP/);
@@ -100,14 +108,21 @@ describe("चिंतन copy", () => {
     assert.match(topic, /GUIDE_TOPIC_HELP/);
     assert.match(topic, /विषय तयार \/ दुरुस्ती फक्त मार्गदर्शक/);
     assert.equal(topic.includes("या स्थळाचे"), false);
+    assert.match(topic, /CHINTAN_LABEL/);
+    assert.match(topic, /CHINTAN_WRITE_PLACEHOLDER/);
+    assert.match(topic, /aria-label=\{CHINTAN_LABEL\}/);
+    assert.equal(topic.includes("विषय तपशील"), false);
     const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
     assert.match(roles, /क्रमवार योग्य तीन/);
     assert.match(roles, /एकसमान/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
-    assert.match(me, /चिंतन लिहा/);
-    assert.match(me, /aria-label="चिंतन"/);
+    assert.match(me, /CHINTAN_WRITE_PLACEHOLDER/);
+    assert.match(me, /aria-label=\{CHINTAN_LABEL\}/);
     assert.equal(me.includes("उत्तर लिहा"), false);
     assert.equal(me.includes("तुमचे उत्तर"), false);
+    const report = readFileSync(new URL("./report.ts", import.meta.url), "utf8");
+    assert.match(report, /CHINTAN_LABEL/);
+    assert.match(report, /📝 \$\{CHINTAN_LABEL\}: \$\{m\.notes\}/);
   });
 
   it("documents one-question / literature-first / escalate copy", () => {
@@ -174,6 +189,7 @@ describe("चिंतन copy", () => {
   it("does not expose the word AI to members", () => {
     const memberFacing = [
       CHINTAN_LABEL,
+      CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
       TOPIC_THURSDAY_HELP,

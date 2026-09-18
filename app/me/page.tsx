@@ -9,6 +9,7 @@ import {
   CHINTAN_DEADLINE_HELP,
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
+  CHINTAN_WRITE_PLACEHOLDER,
   TOPIC_THURSDAY_HELP,
 } from "@/lib/labels";
 
@@ -117,8 +118,8 @@ export default function MemberHomePage() {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     rows={4}
-                    placeholder="चिंतन लिहा…"
-                    aria-label="चिंतन"
+                    placeholder={CHINTAN_WRITE_PLACEHOLDER}
+                    aria-label={CHINTAN_LABEL}
                     className="mt-1 w-full rounded-xl px-3 py-2 text-sm font-normal text-temple-ink ring-1 ring-saffron-200"
                   />
                 </label>
