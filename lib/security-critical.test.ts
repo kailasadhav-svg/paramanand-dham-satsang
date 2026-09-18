@@ -256,10 +256,16 @@ describe("health production_ready", () => {
 });
 
 describe("CSRF origin allowlist", () => {
-  it("allows satsang.dhyeyapurti.in and localhost", () => {
+  it("allows VPS, Vercel production/preview, and localhost", () => {
     assert.equal(isAllowedOrigin("https://satsang.dhyeyapurti.in"), true);
+    assert.equal(isAllowedOrigin("https://paramanand-dham-satsang.vercel.app"), true);
+    assert.equal(
+      isAllowedOrigin("https://paramanand-dham-satsang-git-main-team.vercel.app"),
+      true,
+    );
     assert.equal(isAllowedOrigin("http://localhost:43123"), true);
     assert.equal(isAllowedOrigin("https://evil.example"), false);
+    assert.equal(isAllowedOrigin("https://evil.vercel.app"), false);
   });
 
   it("rejects cross-origin mutating requests with Origin", () => {
