@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { redactChintanRoster, type ChintanStatusRow } from "./chintan.ts";
+import { redactChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
 import { canSeeChintanBody } from "./roles.ts";
 import { VAHAK_LABEL, VAHAK_LABEL_SHORT } from "./labels.ts";
 

@@ -8,32 +8,15 @@ import {
   phonesEqual,
 } from "./roles";
 import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
+import {
+  redactChintanRoster,
+  type ChintanStatusRow,
+} from "./chintan-roster";
 
-export type ChintanStatusRow = {
-  member_id: number;
-  member_name: string;
-  place_code: PlaceCode | string;
-  place_label: string;
-  submitted: boolean;
-  answer?: string;
-};
-
-export function redactChintanRoster(
-  rows: ChintanStatusRow[],
-  seeBody: boolean,
-): ChintanStatusRow[] {
-  return rows.map((r) => {
-    const out: ChintanStatusRow = {
-      member_id: r.member_id,
-      member_name: r.member_name,
-      place_code: r.place_code,
-      place_label: r.place_label,
-      submitted: r.submitted,
-    };
-    if (seeBody && r.submitted && r.answer != null) out.answer = r.answer;
-    return out;
-  });
-}
+export {
+  redactChintanRoster,
+  type ChintanStatusRow,
+} from "./chintan-roster";
 
 export async function actorIsVahak(
   phone: string,
