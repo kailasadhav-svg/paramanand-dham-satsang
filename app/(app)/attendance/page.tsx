@@ -372,11 +372,13 @@ export default function AttendancePage() {
       <ThursdayTithiBar ymd={date} />
       <div>
         <h2 className="text-lg font-bold">
-          {staff ? "उपस्थिती · एडिट" : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}
+          {staff
+            ? `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL} · एडिट`
+            : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}
         </h2>
         <p className="text-xs text-temple-muted">
           {staff
-            ? "चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा"
+            ? `${SATSANG_CHARANSEVAK_LABEL} काम: स्थळी उपस्थिती नोंदवा. चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा`
             : "या स्थळी किती परमानंद चरणसेवक आले ते नोंदवा. चुकले तर संख्या / वेळ पुन्हा बदलून जतन करा."}
         </p>
       </div>

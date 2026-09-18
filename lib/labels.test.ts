@@ -304,6 +304,13 @@ describe("चिंतन copy", () => {
       false,
       "vahak appoint should not repeat a full form per place",
     );
+    assert.equal(
+      attendance.includes('staff ? "उपस्थिती · एडिट"'),
+      false,
+      "staff attendance heading must still name सत्संग चरणसेवक",
+    );
+    assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL/);
+    assert.match(attendance, /VAHAK_APPOINT_HELP/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /ThursdayTithiBar/);
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
