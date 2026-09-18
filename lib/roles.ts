@@ -58,7 +58,8 @@ export const SEEKER_DEMO_PHONES = (
  * - One question per परमानंद चरणसेवक per week (hard limit; see weekly-limits).
  * - चिंतन mandatory for everyone (copy + empty submit rejected).
  * - Village-wise combined चिंतन PDF: JSON stub GET /api/weekly/chintan-pdf (TODO renderer).
- * - Every question gets automatic AI / साहित्य answer first; escalate to
+ * - Every question gets automatic परमानंद साहित्य उत्तर first
+ *   (literature-grounded retrieval); escalate to
  *   मार्गदर्शक if unsatisfied (अजपा OTP flow).
  * - Question id = village+year-week+seq FIFO (`lib/question-id.ts`; not persisted).
  * - मार्गदर्शक handwritten-answer photo: POST /api/questions/[id]/handwritten stub.

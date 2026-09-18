@@ -18,6 +18,8 @@ import {
   GUIDE_LABEL,
   GUIDE_QUESTION_HELP,
   GUIDE_QUEUE_LABEL,
+  LITERATURE_ANSWER_LABEL,
+  LITERATURE_ANSWERS_LABEL,
   MEMBER_ROLE_LABEL,
   ONE_QUESTION_HELP,
   QUESTION_AI_FIRST_HELP,
@@ -25,7 +27,7 @@ import {
 } from "@/lib/labels";
 
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
-  ai_answered: "परमानंद साहित्य",
+  ai_answered: LITERATURE_ANSWER_LABEL,
   escalated: GUIDE_QUEUE_LABEL,
   guru_answered: GUIDE_ANSWER_LABEL,
 };
@@ -336,7 +338,7 @@ export default function AjapaPage() {
         {(
           [
             ["all", "सर्व"],
-            ["ai_answered", "परमानंद साहित्य"],
+            ["ai_answered", LITERATURE_ANSWERS_LABEL],
             ["escalated", GUIDE_QUEUE_LABEL],
             ["guru_answered", "पूर्ण"],
           ] as const
@@ -545,7 +547,7 @@ export default function AjapaPage() {
               {q.ai_answer ? (
                 <details open={q.status === "ai_answered"} className="text-sm">
                   <summary className="cursor-pointer font-medium text-saffron-800">
-                    परमानंद साहित्य उत्तर
+                    {LITERATURE_ANSWER_LABEL}
                   </summary>
                   <p className="mt-1 whitespace-pre-wrap text-temple-ink/90">
                     {q.ai_answer}

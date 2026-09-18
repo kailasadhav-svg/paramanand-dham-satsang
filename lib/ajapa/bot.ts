@@ -167,7 +167,7 @@ async function handleAjapaA(guruPhone: string, seekerPhone: string): Promise<Bot
     return { handled: true, replies: ["no escalated"] };
   }
 
-  const preview = `प्रश्न #${q.id} · चरणसेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य —\n${(q.ai_answer || "").slice(0, 1500)}`;
+  const preview = `प्रश्न #${q.id} · चरणसेवक ${displayPhone(seekerPhone)}\n\n${q.question}\n\n— परमानंद साहित्य उत्तर —\n${(q.ai_answer || "").slice(0, 1500)}`;
   await sendText(guruPhone, preview.slice(0, 4000));
   const guruSession = await getWaSession(guruPhone);
   await askGuruReplyMode({

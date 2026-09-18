@@ -9,6 +9,7 @@ import {
   ANSWERED_BY_LABEL,
   GUIDE_QUESTION_HELP,
   HANDWRITTEN_PHOTO_HELP,
+  LITERATURE_ANSWER_LABEL,
   ONE_QUESTION_HELP,
   QUESTION_AI_FIRST_HELP,
   QUESTION_ID_HELP,
@@ -103,7 +104,7 @@ export default function QuestionsPage() {
       setDraft("");
       if (res.ajapa_id) {
         setOkMsg(
-          "प्रश्न जतन · संवाद मध्ये साहित्य उत्तर तयार. «संवाद» टॅब → सिंक दाबा. अधिक स्पष्टतेसाठी तेथे मधुसुदनदास विजयानंद यांच्याकडे पाठवता येईल.",
+          `प्रश्न जतन · संवाद मध्ये ${LITERATURE_ANSWER_LABEL} तयार. «संवाद» टॅब → सिंक दाबा. अधिक स्पष्टतेसाठी तेथे मधुसुदनदास विजयानंद यांच्याकडे पाठवता येईल.`,
         );
       } else {
         setOkMsg(
@@ -339,7 +340,7 @@ export default function QuestionsPage() {
                 >
                   {savingId === q.id
                     ? "तयार करत आहे…"
-                    : "संवादात साहित्य उत्तर घ्या"}
+                    : `संवादात ${LITERATURE_ANSWER_LABEL} घ्या`}
                 </button>
               </div>
             )}

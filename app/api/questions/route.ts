@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     return routeErrorResponse(err, "प्रश्न जतन अयशस्वी");
   }
 
-  // संवाद: literature / AI उत्तर (knowledge fallback if no API key)
+  // संवाद: literature-grounded retrieval (knowledge fallback if no API key)
   let ajapa_id: number | null = null;
   let ajapa_error: string | null = null;
   try {

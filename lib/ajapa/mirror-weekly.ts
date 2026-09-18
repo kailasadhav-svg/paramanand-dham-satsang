@@ -42,7 +42,7 @@ async function fillWeeklyAnswerIfEmpty(question: string, answer: string) {
   }
 }
 
-/** Copy a weekly प्रश्नोत्तर into अजपा संवाद for this seeker (literature / AI answer). */
+/** Copy a weekly प्रश्नोत्तर into अजपा संवाद for this seeker (literature-grounded retrieval). */
 export async function mirrorWeeklyQuestionToAjapa(input: {
   question: string;
   place_id?: number | null;

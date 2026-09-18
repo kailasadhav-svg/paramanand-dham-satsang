@@ -3,7 +3,7 @@ import { getWaSession, getAjapaQuestion, saveGuruInAppAnswer } from "@/lib/ajapa
 import { normalizePhone } from "@/lib/ajapa/phone";
 import { notifyGuruAnswerReady, sendText } from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
-import { canSeeGuideScreens } from "@/lib/roles";
+import { canSeeGuideScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

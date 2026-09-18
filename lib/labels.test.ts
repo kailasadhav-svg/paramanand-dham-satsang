@@ -17,6 +17,8 @@ import {
   GUIDE_QUESTION_HELP,
   GUIDE_TOPIC_HELP,
   ONE_QUESTION_HELP,
+  LITERATURE_ANSWER_LABEL,
+  LITERATURE_ANSWERS_LABEL,
   QUESTION_AI_FIRST_HELP,
   QUESTION_ID_HELP,
   HANDWRITTEN_PHOTO_HELP,
@@ -105,9 +107,13 @@ describe("चिंतन copy", () => {
     assert.equal(me.includes("तुमचे उत्तर"), false);
   });
 
-  it("documents one-question / AI-first / escalate copy", () => {
+  it("documents one-question / literature-first / escalate copy", () => {
     assert.match(ONE_QUESTION_HELP, /फक्त एकच प्रश्न/);
-    assert.match(QUESTION_AI_FIRST_HELP, /साहित्य \(AI\) उत्तर/);
+    assert.equal(LITERATURE_ANSWER_LABEL, "परमानंद साहित्य उत्तर");
+    assert.equal(LITERATURE_ANSWERS_LABEL, "परमानंद साहित्य उत्तरे");
+    assert.match(QUESTION_AI_FIRST_HELP, /परमानंद साहित्य उत्तर/);
+    assert.equal(QUESTION_AI_FIRST_HELP.includes("AI"), false);
+    assert.equal(QUESTION_AI_FIRST_HELP.includes("एआय"), false);
     assert.match(QUESTION_AI_FIRST_HELP, /मार्गदर्शक चरणसेवकांकडे पाठवा/);
     const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
     assert.match(questions, /ONE_QUESTION_HELP/);
@@ -116,6 +122,9 @@ describe("चिंतन copy", () => {
     const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
     assert.match(ajapa, /ONE_QUESTION_HELP/);
     assert.match(ajapa, /QUESTION_AI_FIRST_HELP/);
+    assert.match(ajapa, /LITERATURE_ANSWER_LABEL/);
+    assert.match(ajapa, /LITERATURE_ANSWERS_LABEL/);
+    assert.match(questions, /LITERATURE_ANSWER_LABEL/);
     const weeklyUi = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weeklyUi, /chintan-pdf/);
     assert.match(weeklyUi, /गावानुसार चिंतन PDF \(stub\)/);
@@ -157,5 +166,77 @@ describe("चिंतन copy", () => {
     const weeklyArchiveUi = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weeklyArchiveUi, /WEEKLY_ARCHIVE_HELP/);
     assert.match(weeklyArchiveUi, /गुरुवार १७:०० संग्रह/);
+  });
+
+  it("does not expose the word AI to members", () => {
+    const memberFacing = [
+      CHINTAN_LABEL,
+      CHINTAN_DEADLINE_HELP,
+      CHINTAN_MISSING_REMINDER,
+      TOPIC_THURSDAY_HELP,
+      VAHAK_JOB_HELP,
+      VAHAK_LABEL,
+      VAHAK_LABEL_SHORT,
+      VAHAK_APPOINT_HELP,
+      GUIDE_LABEL,
+      GUIDE_QUEUE_LABEL,
+      GUIDE_CHINTAN_RANK_HELP,
+      GUIDE_QUESTION_HELP,
+      GUIDE_TOPIC_HELP,
+      ONE_QUESTION_HELP,
+      LITERATURE_ANSWER_LABEL,
+      LITERATURE_ANSWERS_LABEL,
+      QUESTION_AI_FIRST_HELP,
+      QUESTION_ID_HELP,
+      HANDWRITTEN_PHOTO_HELP,
+      PANCHANG_TITHI_HELP,
+      WEEKLY_ARCHIVE_HELP,
+      WEEKLY_ARCHIVE_SUMMARY_HELP,
+      WEEKLY_ARCHIVE_VAHAK_HELP,
+    ];
+    for (const s of memberFacing) {
+      assert.equal(/\bAI\b/i.test(s), false, `label leaks AI: ${s}`);
+      assert.equal(s.includes("एआय"), false, `label leaks एआय: ${s}`);
+      assert.equal(/AI\s*उत्तर|AI\s*answer/i.test(s), false, `label leaks AI उत्तर: ${s}`);
+    }
+
+    const uiFiles = [
+      "app/(app)/ajapa/page.tsx",
+      "app/(app)/questions/page.tsx",
+      "app/(app)/weekly/page.tsx",
+      "app/me/page.tsx",
+      "lib/ajapa/whatsapp.ts",
+      "lib/ajapa/bot.ts",
+      "scripts/submit-waba-templates.ts",
+    ];
+    for (const rel of uiFiles) {
+      const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+      const withoutComments = text
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/(^|[^:])\/\/.*$/gm, "$1");
+      const quoted: string[] = [];
+      const re = /(["'`])(?:\\.|(?!\1)[\s\S])*\1/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(withoutComments))) {
+        quoted.push(m[0].slice(1, -1));
+      }
+      for (const q of quoted) {
+        const visible = q
+          .replace(/\$\{[^}]+\}/g, "")
+          .replace(/\bajapa_ai_\w+\b/gi, "")
+          .replace(/\b(aiAnswer|ai_answer|ai_answered|AJAPA_AI_\w+|OPENAI)\b/g, "");
+        const leaksAiLabel =
+          /AI\s+उत्तर/.test(visible) ||
+          /AI\s+answer/i.test(visible) ||
+          /एआय/.test(visible) ||
+          /\(AI\)/.test(visible) ||
+          /(^|[^A-Za-z_])AI([^A-Za-z_]|$)/.test(visible);
+        assert.equal(
+          leaksAiLabel,
+          false,
+          `${rel} quoted string leaks AI to members: ${q.slice(0, 120)}`,
+        );
+      }
+    }
   });
 });

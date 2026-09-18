@@ -35,8 +35,12 @@ export const CHINTAN_MISSING_REMINDER =
 export const ONE_QUESTION_HELP =
   "एका आठवड्यात एका परमानंद चरणसेवकाकडून फक्त एकच प्रश्न.";
 
+/** Member-facing name for literature-grounded retrieval answers. Never say AI. */
+export const LITERATURE_ANSWER_LABEL = "परमानंद साहित्य उत्तर";
+export const LITERATURE_ANSWERS_LABEL = "परमानंद साहित्य उत्तरे";
+
 export const QUESTION_AI_FIRST_HELP =
-  "प्रत्येक प्रश्नाला आधी परमानंद साहित्य (AI) उत्तर मिळते. समाधान नसेल तर मार्गदर्शक चरणसेवकांकडे पाठवा.";
+  "प्रत्येक प्रश्नाला आधी परमानंद साहित्य उत्तर मिळते. समाधान नसेल तर मार्गदर्शक चरणसेवकांकडे पाठवा.";
 
 /** Public question id = village + year-week + FIFO sequence. */
 export const QUESTION_ID_HELP =

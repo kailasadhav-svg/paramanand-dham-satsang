@@ -64,7 +64,7 @@ export const TEMPLATES: TemplateDef[] = [
     name: "ajapa_notify_guru",
     category: "UTILITY",
     language: "mr",
-    body: "नवीन प्रश्न — {{1}} ({{2}})\nप्रश्न: {{3}}\nAI उत्तर थोडक्यात: {{4}}",
+    body: "नवीन प्रश्न — {{1}} ({{2}})\nप्रश्न: {{3}}\nपरमानंद साहित्य उत्तर थोडक्यात: {{4}}",
     bodyExamples: [["सीता", "9876543210", "अजपा जप कसा करावा?", "श्वासासोबत नामस्मरण सुरू ठेवा."]],
     buttons: [
       { type: "QUICK_REPLY", text: "उत्तर द्या" },
