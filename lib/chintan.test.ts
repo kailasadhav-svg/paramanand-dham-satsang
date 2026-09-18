@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { redactChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
+import { redactChintanRoster, scopeChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
 import { canSeeChintanBody } from "./roles.ts";
 import { VAHAK_LABEL, VAHAK_LABEL_SHORT } from "./labels.ts";
 
@@ -43,6 +43,16 @@ describe("redactChintanRoster", () => {
     assert.equal(sevak[0].answer, undefined);
     const vahak = redactChintanRoster(sample, canSeeChintanBody("charansevak"));
     assert.equal(vahak[0].answer, undefined);
+  });
+});
+
+describe("scopeChintanRoster", () => {
+  it("treats [] as nobody and null as every place", () => {
+    assert.equal(scopeChintanRoster(sample, []).length, 0);
+    assert.equal(scopeChintanRoster(sample, null).length, 2);
+    const nashik = scopeChintanRoster(sample, ["nashik"]);
+    assert.equal(nashik.length, 2);
+    assert.equal(scopeChintanRoster(sample, ["shindi"]).length, 0);
   });
 });
 

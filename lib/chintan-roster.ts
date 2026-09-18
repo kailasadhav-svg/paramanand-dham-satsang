@@ -24,3 +24,13 @@ export function redactChintanRoster(
     return out;
   });
 }
+
+/** `null` = every place (staff). `[]` = nobody (non-vahak). */
+export function scopeChintanRoster(
+  rows: ChintanStatusRow[],
+  placeCodes: string[] | null,
+): ChintanStatusRow[] {
+  if (placeCodes == null) return rows;
+  const codes = new Set(placeCodes);
+  return rows.filter((r) => codes.has(String(r.place_code)));
+}

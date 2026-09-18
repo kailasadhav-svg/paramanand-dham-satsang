@@ -10,6 +10,7 @@ import {
 import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
 import {
   redactChintanRoster,
+  scopeChintanRoster,
   type ChintanStatusRow,
 } from "./chintan-roster";
 
@@ -50,20 +51,18 @@ export async function listChintanRoster(opts: {
   const question = await getWeeklyQuestion(opts.weekStart);
   const answers = question ? await listWeeklyAnswers(question.id) : [];
   const byId = new Map(answers.map((a) => [a.member_id, a]));
-  const codes = opts.placeCodes?.length ? new Set(opts.placeCodes) : null;
-  return members
-    .filter((m) => !codes || codes.has(m.place_code))
-    .map((m) => {
-      const hit = byId.get(m.id);
-      return {
-        member_id: m.id,
-        member_name: m.name,
-        place_code: m.place_code,
-        place_label: m.place_label,
-        submitted: Boolean(hit?.answer?.trim()),
-        answer: hit?.answer,
-      };
-    });
+  const raw = members.map((m) => {
+    const hit = byId.get(m.id);
+    return {
+      member_id: m.id,
+      member_name: m.name,
+      place_code: m.place_code,
+      place_label: m.place_label,
+      submitted: Boolean(hit?.answer?.trim()),
+      answer: hit?.answer,
+    };
+  });
+  return scopeChintanRoster(raw, opts.placeCodes ?? null);
 }
 
 export async function chintanViewForActor(opts: {
