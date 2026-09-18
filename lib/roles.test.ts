@@ -11,7 +11,7 @@ import {
   detectStaffRole,
   roleLabelMarathi,
 } from "./roles.ts";
-import { isFridayVahakAppointWindow } from "./dates.ts";
+import { isFridayVahakAppointWindow, isFridayVahakAppointWindowForWeek, shouldAutoContinueVahak } from "./dates.ts";
 import {
   GUIDE_LABEL,
   MEMBER_ROLE_LABEL,
@@ -68,21 +68,53 @@ describe("role labels", () => {
 
 describe("canAppointVahak", () => {
   const fridayMorning = new Date("2026-09-18T01:30:00.000Z"); // 07:00 IST
+  const fridayNoon = new Date("2026-09-18T06:30:00.000Z"); // 12:00 IST
   const fridayAfternoon = new Date("2026-09-18T07:00:00.000Z"); // 12:30 IST
   const thursday = new Date("2026-09-17T04:00:00.000Z");
+  const week = "2026-09-17";
+  const olderWeek = "2026-09-10";
 
-  it("is Friday 06:00–12:00 IST for the सत्संग चरणसेवक window", () => {
+  it("is Friday 06:00–12:00 IST for that week’s सत्संग चरणसेवक window", () => {
     assert.equal(isFridayVahakAppointWindow(fridayMorning), true);
-    assert.equal(isFridayVahakAppointWindow(fridayAfternoon), false);
+    assert.equal(isFridayVahakAppointWindowForWeek(week, fridayMorning), true);
+    assert.equal(isFridayVahakAppointWindowForWeek(week, fridayNoon), true);
+    assert.equal(isFridayVahakAppointWindowForWeek(week, fridayAfternoon), false);
+    assert.equal(isFridayVahakAppointWindowForWeek(week, thursday), false);
+    assert.equal(isFridayVahakAppointWindowForWeek(olderWeek, fridayMorning), false);
     assert.equal(isFridayVahakAppointWindow(thursday), false);
   });
 
-  it("lets मार्गदर्शक / संगणक appoint anytime; चरणसेवक only empty + Friday window", () => {
+  it("auto-continues last week’s वाहक only after Friday noon", () => {
+    assert.equal(shouldAutoContinueVahak(week, thursday), false);
+    assert.equal(shouldAutoContinueVahak(week, fridayMorning), false);
+    assert.equal(shouldAutoContinueVahak(week, fridayNoon), false);
+    assert.equal(shouldAutoContinueVahak(week, fridayAfternoon), true);
+    assert.equal(shouldAutoContinueVahak("2026-09-24", fridayMorning), false);
+  });
+
+  it("lets मार्गदर्शक / संगणक appoint anytime; चरणसेवक only empty + that Friday window", () => {
     assert.equal(canAppointVahak("guru", { hasDuty: true, now: thursday }), true);
     assert.equal(canAppointVahak("software", { hasDuty: true, now: thursday }), true);
-    assert.equal(canAppointVahak("charansevak", { hasDuty: false, now: fridayMorning }), true);
-    assert.equal(canAppointVahak("charansevak", { hasDuty: true, now: fridayMorning }), false);
-    assert.equal(canAppointVahak("charansevak", { hasDuty: false, now: thursday }), false);
+    assert.equal(
+      canAppointVahak("charansevak", { hasDuty: false, now: fridayMorning, meetingDate: week }),
+      true,
+    );
+    assert.equal(
+      canAppointVahak("charansevak", { hasDuty: true, now: fridayMorning, meetingDate: week }),
+      false,
+    );
+    assert.equal(
+      canAppointVahak("charansevak", { hasDuty: false, now: thursday, meetingDate: week }),
+      false,
+    );
+    assert.equal(
+      canAppointVahak("charansevak", {
+        hasDuty: false,
+        now: fridayMorning,
+        meetingDate: olderWeek,
+      }),
+      false,
+    );
   });
 });
 

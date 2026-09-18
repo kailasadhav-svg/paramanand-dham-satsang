@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
-import { DEFAULT_MEETING_TIME, addDaysYmd } from "./dates";
+import { DEFAULT_MEETING_TIME, addDaysYmd, shouldAutoContinueVahak } from "./dates";
 import { phonesEqual } from "./offline/phone";
 import { renameAmbashiToShindi } from "./place-rename";
 import {
@@ -705,9 +705,9 @@ async function listDutiesOnDateRaw(date: string): Promise<PlaceDutyWithPlace[]> 
   return rs.rows.map(asPlaceDutyWithPlace);
 }
 
-/** If this Thursday has no वाहक, keep last week's person (still a परमानंद चरणसेवक). */
+/** After Friday noon: if this Thursday has no वाहक, keep last week's person. */
 async function continuePreviousVahak(date: string): Promise<void> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  if (!shouldAutoContinueVahak(date)) return;
   const existing = await listDutiesOnDateRaw(date);
   const taken = new Set(existing.map((d) => d.place_id));
   const prev = await listDutiesOnDateRaw(addDaysYmd(date, -7));

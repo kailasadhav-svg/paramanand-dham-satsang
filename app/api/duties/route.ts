@@ -7,7 +7,7 @@ import {
   listPlaces,
   upsertDuty,
 } from "@/lib/db";
-import { isFridayVahakAppointWindow } from "@/lib/dates";
+import { isFridayVahakAppointWindowForWeek } from "@/lib/dates";
 import { VAHAK_APPOINT_HELP } from "@/lib/labels";
 import { displayPhone, phonesEqual } from "@/lib/offline/phone";
 import {
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const staff = canSeeStaffScreens(role);
-  const friday = isFridayVahakAppointWindow();
+  const friday = isFridayVahakAppointWindowForWeek(date);
   const places = await listPlaces();
   const duties = await listDutiesOnDate(date);
 
@@ -102,7 +102,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: true, cleared: true });
   }
 
-  if (!canAppointVahak(role, { hasDuty: Boolean(existing) })) {
+  if (!canAppointVahak(role, {
+    hasDuty: Boolean(existing),
+    meetingDate: String(body.meeting_date),
+  })) {
     return jsonError(VAHAK_APPOINT_HELP, 403);
   }
 
