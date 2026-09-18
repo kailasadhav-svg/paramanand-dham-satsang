@@ -268,12 +268,67 @@ describe("CSRF origin allowlist", () => {
     assert.equal(isAllowedOrigin("https://evil.vercel.app"), false);
   });
 
+  const actorUrl = "https://paramanand-dham-satsang.vercel.app/api/auth/actor";
+  const vercelOrigin = "https://paramanand-dham-satsang.vercel.app";
+  const vercelReferer = `${vercelOrigin}/m/login`;
+
+  function post(headers: Record<string, string> = {}) {
+    return new Request(actorUrl, { method: "POST", headers });
+  }
+
   it("rejects cross-origin mutating requests with Origin", () => {
     const req = new Request("https://satsang.dhyeyapurti.in/api/auth/login", {
       method: "POST",
       headers: { origin: "https://evil.example" },
     });
     assert.equal(csrfOriginOk(req), false);
+    assert.equal(csrfOriginOk(post({ origin: "https://evil.com" })), false);
+  });
+
+  it("allows Vercel production Origin", () => {
+    assert.equal(csrfOriginOk(post({ origin: vercelOrigin })), true);
+  });
+
+  it("allows Origin: null when Referer is the Vercel production origin", () => {
+    assert.equal(
+      csrfOriginOk(post({ origin: "null", referer: vercelReferer })),
+      true,
+    );
+  });
+
+  it("allows Origin: null when Sec-Fetch-Site is same-origin", () => {
+    assert.equal(
+      csrfOriginOk(post({ origin: "null", "sec-fetch-site": "same-origin" })),
+      true,
+    );
+  });
+
+  it("allows Origin: null when Sec-Fetch-Site is none (user navigation)", () => {
+    assert.equal(
+      csrfOriginOk(post({ origin: "null", "sec-fetch-site": "none" })),
+      true,
+    );
+  });
+
+  it("denies Origin: null alone (no Referer, no Sec-Fetch-Site) — not the same as both headers missing", () => {
+    // Non-browser clients omit Origin; browsers that send the opaque token must also
+    // send Referer or same-origin/none Sec-Fetch-Site. Do not globally allow Origin: null.
+    assert.equal(csrfOriginOk(post({ origin: "null" })), false);
+    assert.equal(isAllowedOrigin("null"), false);
+  });
+
+  it("denies Origin: null with a cross-site Referer", () => {
+    assert.equal(
+      csrfOriginOk(post({ origin: "null", referer: "https://evil.com/phish" })),
+      false,
+    );
+  });
+
+  it("denies Origin: null with Sec-Fetch-Site: cross-site", () => {
+    assert.equal(
+      csrfOriginOk(post({ origin: "null", "sec-fetch-site": "cross-site" })),
+      false,
+    );
   });
 
   it("allows same-origin and missing Origin (non-browser)", () => {
@@ -286,6 +341,7 @@ describe("CSRF origin allowlist", () => {
       method: "POST",
     });
     assert.equal(csrfOriginOk(curl), true);
+    assert.equal(csrfOriginOk(post()), true);
   });
 
   it("exempts health and WhatsApp webhook", () => {
