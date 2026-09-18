@@ -60,4 +60,16 @@ describe("register chat steps", () => {
       place_code: "nashik",
     });
   });
+
+  it("lists शिंदी in the place prompt and accepts it", () => {
+    const prompt = registerPrompt("ask_place");
+    assert.match(prompt, /शिंदी/);
+    assert.doesNotMatch(prompt, /अंबाशी/);
+    const state = applyRegisterReply("ask_place", "शिंदी", {
+      name: "कमल पाटील",
+      mobile: "9876511122",
+    });
+    assert.equal(state.step, "done");
+    assert.equal(state.draft.place_code, "shindi");
+  });
 });

@@ -13,7 +13,7 @@ const SEED_PLACES = [
   "श्री क्षेत्र रानअंत्री",
   "वरखेड",
   "बरटाळा",
-  "अंबाशी",
+  "शिंदी",
   "नाशिक",
 ];
 
@@ -319,12 +319,31 @@ async function migrate(db: Client) {
     "CREATE INDEX IF NOT EXISTS idx_questions_asked_by ON questions(asked_by_phone)",
   );
 
+  await renameAmbashiToShindi(db);
 
   const insert = SEED_PLACES.map((name, i) => ({
     sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",
     args: [name, i + 1] as (string | number)[],
   }));
   await db.batch(insert, "write");
+}
+
+/** Keep place ids so attendance, questions, and duties stay linked. */
+export async function renameAmbashiToShindi(db: Client): Promise<void> {
+  const shindi = await db.execute({
+    sql: "SELECT id FROM places WHERE name = ? LIMIT 1",
+    args: ["शिंदी"],
+  });
+  if (!shindi.rows[0]) {
+    await db.execute({
+      sql: "UPDATE places SET name = ? WHERE name = ?",
+      args: ["शिंदी", "अंबाशी"],
+    });
+  }
+  await db.execute({
+    sql: "UPDATE members SET place_code = ? WHERE place_code = ?",
+    args: ["shindi", "ambashi"],
+  });
 }
 
 export async function getDb(): Promise<Client> {
