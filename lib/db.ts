@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
 import { DEFAULT_MEETING_TIME } from "./dates";
+import { renameAmbashiToShindi } from "./place-rename";
 import {
   productionFileStoreBlockedReason,
   remoteDatabaseUrl,
@@ -13,7 +14,7 @@ const SEED_PLACES = [
   "श्री क्षेत्र रानअंत्री",
   "वरखेड",
   "बरटाळा",
-  "अंबाशी",
+  "शिंदी",
   "नाशिक",
 ];
 
@@ -319,6 +320,7 @@ async function migrate(db: Client) {
     "CREATE INDEX IF NOT EXISTS idx_questions_asked_by ON questions(asked_by_phone)",
   );
 
+  await renameAmbashiToShindi(db);
 
   const insert = SEED_PLACES.map((name, i) => ({
     sql: "INSERT OR IGNORE INTO places (name, sort_order) VALUES (?, ?)",

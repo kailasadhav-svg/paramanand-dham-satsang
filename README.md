@@ -25,7 +25,7 @@ App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Web members s
 1. श्री क्षेत्र रानअंत्री
 2. वरखेड
 3. बरटाळा
-4. अंबाशी
+4. शिंदी
 5. नाशिक
 
 ## Screens (bottom nav)

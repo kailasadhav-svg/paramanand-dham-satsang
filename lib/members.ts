@@ -1,7 +1,7 @@
 import type { Row } from "@libsql/client";
 import { getDb } from "./db";
 import { allocateLoginCode, normalizeMobile } from "./login-code";
-import { isPlaceCode, placeLabel, type PlaceCode } from "./places";
+import { canonicalizePlaceCode, placeLabel, type PlaceCode } from "./places";
 
 export type Member = {
   id: number;
@@ -35,12 +35,13 @@ function str(value: unknown): string {
 }
 
 function asMember(row: Row): Member {
-  const place_code = str(row.place_code);
+  const rawPlace = str(row.place_code);
+  const place_code = (canonicalizePlaceCode(rawPlace) ?? rawPlace) as PlaceCode;
   return {
     id: num(row.id),
     name: str(row.name),
     mobile: str(row.mobile),
-    place_code: (isPlaceCode(place_code) ? place_code : place_code) as PlaceCode,
+    place_code,
     place_label: placeLabel(place_code),
     login_code: str(row.login_code),
     login_code_collision: num(row.login_code_collision) === 1,
@@ -103,7 +104,8 @@ export async function registerMember(input: {
   if (!name) throw new MemberError("नाव लिहा (२–८० अक्षरे)", 400);
   const mobile = normalizeMobile(input.mobile ?? "");
   if (!mobile) throw new MemberError("१० अंकी भारतीय मोबाइल लिहा", 400);
-  if (!isPlaceCode(input.place_code)) throw new MemberError("स्थान निवडा", 400);
+  const place_code = canonicalizePlaceCode(input.place_code);
+  if (!place_code) throw new MemberError("स्थान निवडा", 400);
 
   const existing = await getMemberByMobile(mobile);
   if (existing) throw new MemberError("हा मोबाइल आधी नोंदला आहे", 409);
@@ -119,7 +121,7 @@ export async function registerMember(input: {
       args: [
         name,
         mobile,
-        input.place_code,
+        place_code,
         allocated.login_code,
         allocated.collision ? 1 : 0,
         created_at,
@@ -139,7 +141,7 @@ export async function registerMember(input: {
       const result = await db.execute({
         sql: `INSERT INTO members (name, mobile, place_code, login_code, login_code_collision, created_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [name, mobile, input.place_code, retry.login_code, 1, created_at],
+        args: [name, mobile, place_code, retry.login_code, 1, created_at],
       });
       const id = Number(result.lastInsertRowid);
       const saved = await getMemberById(id);

@@ -59,7 +59,7 @@ export function resolveAjpaIntent(raw: string, registered: boolean): AjpaIntent 
 export function registerPrompt(step: RegisterChatStep): string {
   if (step === "ask_name") return "नाव लिहा";
   if (step === "ask_mobile") return "मोबाइल (१० अंक) लिहा";
-  if (step === "ask_place") return "स्थान: रानअंत्री / वरखेड / बरटाळा / अंबाशी / नाशिक";
+  if (step === "ask_place") return "स्थान: रानअंत्री / वरखेड / बरटाळा / शिंदी / नाशिक";
   return AJPA_LABEL;
 }
 
