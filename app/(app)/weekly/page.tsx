@@ -15,6 +15,8 @@ import {
   CHINTAN_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_TOPIC_HELP,
+  PLACE_TOPIC_LOCK_SCOPE_HELP,
+  PLACE_TOPIC_PRIOR_SUMMARY_HELP,
   TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
@@ -44,6 +46,12 @@ type WeeklyPayload = {
   roster?: RosterRow[];
 };
 
+type ArchiveRow = {
+  place_code: string;
+  place_label?: string;
+  summary?: { kind?: string; text?: string; filename?: string } | null;
+};
+
 export default function WeeklyAdminPage() {
   const [thursday, setThursday] = useState(defaultThursdayYmd());
   const [question, setQuestion] = useState("");
@@ -58,6 +66,11 @@ export default function WeeklyAdminPage() {
   const [pdfNote, setPdfNote] = useState<string | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveNote, setArchiveNote] = useState<string | null>(null);
+  const [archives, setArchives] = useState<ArchiveRow[]>([]);
+  const [summaryPlace, setSummaryPlace] = useState("");
+  const [summaryKind, setSummaryKind] = useState<"text" | "photo" | "voice">("text");
+  const [summaryText, setSummaryText] = useState("");
+  const [summaryFile, setSummaryFile] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +86,24 @@ export default function WeeklyAdminPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "लोड अयशस्वी"));
   }, [thursday]);
+
+  useEffect(() => {
+    if (!canSeeBodies && !isVahak) {
+      setArchives([]);
+      return;
+    }
+    void api<{ archives?: ArchiveRow[] }>(`/api/weekly/archive?this_thursday=${thursday}`)
+      .then((data) => {
+        const rows = data.archives || [];
+        setArchives(rows);
+        setSummaryPlace((code) =>
+          code && rows.some((r) => r.place_code === code)
+            ? code
+            : rows[0]?.place_code || "",
+        );
+      })
+      .catch(() => undefined);
+  }, [thursday, canSeeBodies, isVahak]);
 
   async function save() {
     if (!canEdit) return;
@@ -121,7 +152,12 @@ export default function WeeklyAdminPage() {
       const data = await api<{
         message?: string;
         archives?: unknown[];
-        archive?: { place_code?: string; visible?: boolean; summary_read?: boolean };
+        archive?: {
+          place_code?: string;
+          visible?: boolean;
+          summary_read?: boolean;
+          summary?: ArchiveRow["summary"];
+        };
       }>("/api/weekly/archive", {
         method: "POST",
         body: JSON.stringify({
@@ -132,6 +168,22 @@ export default function WeeklyAdminPage() {
         }),
       });
       const n = data.archives?.length;
+      if (Array.isArray(data.archives)) {
+        const rows = data.archives as ArchiveRow[];
+        setArchives(rows);
+        setSummaryPlace((code) =>
+          code && rows.some((r) => r.place_code === code)
+            ? code
+            : rows[0]?.place_code || "",
+        );
+      } else if (data.archive?.place_code) {
+        setArchives((rows) => {
+          const next = rows.map((r) =>
+            r.place_code === data.archive?.place_code ? { ...r, ...data.archive } : r,
+          );
+          return next;
+        });
+      }
       setArchiveNote(
         data.message ||
           (n != null ? `संग्रह · ${n} गावे` : "संग्रह जतन") +
@@ -142,6 +194,16 @@ export default function WeeklyAdminPage() {
     } finally {
       setArchiveBusy(false);
     }
+  }
+
+  async function saveVillageSummary() {
+    if (!summaryPlace) return;
+    await runArchive("summary", {
+      place_code: summaryPlace,
+      kind: summaryKind,
+      text: summaryKind === "text" ? summaryText : undefined,
+      filename: summaryKind === "text" ? undefined : summaryFile,
+    });
   }
 
   const pending = roster.filter((r) => !r.submitted);
@@ -168,6 +230,7 @@ export default function WeeklyAdminPage() {
           <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
         </>
       )}
+      <p className="text-xs leading-relaxed text-temple-muted">{PLACE_TOPIC_LOCK_SCOPE_HELP}</p>
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -278,6 +341,86 @@ export default function WeeklyAdminPage() {
           >
             सारांश वाचला / ऐकला (stub)
           </button>
+        ) : null}
+        {canSeeBodies ? (
+          <p className="text-[11px] leading-relaxed text-temple-muted">
+            {PLACE_TOPIC_PRIOR_SUMMARY_HELP}
+          </p>
+        ) : null}
+        {canSeeBodies && archives.length > 0 ? (
+          <div className="space-y-2 rounded-xl bg-saffron-50 p-2 ring-1 ring-saffron-100">
+            <label className="block text-xs font-semibold text-temple-muted">
+              गावाचा सारांश (लिहा / upload / voice)
+              <select
+                value={summaryPlace}
+                onChange={(e) => setSummaryPlace(e.target.value)}
+                className="mt-1 w-full rounded-xl bg-white px-3 py-2 text-sm font-semibold ring-1 ring-saffron-200"
+                aria-label="सारांश गाव निवडा"
+              >
+                {archives.map((a) => (
+                  <option key={a.place_code} value={a.place_code}>
+                    {a.place_label || placeLabel(a.place_code)} ·{" "}
+                    {a.summary ? "झाले" : "बाकी"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-wrap gap-1">
+              {(
+                [
+                  ["text", "लिहा"],
+                  ["photo", "upload"],
+                  ["voice", "voice"],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSummaryKind(k)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    summaryKind === k
+                      ? "bg-saffron-700 text-white"
+                      : "bg-white text-saffron-900 ring-1 ring-saffron-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {summaryKind === "text" ? (
+              <textarea
+                value={summaryText}
+                onChange={(e) => setSummaryText(e.target.value)}
+                rows={3}
+                placeholder="सारांश लिहा…"
+                aria-label="सारांश लिहा"
+                className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
+              />
+            ) : (
+              <input
+                type="file"
+                accept={summaryKind === "photo" ? "image/*" : "audio/*"}
+                aria-label={summaryKind === "photo" ? "सारांश upload" : "सारांश voice"}
+                onChange={(e) => setSummaryFile(e.target.files?.[0]?.name || "")}
+                className="w-full text-xs"
+              />
+            )}
+            {summaryKind !== "text" && summaryFile ? (
+              <p className="text-[11px] text-temple-muted">{summaryFile}</p>
+            ) : null}
+            <button
+              type="button"
+              disabled={
+                archiveBusy ||
+                !summaryPlace ||
+                (summaryKind === "text" ? !summaryText.trim() : !summaryFile.trim())
+              }
+              onClick={() => void saveVillageSummary()}
+              className="rounded-xl bg-saffron-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              सारांश जतन (stub)
+            </button>
+          </div>
         ) : null}
         {archiveNote ? <p className="text-[11px] text-temple-muted">{archiveNote}</p> : null}
       </div>

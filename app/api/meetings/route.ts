@@ -8,7 +8,7 @@ import {
   upsertMeeting,
   type MeetingPatch,
 } from "@/lib/db";
-import { actorCanEditPlaceTopic } from "@/lib/chintan";
+import { actorCanEditPlaceTopic, getMeetingTopicLock } from "@/lib/chintan";
 import { DEFAULT_MEETING_TIME } from "@/lib/dates";
 import {
   ATTENDANCE_GEO_MAX_METERS,
@@ -17,6 +17,11 @@ import {
 } from "@/lib/geo";
 import { SATSANG_CHARANSEVAK_LABEL } from "@/lib/labels";
 import { phonesEqual } from "@/lib/offline/phone";
+import {
+  PLACE_TOPIC_LOCKED_ERROR,
+  PRIOR_WEEK_SUMMARY_REQUIRED_ERROR,
+  meetingTopicFieldsTouched,
+} from "@/lib/topic-lock";
 import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
@@ -33,8 +38,24 @@ export async function GET(request: Request) {
   try {
     const meeting = await getMeeting(placeId, date);
     const place = await getPlace(placeId);
+    const lock = place
+      ? await getMeetingTopicLock({ placeName: place.name, weekStart: date })
+      : {
+          topic_locked: false,
+          chintan_count: 0,
+          prior_week_start: date,
+          prior_chintan_count: 0,
+          prior_summary_complete: true,
+          topic_needs_prior_summary: false,
+        };
     return NextResponse.json({
       place,
+      topic_locked: lock.topic_locked,
+      chintan_count: lock.chintan_count,
+      prior_week_start: lock.prior_week_start,
+      prior_chintan_count: lock.prior_chintan_count,
+      prior_summary_complete: lock.prior_summary_complete,
+      topic_needs_prior_summary: lock.topic_needs_prior_summary,
       meeting: meeting ?? {
         place_id: placeId,
         meeting_date: date,
@@ -102,10 +123,8 @@ export async function PUT(request: Request) {
   const place = await getPlace(Number(body.place_id));
   if (!place) return jsonError("स्थान सापडले नाही", 404);
 
-  const topicTouched =
-    body.topic_kind !== undefined ||
-    body.topic_title !== undefined ||
-    body.notes !== undefined;
+  const topicFieldsTouched = meetingTopicFieldsTouched(body);
+  const topicTouched = topicFieldsTouched || body.notes !== undefined;
   const hasGeo =
     Number.isFinite(Number(body.latitude)) &&
     Number.isFinite(Number(body.longitude));
@@ -114,6 +133,19 @@ export async function PUT(request: Request) {
     const allowed = actor ? await actorCanEditPlaceTopic(actor) : false;
     if (!allowed) {
       return jsonError("फक्त मार्गदर्शक विषय तयार / दुरुस्त करू शकतात", 403);
+    }
+  }
+
+  if (topicFieldsTouched) {
+    const lock = await getMeetingTopicLock({
+      placeName: place.name,
+      weekStart: String(body.meeting_date),
+    });
+    if (lock.topic_locked) {
+      return jsonError(PLACE_TOPIC_LOCKED_ERROR, 409);
+    }
+    if (lock.topic_needs_prior_summary) {
+      return jsonError(PRIOR_WEEK_SUMMARY_REQUIRED_ERROR, 409);
     }
   }
 

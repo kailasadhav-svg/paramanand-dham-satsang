@@ -72,6 +72,18 @@ export const VAHAK_LABEL_SHORT = "विचार वाहक";
 /** Village topic create/edit — मार्गदर्शक only. Never Vahak or संगणक. */
 export const TOPIC_EDIT_GUIDE_ONLY_HELP = "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.";
 
+/** After ≥1 गाव चिंतन that week, even मार्गदर्शक cannot change that place's विषय. */
+export const PLACE_TOPIC_LOCKED_HELP =
+  "या गावाचे चिंतन आले आहे; या गावाचा विषय आता बदलता येणार नाही — मार्गदर्शकही नाही.";
+
+/** Clarify that the lock is the per-place topic (विषय पडदा), not the global weekly question. */
+export const PLACE_TOPIC_LOCK_SCOPE_HELP =
+  "बंद होतो तो या गावाचा विषय (विषय पडदा). सर्व गावांचा साप्ताहिक विषय वेगळा.";
+
+/** Next Thursday विषय waits until prior-week per-गाव सारांश (type / upload / voice). */
+export const PLACE_TOPIC_PRIOR_SUMMARY_HELP =
+  "मागच्या आठवड्याचा सारांश (लिहा / upload / voice) पूर्ण करा; मगच नवीन विषय.";
+
 /** Own sentence so it cannot be skimmed as «विचार वाहक विषय दुरुस्त करतात». */
 export const VAHAK_NO_TOPIC_EDIT_HELP =
   "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.";

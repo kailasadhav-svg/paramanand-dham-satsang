@@ -127,6 +127,8 @@ describe("one विचार वाहक per place per Thursday", () => {
       "utf8",
     );
     assert.match(meetings, /फक्त मार्गदर्शक विषय तयार \/ दुरुस्त करू शकतात/);
+    assert.match(meetings, /PLACE_TOPIC_LOCKED_ERROR/);
+    assert.match(meetings, /topic_locked/);
     assert.equal(meetings.includes("विचार वाहक किंवा मार्गदर्शक विषय"), false);
     assert.equal(meetings.includes("या स्थळाचे परमानंद विचार वाहक"), false);
     assert.equal(meetings.includes("मार्गदर्शक / संगणक विषय"), false);

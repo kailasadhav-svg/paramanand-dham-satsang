@@ -1,4 +1,5 @@
 import { listDutiesForPhone, getDuty } from "./db";
+import { archiveSourceWeekStart } from "./dates";
 import { listMembers } from "./members";
 import { placeCodeFromDbName, type PlaceCode } from "./places";
 import {
@@ -9,6 +10,8 @@ import {
   detectStaffRole,
   phonesEqual,
 } from "./roles";
+import { placeTopicLockState, priorWeekSummaryBlocksNewTopic } from "./topic-lock";
+import { isArchiveSummaryComplete, getStoredArchive } from "./weekly-archive";
 import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
 import {
   redactChintanRoster,
@@ -38,6 +41,55 @@ export async function actorIsVahak(
 /** Topic create/edit — मार्गदर्शक only. विचार वाहक cannot edit. */
 export async function actorCanEditPlaceTopic(phone: string): Promise<boolean> {
   return canEditAnyPlaceTopic(detectStaffRole(phone));
+}
+
+/** Per-गाव विषय lock: first non-empty चिंतन that week freezes topic_kind / topic_title. */
+export async function getPlaceTopicLock(opts: {
+  placeCode: string | null;
+  weekStart: string;
+}): Promise<{ topic_locked: boolean; chintan_count: number }> {
+  if (!opts.placeCode) return { topic_locked: false, chintan_count: 0 };
+  const question = await getWeeklyQuestion(opts.weekStart);
+  if (!question) return placeTopicLockState([], opts.placeCode);
+  const answers = await listWeeklyAnswers(question.id);
+  return placeTopicLockState(answers, opts.placeCode);
+}
+
+export async function getMeetingTopicLock(opts: {
+  placeName: string;
+  weekStart: string;
+}): Promise<{
+  topic_locked: boolean;
+  chintan_count: number;
+  prior_week_start: string;
+  prior_chintan_count: number;
+  prior_summary_complete: boolean;
+  topic_needs_prior_summary: boolean;
+}> {
+  const placeCode = placeCodeFromDbName(opts.placeName);
+  const priorWeek = archiveSourceWeekStart(opts.weekStart);
+  const current = await getPlaceTopicLock({
+    placeCode,
+    weekStart: opts.weekStart,
+  });
+  const prior = await getPlaceTopicLock({
+    placeCode,
+    weekStart: priorWeek,
+  });
+  const archive = placeCode ? getStoredArchive(priorWeek, placeCode) : undefined;
+  const prior_summary_complete = isArchiveSummaryComplete(archive?.summary);
+  return {
+    topic_locked: current.topic_locked,
+    chintan_count: current.chintan_count,
+    prior_week_start: priorWeek,
+    prior_chintan_count: prior.chintan_count,
+    prior_summary_complete,
+    topic_needs_prior_summary: priorWeekSummaryBlocksNewTopic({
+      priorArchiveExists: Boolean(archive),
+      priorSummaryComplete: prior_summary_complete,
+      priorChintanCount: prior.chintan_count,
+    }),
+  };
 }
 
 export async function listChintanRoster(opts: {
