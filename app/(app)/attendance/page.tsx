@@ -16,6 +16,7 @@ import { displayPhone } from "@/lib/offline/phone";
 import {
   SATSANG_CHARANSEVAK_LABEL,
   VAHAK_APPOINT_HELP,
+  vahakDutyPersonLabel,
 } from "@/lib/labels";
 
 type Meeting = {
@@ -85,6 +86,7 @@ export default function AttendancePage() {
 
   const [dutyRows, setDutyRows] = useState<DutyRow[]>([]);
   const [canAssign, setCanAssign] = useState(false);
+  const [dutyPlaceId, setDutyPlaceId] = useState<number | "">("");
   const [drafts, setDrafts] = useState<Record<number, DutyDraft>>({});
   const [dutyMsg, setDutyMsg] = useState<string | null>(null);
   const [dutyBusy, setDutyBusy] = useState<number | null>(null);
@@ -134,6 +136,10 @@ export default function AttendancePage() {
     setPlaceId((id) => {
       if (id !== "" && visible.some((p) => p.id === id)) return id;
       return visible[0]?.id ?? "";
+    });
+    setDutyPlaceId((id) => {
+      if (id !== "" && data.rows.some((r) => r.place.id === id)) return id;
+      return data.rows[0]?.place.id ?? "";
     });
   }, []);
 
@@ -325,6 +331,19 @@ export default function AttendancePage() {
     return row.duty.charansevak_name || row.duty.charansevak_phone_display;
   }, [dutyRows, placeId]);
 
+  const selectedDutyRow = useMemo(
+    () => dutyRows.find((r) => r.place.id === dutyPlaceId) || null,
+    [dutyRows, dutyPlaceId],
+  );
+
+  const otherDutyRows = useMemo(
+    () => dutyRows.filter((r) => r.place.id !== dutyPlaceId),
+    [dutyRows, dutyPlaceId],
+  );
+
+  const selectedDutyDraft: DutyDraft =
+    (dutyPlaceId !== "" && drafts[dutyPlaceId]) || { phone: "", name: "" };
+
   function markDirty<T>(setter: (v: T) => void) {
     return (v: T) => {
       setSaved(false);
@@ -467,51 +486,91 @@ export default function AttendancePage() {
           </h3>
           <p className="text-[11px] text-temple-muted">
             {VAHAK_APPOINT_HELP} प्रत्येक स्थळी आठवड्यात एकच विचार वाहक.
+            स्थळ ड्रॉपडाउनमधून निवडा — फक्त त्या स्थळाचा नाव + मोबाइल फॉर्म दिसतो.
           </p>
-          {dutyRows.map((row) => {
-            const draft = drafts[row.place.id] || { phone: "", name: "" };
-            return (
-              <div
-                key={row.place.id}
-                className="space-y-2 rounded-xl bg-saffron-50/50 p-3"
+          <label className="block text-xs font-semibold text-temple-muted">
+            नेमणूक स्थळ (ड्रॉपडाउन)
+          </label>
+          <select
+            value={dutyPlaceId === "" ? "" : String(dutyPlaceId)}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              setDutyPlaceId(Number.isFinite(id) ? id : "");
+              setDutyMsg(null);
+            }}
+            className="w-full min-w-0 rounded-xl bg-saffron-50 px-3 py-2.5 text-sm font-semibold ring-1 ring-saffron-200"
+            aria-label="नेमणूक स्थळ निवडा"
+          >
+            {dutyRows.length === 0 ? <option value="">स्थळ नाही</option> : null}
+            {dutyRows.map((row) => (
+              <option key={row.place.id} value={row.place.id}>
+                {row.place.name} · {vahakDutyPersonLabel(row.duty)}
+              </option>
+            ))}
+          </select>
+          {selectedDutyRow ? (
+            <div className="space-y-2 rounded-xl bg-saffron-50/50 p-3">
+              <p className="text-sm font-semibold">{selectedDutyRow.place.name}</p>
+              <input
+                type="text"
+                placeholder="नाव"
+                value={selectedDutyDraft.name}
+                onChange={(e) =>
+                  setDrafts((d) => ({
+                    ...d,
+                    [selectedDutyRow.place.id]: {
+                      ...selectedDutyDraft,
+                      name: e.target.value,
+                    },
+                  }))
+                }
+                className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
+              />
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder="मोबाइल"
+                value={selectedDutyDraft.phone}
+                onChange={(e) =>
+                  setDrafts((d) => ({
+                    ...d,
+                    [selectedDutyRow.place.id]: {
+                      ...selectedDutyDraft,
+                      phone: e.target.value,
+                    },
+                  }))
+                }
+                className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
+              />
+              <button
+                type="button"
+                disabled={dutyBusy === selectedDutyRow.place.id}
+                onClick={() => void saveDuty(selectedDutyRow.place)}
+                className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
               >
-                <p className="text-sm font-semibold">{row.place.name}</p>
-                <input
-                  type="text"
-                  placeholder="नाव"
-                  value={draft.name}
-                  onChange={(e) =>
-                    setDrafts((d) => ({
-                      ...d,
-                      [row.place.id]: { ...draft, name: e.target.value },
-                    }))
-                  }
-                  className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
-                />
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="मोबाइल"
-                  value={draft.phone}
-                  onChange={(e) =>
-                    setDrafts((d) => ({
-                      ...d,
-                      [row.place.id]: { ...draft, phone: e.target.value },
-                    }))
-                  }
-                  className="w-full rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-saffron-200"
-                />
-                <button
-                  type="button"
-                  disabled={dutyBusy === row.place.id}
-                  onClick={() => void saveDuty(row.place)}
-                  className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                >
-                  {dutyBusy === row.place.id ? "जतन…" : "नेमणूक दुरुस्त / जतन"}
-                </button>
-              </div>
-            );
-          })}
+                {dutyBusy === selectedDutyRow.place.id
+                  ? "जतन…"
+                  : "नेमणूक दुरुस्त / जतन"}
+              </button>
+            </div>
+          ) : null}
+          {otherDutyRows.length > 0 ? (
+            <div className="space-y-1 border-t border-saffron-100 pt-2">
+              <p className="text-[11px] font-semibold text-temple-muted">
+                इतर स्थळांच्या नेमणुका
+              </p>
+              <ul className="space-y-0.5">
+                {otherDutyRows.map((row) => (
+                  <li
+                    key={row.place.id}
+                    className="break-words text-[11px] leading-snug text-temple-muted"
+                  >
+                    {row.place.name} — {vahakDutyPersonLabel(row.duty)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {dutyMsg ? (
             <p className="text-xs font-semibold text-saffron-800">{dutyMsg}</p>
           ) : null}

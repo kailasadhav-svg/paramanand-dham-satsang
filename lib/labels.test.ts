@@ -13,6 +13,8 @@ import {
   VAHAK_LABEL,
   VAHAK_LABEL_SHORT,
   VAHAK_APPOINT_HELP,
+  VAHAK_APPOINT_UNSET,
+  vahakDutyPersonLabel,
   VAHAK_NO_TOPIC_EDIT_HELP,
   GUIDE_LABEL,
   GUIDE_QUEUE_LABEL,
@@ -89,6 +91,31 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_APPOINT_HELP, /सत्संग चरणसेवक/);
     assert.match(VAHAK_APPOINT_HELP, /दुपारी १२/);
     assert.match(VAHAK_APPOINT_HELP, /परमानंद चरणसेवकांपैकी एक/);
+  });
+
+  it("formats a compact one-line विचार वाहक appointment", () => {
+    assert.equal(vahakDutyPersonLabel(null), VAHAK_APPOINT_UNSET);
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: "राम देशमुख",
+        charansevak_phone_display: "9021555060",
+      }),
+      "राम देशमुख · 9021555060",
+    );
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: "  ",
+        charansevak_phone_display: "9021555060",
+      }),
+      "9021555060",
+    );
+    assert.equal(
+      vahakDutyPersonLabel({
+        charansevak_name: null,
+        charansevak_phone_display: "",
+      }),
+      VAHAK_APPOINT_UNSET,
+    );
   });
 
   it("cannot be skimmed as विचार वाहक editing विषय", () => {
@@ -268,6 +295,15 @@ describe("चिंतन copy", () => {
     assert.match(qPage, /QUESTION_ID_HELP/);
     const attendance = readFileSync(new URL("../app/(app)/attendance/page.tsx", import.meta.url), "utf8");
     assert.match(attendance, /ThursdayTithiBar/);
+    assert.match(attendance, /नेमणूक स्थळ \(ड्रॉपडाउन\)/);
+    assert.match(attendance, /aria-label="नेमणूक स्थळ निवडा"/);
+    assert.match(attendance, /इतर स्थळांच्या नेमणुका/);
+    assert.match(attendance, /saveDuty\(selectedDutyRow\.place\)/);
+    assert.equal(
+      attendance.includes("dutyRows.map((row) => {"),
+      false,
+      "vahak appoint should not repeat a full form per place",
+    );
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /ThursdayTithiBar/);
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
@@ -300,6 +336,7 @@ describe("चिंतन copy", () => {
       VAHAK_LABEL,
       VAHAK_LABEL_SHORT,
       VAHAK_APPOINT_HELP,
+      VAHAK_APPOINT_UNSET,
       GUIDE_LABEL,
       GUIDE_QUEUE_LABEL,
       GUIDE_CHINTAN_RANK_HELP,

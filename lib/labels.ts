@@ -92,3 +92,16 @@ export const GUIDE_ANSWER_LABEL = "मार्गदर्शक उत्त�
 
 export const VAHAK_APPOINT_HELP =
   "मार्गदर्शक प्रत्येक गुरुवारी विचार वाहक नेमतात. नसेल तर त्या सत्संगाच्या शुक्रवारी सकाळी ६–१२ वाजता सत्संग चरणसेवक नेमू शकतात. शुक्रवार दुपारी १२ नंतरही रिकामे असेल तर मागच्या सत्संगाचा विचार वाहक चालू राहतो. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
+
+export const VAHAK_APPOINT_UNSET = "नेमलेले नाही";
+
+/** Compact one-line label for a place’s appointed विचार वाहक. */
+export function vahakDutyPersonLabel(
+  duty: { charansevak_name: string | null; charansevak_phone_display: string } | null,
+): string {
+  if (!duty) return VAHAK_APPOINT_UNSET;
+  const name = duty.charansevak_name?.trim();
+  const phone = duty.charansevak_phone_display?.trim();
+  if (name && phone) return `${name} · ${phone}`;
+  return name || phone || VAHAK_APPOINT_UNSET;
+}
