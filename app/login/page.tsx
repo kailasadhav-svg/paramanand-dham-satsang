@@ -7,7 +7,8 @@ import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { loadProfile } from "@/lib/offline/profile";
 import { defaultHomePath } from "@/lib/roles";
 
-const PIN_SLOT_COUNT = 8;
+const PIN_DOT_COUNT = 4;
+const PIN_MAX_LENGTH = 8;
 const PIN_MIN_LENGTH = 4;
 
 function LoginForm() {
@@ -56,11 +57,10 @@ function LoginForm() {
   }
 
   function press(digit: string) {
-    const next = (pin + digit).slice(0, PIN_SLOT_COUNT);
+    const next = (pin + digit).slice(0, PIN_MAX_LENGTH);
     setPin(next);
     setError(null);
-    // Wait until all 8 slots are filled so an 8-digit ADMIN_PIN can be entered.
-    if (next.length === PIN_SLOT_COUNT) void submit(next);
+    if (next.length === PIN_MIN_LENGTH) void submit(next);
   }
 
   function backspace() {
@@ -92,14 +92,14 @@ function LoginForm() {
       <div className="mt-10 card px-5 py-6">
         <p className="text-center text-sm font-semibold">प्रवेश पिन</p>
         <div className="pin-dots mt-4 flex flex-nowrap justify-center gap-2">
-          {Array.from({ length: PIN_SLOT_COUNT }).map((_, i) => (
+          {Array.from({ length: PIN_DOT_COUNT }).map((_, i) => (
             <span
               key={i}
               className={`h-3 w-3 shrink-0 rounded-full ${i < pin.length ? "filled bg-saffron-700" : "bg-saffron-200"}`}
             />
           ))}
         </div>
-        <p className="pin-hint mt-2 text-center text-xs text-temple-muted">८ अंकी पिन</p>
+        <p className="pin-hint mt-2 text-center text-xs text-temple-muted">४ अंकी पिन</p>
         {error ? <p className="mt-3 text-center text-sm text-red-700">{error}</p> : null}
         <div className="pin-pad mt-6 grid grid-cols-3 gap-3">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
@@ -128,7 +128,7 @@ function LoginForm() {
           </button>
           <button
             type="button"
-            disabled={loading || pin.length < PIN_MIN_LENGTH || pin.length > PIN_SLOT_COUNT}
+            disabled={loading || pin.length < PIN_MIN_LENGTH}
             onClick={() => void submit(pin)}
             className="pin-ok rounded-2xl bg-saffron-700 py-4 text-sm font-semibold text-white disabled:opacity-50"
           >
