@@ -17,6 +17,7 @@ import {
   vahakDutyPersonLabel,
   VAHAK_NO_TOPIC_EDIT_HELP,
   GUIDE_LABEL,
+  GUIDE_MAIN_WORK_HELP,
   GUIDE_QUEUE_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_QUESTION_HELP,
@@ -311,6 +312,12 @@ describe("चिंतन copy", () => {
     );
     assert.match(attendance, /SATSANG_CHARANSEVAK_LABEL/);
     assert.match(attendance, /VAHAK_APPOINT_HELP/);
+    assert.match(attendance, /GUIDE_MAIN_WORK_HELP/);
+    assert.match(attendance, /canSeeGuideScreens/);
+    assert.match(attendance, /href="\/weekly"/);
+    assert.match(attendance, /href="\/questions"/);
+    assert.equal(GUIDE_MAIN_WORK_HELP.includes("सत्संग चरणसेवक"), true);
+    assert.match(GUIDE_MAIN_WORK_HELP, /चिंतनावर उत्तर/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /ThursdayTithiBar/);
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
@@ -345,6 +352,7 @@ describe("चिंतन copy", () => {
       VAHAK_APPOINT_HELP,
       VAHAK_APPOINT_UNSET,
       GUIDE_LABEL,
+      GUIDE_MAIN_WORK_HELP,
       GUIDE_QUEUE_LABEL,
       GUIDE_CHINTAN_RANK_HELP,
       GUIDE_QUESTION_HELP,

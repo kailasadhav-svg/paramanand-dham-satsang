@@ -11,13 +11,15 @@ import {
   OFF_SITE_WARNING,
   ON_SITE_BLESSING,
 } from "@/lib/geo";
-import { canApproveCharansevak, canSeeStaffScreens } from "@/lib/roles";
+import { canApproveCharansevak, canSeeGuideScreens, canSeeStaffScreens } from "@/lib/roles";
 import { displayPhone } from "@/lib/offline/phone";
 import {
+  GUIDE_MAIN_WORK_HELP,
   SATSANG_CHARANSEVAK_LABEL,
   VAHAK_APPOINT_HELP,
   vahakDutyPersonLabel,
 } from "@/lib/labels";
+import Link from "next/link";
 
 type Meeting = {
   place_id: number;
@@ -71,6 +73,7 @@ async function readGps(): Promise<GeoPos> {
 export default function AttendancePage() {
   const profile = useProfile();
   const staff = canSeeStaffScreens(profile.role);
+  const guide = canSeeGuideScreens(profile.role);
   const canApprove = canApproveCharansevak(profile.role);
 
   const [places, setPlaces] = useState<Place[]>([]);
@@ -382,6 +385,31 @@ export default function AttendancePage() {
             : "या स्थळी किती परमानंद चरणसेवक आले ते नोंदवा. चुकले तर संख्या / वेळ पुन्हा बदलून जतन करा."}
         </p>
       </div>
+
+      {guide ? (
+        <section className="space-y-2 rounded-2xl bg-saffron-50 p-3 ring-1 ring-saffron-200">
+          <p className="text-sm font-semibold text-saffron-900">
+            उपस्थिती {SATSANG_CHARANSEVAK_LABEL} यांचे काम
+          </p>
+          <p className="text-[11px] leading-relaxed text-temple-muted">
+            {GUIDE_MAIN_WORK_HELP}
+          </p>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold">
+            <Link
+              href="/weekly"
+              className="rounded-full bg-saffron-700 px-3 py-1.5 text-white"
+            >
+              चिंतन
+            </Link>
+            <Link
+              href="/questions"
+              className="rounded-full bg-white px-3 py-1.5 text-saffron-900 ring-1 ring-saffron-200"
+            >
+              प्रश्नोत्तर
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <PlaceDateBar
         places={places}

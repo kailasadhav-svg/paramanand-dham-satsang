@@ -95,6 +95,10 @@ export const VAHAK_APPOINT_HELP =
 
 export const VAHAK_APPOINT_UNSET = "नेमलेले नाही";
 
+/** मार्गदर्शक home focus — attendance recording is सत्संग चरणसेवक work. */
+export const GUIDE_MAIN_WORK_HELP =
+  "उपस्थिती नोंद सत्संग चरणसेवकांचे काम. मार्गदर्शक मुख्य काम: चिंतनावर उत्तर, विषय, प्रश्नोत्तर.";
+
 /** Compact one-line label for a place’s appointed विचार वाहक. */
 export function vahakDutyPersonLabel(
   duty: { charansevak_name: string | null; charansevak_phone_display: string } | null,

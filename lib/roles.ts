@@ -184,5 +184,7 @@ export function roleLabelMarathi(role: StaffRole): string {
 }
 
 export function defaultHomePath(role: StaffRole): string {
-  return canSeeStaffScreens(role) ? "/attendance" : "/ajapa";
+  if (role === "guru") return "/weekly";
+  if (canSeeStaffScreens(role)) return "/attendance";
+  return "/ajapa";
 }

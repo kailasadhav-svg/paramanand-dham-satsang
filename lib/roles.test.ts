@@ -12,6 +12,7 @@ import {
   canSeeChintanBody,
   canSeeGuideScreens,
   canSeeStaffScreens,
+  defaultHomePath,
   detectStaffRole,
   roleLabelMarathi,
 } from "./roles.ts";
@@ -126,6 +127,15 @@ describe("canAppointVahak", () => {
       }),
       false,
     );
+  });
+});
+
+describe("defaultHomePath", () => {
+  it("sends मार्गदर्शक to चिंतन, संगणक to attendance, चरणसेवक to अजपा", () => {
+    assert.equal(defaultHomePath("guru"), "/weekly");
+    assert.equal(defaultHomePath("software"), "/attendance");
+    const home = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+    assert.match(home, /defaultHomePath\(detectStaffRole\(actor\)\)/);
   });
 });
 
