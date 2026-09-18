@@ -69,9 +69,18 @@ export function canSeeSoftwareRights(role: StaffRole): boolean {
   return role === "software";
 }
 
-/** नवीन सत्संगी (नाव+मोबाइल) नेमणूक — संचालक / संवादक / चरणसेवक */
+/**
+ * App access / appoint परमानंद चरणसेवक into the system.
+ * Only संवादक (मधुसुदनदास / super-admin — `guru` role) may approve.
+ * चरणसेवक admin must not appoint; there is no recommend-vs-approve queue.
+ */
+export function canApproveCharansevak(role: StaffRole): boolean {
+  return role === "guru";
+}
+
+/** @deprecated Use canApproveCharansevak — same guru-only rule. */
 export function canAppointSatsangi(role: StaffRole): boolean {
-  return role === "software" || role === "guru" || role === "charansevak";
+  return canApproveCharansevak(role);
 }
 
 export function appDisplayName(role: StaffRole): string {

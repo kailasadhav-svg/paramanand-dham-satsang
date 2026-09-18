@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 const ONE_PER_WEEK_MSG =
-  "हमी: एका आठवड्यात (एक गुरुवार) एका सत्संगी/चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न पाठवता येतो. या आठवड्याचा प्रश्न आधीच गेला आहे.";
+  "हमी: एका आठवड्यात (एक गुरुवार) एका परमानंद चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न पाठवता येतो. या आठवड्याचा प्रश्न आधीच गेला आहे.";
 
 /** Meta WhatsApp OTP — साधकाच्या मोबाइलवर; खात्री झाल्यावरच escalate. */
 export async function POST(request: Request, ctx: Ctx) {

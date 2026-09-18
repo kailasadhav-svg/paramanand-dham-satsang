@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const role = actor ? detectStaffRole(actor) : "charansevak";
   const all = await listPlaces();
 
-  // Appointed सत्संगी → फक्त त्यांचे home स्थळ (प्रश्न / उपस्थिती)
+  // Appointed परमानंद चरणसेवक → फक्त त्यांचे home स्थळ (प्रश्न / उपस्थिती)
   if (actor && !canSeeStaffScreens(role)) {
     try {
       const member = await getSatsangiByPhone(actor);

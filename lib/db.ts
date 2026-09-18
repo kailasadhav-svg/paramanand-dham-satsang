@@ -279,6 +279,7 @@ async function migrate(db: Client) {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_date ON place_duties(meeting_date)`,
     `CREATE INDEX IF NOT EXISTS idx_place_duties_phone ON place_duties(charansevak_phone)`,
+    // Table name kept for migrations; rows are appointed परमानंद चरणसेवक.
     `CREATE TABLE IF NOT EXISTS satsangi_members (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       phone TEXT NOT NULL UNIQUE,
@@ -751,6 +752,7 @@ export async function clearDuty(placeId: number, date: string): Promise<boolean>
   return (result.rowsAffected ?? 0) > 0;
 }
 
+/** Appointed परमानंद चरणसेवक (table `satsangi_members` kept for migrations). */
 export type SatsangiMember = {
   id: number;
   phone: string;

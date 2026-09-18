@@ -10,7 +10,7 @@ import {
   OFF_SITE_WARNING,
   ON_SITE_BLESSING,
 } from "@/lib/geo";
-import { canAppointSatsangi, canSeeStaffScreens } from "@/lib/roles";
+import { canApproveCharansevak, canSeeStaffScreens } from "@/lib/roles";
 import { displayPhone } from "@/lib/offline/phone";
 
 type Meeting = {
@@ -65,7 +65,7 @@ async function readGps(): Promise<GeoPos> {
 export default function AttendancePage() {
   const profile = useProfile();
   const staff = canSeeStaffScreens(profile.role);
-  const canAppoint = canAppointSatsangi(profile.role);
+  const canApprove = canApproveCharansevak(profile.role);
 
   const [places, setPlaces] = useState<Place[]>([]);
   const [placeId, setPlaceId] = useState<number | "">("");
@@ -90,8 +90,8 @@ export default function AttendancePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [appointBusy, setAppointBusy] = useState(false);
-  const [appointMsg, setAppointMsg] = useState<string | null>(null);
+  const [approveBusy, setApproveBusy] = useState(false);
+  const [approveMsg, setApproveMsg] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<number | "">("");
 
   const selectedPlace = useMemo(
@@ -133,10 +133,10 @@ export default function AttendancePage() {
   }, []);
 
   const loadMembers = useCallback(async () => {
-    if (!canAppoint) return;
+    if (!canApprove) return;
     const data = await api<{ members: Member[] }>("/api/satsangi-members");
     setMembers(data.members);
-  }, [canAppoint]);
+  }, [canApprove]);
 
   useEffect(() => {
     void loadDuties(date).catch((e) =>
@@ -195,13 +195,13 @@ export default function AttendancePage() {
     }
   }
 
-  async function appointMember() {
+  async function approveMember() {
     if (!placeId) {
-      setError("आधी स्थळ निवडा — सत्संगी त्याच स्थळाचा राहील");
+      setError("आधी स्थळ निवडा — परमानंद चरणसेवक त्याच स्थळाचा राहील");
       return;
     }
-    setAppointBusy(true);
-    setAppointMsg(null);
+    setApproveBusy(true);
+    setApproveMsg(null);
     setError(null);
     try {
       const data = await api<{
@@ -218,15 +218,15 @@ export default function AttendancePage() {
       setNewPhone("");
       await loadMembers();
       setSelectedMemberId(data.member.id);
-      setAppointMsg(
-        `सत्संगी जोडला: ${data.member.name} · ${data.member.phone_display} · ${
+      setApproveMsg(
+        `परमानंद चरणसेवक मंजूर: ${data.member.name} · ${data.member.phone_display} · ${
           data.member.home_place_name || selectedPlace?.name || ""
         }`,
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "सत्संगी जोडणे अयशस्वी");
+      setError(e instanceof Error ? e.message : "मंजुरी अयशस्वी");
     } finally {
-      setAppointBusy(false);
+      setApproveBusy(false);
     }
   }
 
@@ -347,9 +347,13 @@ export default function AttendancePage() {
   return (
     <div className="space-y-4 pb-8">
       <div>
-        <h2 className="text-lg font-bold">उपस्थिती · एडिट</h2>
+        <h2 className="text-lg font-bold">
+          {staff ? "उपस्थिती · एडिट" : "उपस्थिती · परमानंद चरणसेवक"}
+        </h2>
         <p className="text-xs text-temple-muted">
-          चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा
+          {staff
+            ? "चुकले तर संख्या / वेळ / GPS पुन्हा बदलून «दुरुस्ती जतन» दाबा"
+            : "या स्थळी किती परमानंद चरणसेवक आले ते नोंदवा. चुकले तर संख्या / वेळ पुन्हा बदलून जतन करा."}
         </p>
       </div>
 
@@ -361,13 +365,19 @@ export default function AttendancePage() {
         onDate={markDirty(setDate)}
       />
 
-      {canAppoint ? (
+      {!canApprove && !staff ? (
+        <p className="rounded-xl bg-saffron-50 px-3 py-2 text-[11px] leading-relaxed text-temple-muted">
+          तुमचे काम: उपस्थित परमानंद चरणसेवक संख्या नोंदवा. नवीन सदस्य मंजुरी फक्त संवादक (मधुसुदनदास) करतात.
+        </p>
+      ) : null}
+
+      {canApprove ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
           <h3 className="break-words text-sm font-bold text-saffron-900">
-            नवीन सत्संगी जोडा
+            नवीन परमानंद चरणसेवक मंजूर करा
           </h3>
           <p className="break-words text-[11px] text-temple-muted">
-            सेवक / संवादक / चरणसेवक · नाव + मोबाइल · स्थळ{" "}
+            फक्त संवादक (मधुसुदनदास) · नाव + मोबाइल · स्थळ{" "}
             <strong>{selectedPlace?.name || "—"}</strong>
           </p>
           <input
@@ -387,21 +397,21 @@ export default function AttendancePage() {
           />
           <button
             type="button"
-            disabled={appointBusy || !placeId || !newName.trim() || !newPhone.trim()}
-            onClick={() => void appointMember()}
+            disabled={approveBusy || !placeId || !newName.trim() || !newPhone.trim()}
+            onClick={() => void approveMember()}
             className="rounded-full bg-saffron-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            {appointBusy ? "जोडत आहे…" : "सत्संगी जोडा"}
+            {approveBusy ? "मंजूर करत आहे…" : "मंजूर करा"}
           </button>
-          {appointMsg ? (
+          {approveMsg ? (
             <p className="break-words text-xs font-semibold text-emerald-800">
-              {appointMsg}
+              {approveMsg}
             </p>
           ) : null}
 
           <div className="space-y-2 border-t border-saffron-100 pt-3">
             <label className="block text-xs font-semibold text-temple-muted">
-              या स्थळाचे सत्संगी (ड्रॉपडाउन)
+              या स्थळाचे परमानंद चरणसेवक (ड्रॉपडाउन)
             </label>
             <select
               value={selectedMemberId === "" ? "" : String(selectedMemberId)}
@@ -410,12 +420,12 @@ export default function AttendancePage() {
                 setSelectedMemberId(Number.isFinite(id) ? id : "");
               }}
               className="w-full min-w-0 rounded-xl bg-saffron-50 px-3 py-2.5 text-sm font-semibold ring-1 ring-saffron-200"
-              aria-label="सत्संगी निवडा"
+              aria-label="परमानंद चरणसेवक निवडा"
             >
               <option value="">
                 {placeMembers.length
                   ? `निवडा… (${placeMembers.length})`
-                  : "या स्थळावर अजून सत्संगी नाही"}
+                  : "या स्थळावर अजून परमानंद चरणसेवक नाही"}
               </option>
               {placeMembers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -580,7 +590,9 @@ export default function AttendancePage() {
 
       <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 ring-1 ring-saffron-200">
         <div>
-          <p className="text-xs font-semibold text-temple-muted">एकूण उपस्थिती</p>
+          <p className="text-xs font-semibold text-temple-muted">
+            {staff ? "एकूण उपस्थिती" : "एकूण परमानंद चरणसेवक"}
+          </p>
           <p className="text-[11px] text-temple-muted">+/− किंवा आकडा टाइप · एडिट</p>
         </div>
         <p className="text-3xl font-bold tabular-nums text-saffron-800">{total}</p>

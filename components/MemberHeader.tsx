@@ -20,7 +20,9 @@ export function MemberHeader() {
       <div className="mx-auto flex max-w-lg items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-wide text-saffron-700">परमानंद धाम</p>
-          <h1 className="font-display text-2xl leading-tight text-saffron-900">चरणसेवक</h1>
+          <h1 className="font-display text-2xl leading-tight text-saffron-900">
+            परमानंद चरणसेवक
+          </h1>
         </div>
         <button
           type="button"

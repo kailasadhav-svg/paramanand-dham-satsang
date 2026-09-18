@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
 };
 
 const ROLE_LABEL = {
-  charansevak: "चरणसेवक",
+  charansevak: "परमानंद चरणसेवक",
   guru: "संवादक",
   software: "सेवक",
 } as const;

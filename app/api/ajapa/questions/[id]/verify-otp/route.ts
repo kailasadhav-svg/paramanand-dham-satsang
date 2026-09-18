@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 const ONE_PER_WEEK_MSG =
-  "हमी: एका आठवड्यात एका सत्संगी/चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न. या आठवड्याचा प्रश्न आधीच संवादकांकडे गेला आहे.";
+  "हमी: एका आठवड्यात एका परमानंद चरणसेवकाकडून मधुसुदनदास यांना फक्त एकच प्रश्न. या आठवड्याचा प्रश्न आधीच संवादकांकडे गेला आहे.";
 
 /** Verify Meta WhatsApp OTP → escalate to मधुसुदनदास. */
 export async function POST(request: Request, ctx: Ctx) {

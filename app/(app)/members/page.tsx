@@ -31,7 +31,7 @@ export default function MembersAdminPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">चरणसेवक</h2>
+      <h2 className="text-lg font-bold">परमानंद चरणसेवक</h2>
       <p className="text-sm text-temple-muted">
         ६-अंकी संकेत (टक्कर): <span className="font-bold text-saffron-800">{collisionCount}</span>
       </p>

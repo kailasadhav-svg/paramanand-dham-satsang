@@ -5,14 +5,14 @@ import {
   listSatsangiMembers,
   upsertSatsangiMember,
 } from "@/lib/db";
-import { displayPhone, normalizePhone } from "@/lib/offline/phone";
-import { canAppointSatsangi, detectStaffRole } from "@/lib/roles";
+import { displayPhone } from "@/lib/offline/phone";
+import { canApproveCharansevak, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 
-/** Appointed सत्संगी list (attendance / प्रश्न place lock). */
+/** Appointed परमानंद चरणसेवक list (attendance / प्रश्न place lock). */
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
@@ -20,8 +20,11 @@ export async function GET(request: Request) {
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
-  if (!actor || !canAppointSatsangi(detectStaffRole(actor))) {
-    return jsonError("फक्त संचालक / संवादक / चरणसेवक यादी पाहू शकतात", 403);
+  if (!actor || !canApproveCharansevak(detectStaffRole(actor))) {
+    return jsonError(
+      "फक्त संवादक (मधुसुदनदास) परमानंद चरणसेवक यादी पाहू शकतात",
+      403,
+    );
   }
 
   const members = await listSatsangiMembers();
@@ -40,8 +43,11 @@ export async function POST(request: Request) {
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
-  if (!actor || !canAppointSatsangi(detectStaffRole(actor))) {
-    return jsonError("फक्त संचालक / संवादक / चरणसेवक नेमणूक करू शकतात", 403);
+  if (!actor || !canApproveCharansevak(detectStaffRole(actor))) {
+    return jsonError(
+      "फक्त संवादक (मधुसुदनदास) परमानंद चरणसेवक मंजूर करू शकतात",
+      403,
+    );
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
 
   const homePlaceId = Number(body.home_place_id);
   if (!Number.isFinite(homePlaceId)) {
-    return jsonError("स्थळ निवडा — सत्संगी त्याच स्थळाचा राहील", 400);
+    return jsonError("स्थळ निवडा — परमानंद चरणसेवक त्याच स्थळाचा राहील", 400);
   }
   const place = await getPlace(homePlaceId);
   if (!place) return jsonError("स्थान सापडले नाही", 404);
