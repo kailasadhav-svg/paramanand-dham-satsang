@@ -10,7 +10,12 @@ import {
 } from "./auth-policy.ts";
 import { csrfExemptPath, csrfOriginOk, isAllowedOrigin } from "./csrf.ts";
 import { isProductionReady } from "./health.ts";
-import { canSeeStaffScreens, detectStaffRole } from "./roles.ts";
+import {
+  canApproveCharansevak,
+  canAppointSatsangi,
+  canSeeStaffScreens,
+  detectStaffRole,
+} from "./roles.ts";
 import {
   cookieSecureEnabled,
   isServingProduction,
@@ -292,5 +297,27 @@ describe("row isolation for चरणसेवक", () => {
   it("lets संवादक / सेवक list others", () => {
     assert.equal(canSeeStaffScreens(detectStaffRole("9225118811")), true);
     assert.equal(canSeeStaffScreens(detectStaffRole("9850120960")), true);
+  });
+});
+
+describe("app access approval — परमानंद चरणसेवक", () => {
+  it("only संवादक (guru / मधुसुदनदास super-admin) may approve", () => {
+    assert.equal(canApproveCharansevak("guru"), true);
+    assert.equal(canApproveCharansevak(detectStaffRole("9850120960")), true);
+    assert.equal(canAppointSatsangi("guru"), true);
+  });
+
+  it("denies सेवक and चरणसेवक admin appoint/approve power", () => {
+    assert.equal(canApproveCharansevak("software"), false);
+    assert.equal(canApproveCharansevak("charansevak"), false);
+    assert.equal(canApproveCharansevak(detectStaffRole("9225118811")), false);
+    assert.equal(canApproveCharansevak(detectStaffRole("9423078811")), false);
+    assert.equal(canAppointSatsangi("charansevak"), false);
+  });
+
+  it("keeps attendance staff screens for सेवक / संवादक, not चरणसेवक", () => {
+    assert.equal(canSeeStaffScreens("software"), true);
+    assert.equal(canSeeStaffScreens("guru"), true);
+    assert.equal(canSeeStaffScreens("charansevak"), false);
   });
 });

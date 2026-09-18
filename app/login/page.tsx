@@ -132,7 +132,7 @@ function LoginForm() {
           अजपा · ajpa
         </Link>
         <Link href="/member-login" className="text-saffron-800">
-          चरणसेवक प्रवेश
+          परमानंद चरणसेवक प्रवेश
         </Link>
       </div>
 

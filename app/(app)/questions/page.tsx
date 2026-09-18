@@ -163,7 +163,7 @@ export default function QuestionsPage() {
         <p className="break-words text-xs text-temple-muted">
           {staff
             ? "सेवक / संवादक — प्रश्न व उत्तर"
-            : "सत्संगी — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
+            : "परमानंद चरणसेवक — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
         </p>
       </div>
       <PlaceDateBar

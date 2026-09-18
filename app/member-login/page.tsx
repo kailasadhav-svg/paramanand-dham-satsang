@@ -34,7 +34,9 @@ function MemberLoginForm() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-6 py-10">
       <p className="text-center text-sm font-semibold text-saffron-700">श्री परमानंद धाम</p>
-      <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">चरणसेवक प्रवेश</h1>
+      <h1 className="mt-1 text-center font-display text-3xl text-saffron-900">
+        परमानंद चरणसेवक प्रवेश
+      </h1>
       <p className="mt-2 text-center text-sm text-temple-muted">मोबाइल + प्रवेश संकेत</p>
 
       <form onSubmit={(e) => void submit(e)} className="card mt-8 space-y-4 px-5 py-6">
