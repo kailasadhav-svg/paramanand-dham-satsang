@@ -58,6 +58,7 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
+    assert.equal(VAHAK_JOB_HELP.includes("विषय दुरुस्त करतात"), false);
     assert.match(TOPIC_THURSDAY_HELP, /गावानुसार/);
     assert.match(GUIDE_TOPIC_HELP, /सर्व गावांना/);
     assert.match(GUIDE_CHINTAN_RANK_HELP, /क्रमवार योग्य तीन/);
@@ -97,6 +98,8 @@ describe("चिंतन copy", () => {
     assert.match(ajapa, /GUIDE_QUESTION_HELP/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /GUIDE_TOPIC_HELP/);
+    assert.match(topic, /विषय तयार \/ दुरुस्ती फक्त मार्गदर्शक/);
+    assert.equal(topic.includes("या स्थळाचे"), false);
     const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
     assert.match(roles, /क्रमवार योग्य तीन/);
     assert.match(roles, /एकसमान/);

@@ -90,38 +90,22 @@ export async function PUT(request: Request) {
   const topicTouched =
     body.topic_kind !== undefined ||
     body.topic_title !== undefined ||
-    body.conductor !== undefined ||
     body.notes !== undefined;
-  const attendanceTouched =
-    body.men !== undefined ||
-    body.women !== undefined ||
-    body.children !== undefined ||
-    body.meeting_time !== undefined;
   const hasGeo =
     Number.isFinite(Number(body.latitude)) &&
     Number.isFinite(Number(body.longitude));
-  const topicOnly = topicTouched && !attendanceTouched && !hasGeo;
 
   if (topicTouched) {
-    const allowed = actor
-      ? await actorCanEditPlaceTopic(
-          actor,
-          Number(body.place_id),
-          String(body.meeting_date),
-        )
-      : false;
+    const allowed = actor ? await actorCanEditPlaceTopic(actor) : false;
     if (!allowed) {
-      return jsonError(
-        "फक्त या स्थळाचे परमानंद विचार वाहक किंवा मार्गदर्शक विषय दुरुस्त करू शकतात",
-        403,
-      );
+      return jsonError("फक्त मार्गदर्शक विषय तयार / दुरुस्त करू शकतात", 403);
     }
   }
 
   let checkin: Partial<MeetingPatch> = {};
 
-  // चरणसेवक attendance: सत्संग स्थळापासून ≤20m आवश्यक (विषय-only विचार वाहक जतन GPS नको)
-  if (!staff && !topicOnly) {
+  // चरणसेवक attendance: सत्संग स्थळापासून ≤20m आवश्यक
+  if (!staff) {
     const lat = Number(body.latitude);
     const lng = Number(body.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {

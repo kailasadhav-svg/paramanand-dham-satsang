@@ -180,7 +180,7 @@ export default function TopicPage() {
         <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
       ) : (
         <p className="text-sm text-temple-muted">
-          विषय दुरुस्ती फक्त या स्थळाचे {VAHAK_LABEL} किंवा मार्गदर्शक / संगणक.
+          विषय तयार / दुरुस्ती फक्त मार्गदर्शक. {VAHAK_LABEL} फक्त चिंतन पाठपुरावा व आले / बाकी पाहतात.
         </p>
       )}
     </div>

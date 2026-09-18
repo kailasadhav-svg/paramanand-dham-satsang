@@ -42,7 +42,9 @@ export const SEEKER_DEMO_PHONES = (
  * Official display roles (StaffRole remains software|guru|charansevak):
  * - परमानंद चरणसेवक — base for everyone (`charansevak`)
  * - सत्संग चरणसेवक — attendance / satsang recording (+ Friday Vahak appoint window)
- * - परमानंद विचार वाहक — weekly place duty, not a separate login class
+ * - परमानंद विचार वाहक — weekly place duty, not a separate login class.
+ *   चिंतन collect / follow-up / help + done/pending status only.
+ *   Cannot create or edit the village topic (मार्गदर्शक only).
  * - संगणक चरणसेवक — software (KAILAS)
  * - मार्गदर्शक चरणसेवक — Madhusudandas: topics, all चिंतन, approve app access, appoint Vahak
  *
@@ -123,6 +125,7 @@ export function canSeeAllAjapa(role: StaffRole): boolean {
   return canSeeGuideScreens(role);
 }
 
+/** Village topic create/edit — मार्गदर्शक only. विचार वाहक never. */
 export function canEditAnyPlaceTopic(role: StaffRole): boolean {
   return canSeeGuideScreens(role);
 }

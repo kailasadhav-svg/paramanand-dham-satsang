@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         default_place_id: places[0]?.id ?? null,
         place_locked: true,
         is_vahak: true,
-        can_edit_topic: true,
+        can_edit_topic: false,
         member_name: duties[0]?.charansevak_name ?? null,
       });
     }

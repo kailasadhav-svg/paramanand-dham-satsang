@@ -166,8 +166,10 @@ describe("role isolation", () => {
     assert.equal(canSeeGuideScreens("charansevak"), false);
     assert.equal(canEditWeeklyQuestion("guru"), true);
     assert.equal(canEditWeeklyQuestion("software"), false);
+    assert.equal(canEditWeeklyQuestion("charansevak"), false);
     assert.equal(canEditAnyPlaceTopic("guru"), true);
     assert.equal(canEditAnyPlaceTopic("software"), false);
+    assert.equal(canEditAnyPlaceTopic("charansevak"), false);
     assert.equal(canSeeAllAjapa("guru"), true);
     assert.equal(canSeeAllAjapa("software"), false);
     assert.equal(canSeeAllAjapa("charansevak"), false);
