@@ -44,6 +44,8 @@ type BindResponse = {
   message?: string;
   error?: string;
   debug_otp?: string;
+  whatsapp_ok?: boolean;
+  whatsapp_error?: string | null;
 };
 
 /** After PIN login — verified phone cookie decides software / guru / चरणसेवक screens. */
@@ -138,6 +140,13 @@ export function PhoneGate({ children }: { children: ReactNode }) {
         setNeedsOtp(true);
         setHint(data.message || "WhatsApp OTP टाका");
         if (data.debug_otp) setOtp(data.debug_otp);
+        if (data.whatsapp_ok === false && !data.debug_otp) {
+          setError(
+            data.whatsapp_error
+              ? `WhatsApp OTP गेला नाही: ${data.whatsapp_error.slice(0, 120)}`
+              : "WhatsApp OTP गेला नाही — पुन्हा पाठवा किंवा नंतर प्रयत्न करा",
+          );
+        }
         return;
       }
       const next = saveProfile({ phone: opts.phone });
@@ -221,18 +230,32 @@ export function PhoneGate({ children }: { children: ReactNode }) {
             {busy ? "कृपया थांबा…" : needsOtp ? "OTP खात्री करा" : "सुरू करा"}
           </button>
           {needsOtp ? (
-            <button
-              type="button"
-              className="w-full text-sm text-temple-muted underline"
-              disabled={busy}
-              onClick={() => {
-                setNeedsOtp(false);
-                setOtp("");
-                setHint(null);
-              }}
-            >
-              मोबाइल बदला
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="w-full rounded-full border border-saffron-300 py-2 text-sm font-semibold text-saffron-900 disabled:opacity-60"
+                disabled={busy}
+                onClick={() => {
+                  setOtp("");
+                  void bindPhone({ phone });
+                }}
+              >
+                OTP पुन्हा पाठवा
+              </button>
+              <button
+                type="button"
+                className="w-full text-sm text-temple-muted underline"
+                disabled={busy}
+                onClick={() => {
+                  setNeedsOtp(false);
+                  setOtp("");
+                  setHint(null);
+                  setError(null);
+                }}
+              >
+                मोबाइल बदला
+              </button>
+            </div>
           ) : null}
         </form>
       </div>

@@ -102,6 +102,33 @@ Quick Reply ≤ ३ बटणे. Session interactive title ≤ २० अक्
 
 **बटणे:** `समजलं` · `अ‍ॅप उघडा`
 
+### ६b) `home_login_otp` — अ‍ॅप लॉगिन OTP (LIVE · APPROVED)
+
+*Team Dhyeyapurti / Turiya `getTemplateList` — status **APPROVED**, category **AUTHENTICATION**, language **`en_US`**.*  
+*संगणक (`9225118811`) व मार्गदर्शक (`9850120960`) मोबाइल खात्रीसाठी हेच वापरा.*
+
+| Field | Value |
+|-------|--------|
+| Template name | `home_login_otp` |
+| Library | `verify_code_1` |
+| Language | `en_US` |
+| Body | `*{{1}}* is your verification code. For your security, do not share this code.` |
+| Footer | `Expires in 10 minutes.` |
+| Button | Copy code (Meta stores as URL subtype) |
+
+**Env (locked):**
+```
+WHATSAPP_OTP_TEMPLATE=home_login_otp
+WHATSAPP_OTP_AUTH=1
+WHATSAPP_OTP_LANG=en_US
+```
+
+App send shape (AUTHENTICATION):
+- body parameter = OTP  
+- button `sub_type=url` index `0` parameter = same OTP  
+
+Utility fallback (जर AUTH fail): `ajapa_app_otp` / `ajapa_welcome_code` (mr).
+
 ---
 
 ## सत्संग + रिपोर्ट (वेगळे — अजपा नसलेले)

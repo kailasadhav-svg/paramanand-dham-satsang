@@ -151,11 +151,22 @@ ADMIN_PIN=…          # unique, not 1960
 SESSION_SECRET=…     # long random
 WHATSAPP_VERIFY_TOKEN=…
 WHATSAPP_APP_SECRET=…
+# Outbound OTP (संगणक 9225118811 / मार्गदर्शक 9850120960):
+WHATSAPP_PROVIDER=meta          # or turiya
+WHATSAPP_TOKEN=…                # Meta Graph (meta provider)
+WHATSAPP_PHONE_NUMBER_ID=…
+# TURIYA_API_KEY=…              # only if WHATSAPP_PROVIDER=turiya
+WHATSAPP_DRY_RUN=0              # must be off on VPS — production ignores dry-run anyway
+WHATSAPP_OTP_TEMPLATE=home_login_otp   # APPROVED AUTHENTICATION (Turiya)
+WHATSAPP_OTP_AUTH=1             # body + copy-code button (Meta OTP format)
+WHATSAPP_OTP_LANG=en_US
 ```
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
 
-`GET /api/health` returns `{ ok, db: { store: "file" | "turso" }, production_ready }` when the store is reachable.
+Live OTP uses Meta AUTHENTICATION template **`home_login_otp`** (`en_US`, copy-code) already approved on Team Dhyeyapurti WABA. See `docs/AJAPA_WABA_TEMPLATES.md`.
+
+`GET /api/health` returns `{ ok, db, secrets, whatsapp: { outbound_ok, provider, dry_run }, production_ready }` when the store is reachable.
 
 ### Vercel / multi-instance production
 

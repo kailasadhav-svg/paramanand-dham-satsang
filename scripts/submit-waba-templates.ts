@@ -118,6 +118,13 @@ export const TEMPLATES: TemplateDef[] = [
     ],
   },
   {
+    name: "ajapa_app_otp",
+    category: "UTILITY",
+    language: "mr",
+    body: "परमानंद धाम · अ‍ॅप OTP: {{1}}\nअ‍ॅपमध्ये टाका. १० मिनिटे वैध.",
+    bodyExamples: [["123456"]],
+  },
+  {
     name: "satsang_wed_notice",
     category: "UTILITY",
     language: "mr",
