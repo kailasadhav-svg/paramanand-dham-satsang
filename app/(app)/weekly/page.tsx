@@ -15,6 +15,7 @@ import {
   CHINTAN_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_TOPIC_HELP,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
@@ -162,7 +163,7 @@ export default function WeeklyAdminPage() {
       ) : (
         <>
           <p className="text-xs font-semibold leading-relaxed text-temple-muted">
-            {VAHAK_NO_TOPIC_EDIT_HELP}
+            {TOPIC_EDIT_GUIDE_ONLY_HELP} {VAHAK_NO_TOPIC_EDIT_HELP}
           </p>
           <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
         </>

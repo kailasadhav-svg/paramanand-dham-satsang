@@ -7,6 +7,7 @@ import {
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
   CHINTAN_WRITE_PLACEHOLDER,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
@@ -45,6 +46,7 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
       VAHAK_NO_TOPIC_EDIT_HELP,
@@ -63,6 +65,7 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP, "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.");
     assert.equal(
       VAHAK_NO_TOPIC_EDIT_HELP,
       "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.",
@@ -99,6 +102,7 @@ describe("चिंतन copy", () => {
     const copy = [
       VAHAK_JOB_HELP,
       VAHAK_NO_TOPIC_EDIT_HELP,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       VAHAK_APPOINT_HELP,
       TOPIC_THURSDAY_HELP,
       GUIDE_TOPIC_HELP,
@@ -120,12 +124,42 @@ describe("चिंतन copy", () => {
       ["topic", topic],
       ["weekly", weekly],
     ] as const) {
+      assert.match(text, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
       assert.match(text, /VAHAK_NO_TOPIC_EDIT_HELP/);
       assert.match(text, /VAHAK_JOB_HELP/);
       for (const bad of skimAsVahakEditsTopic) {
         assert.equal(text.includes(bad), false, `${rel} contains ${bad}`);
       }
     }
+  });
+
+  it("forbids the old Vahak/software topic-edit copy", () => {
+    const forbidden = [
+      "विषय दुरुस्ती फक्त या स्थळाचे",
+      "या स्थळाचे परमानंद विचार वाहक",
+      "या स्थळाचे {VAHAK_LABEL}",
+      "विचार वाहक किंवा मार्गदर्शक / संगणक",
+      "{VAHAK_LABEL} किंवा मार्गदर्शक / संगणक",
+      "किंवा मार्गदर्शक विषय दुरुस्त",
+    ];
+    const files = [
+      "lib/labels.ts",
+      "app/(app)/topic/page.tsx",
+      "app/(app)/weekly/page.tsx",
+      "app/api/meetings/route.ts",
+      "app/me/page.tsx",
+    ];
+    for (const rel of files) {
+      const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+      for (const bad of forbidden) {
+        assert.equal(text.includes(bad), false, `${rel} still has ${bad}`);
+      }
+    }
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("या स्थळाचे"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("विचार वाहक"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("संगणक"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("या स्थळाचे"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("संगणक"), false);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {
@@ -160,7 +194,7 @@ describe("चिंतन copy", () => {
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /GUIDE_TOPIC_HELP/);
     assert.match(topic, /VAHAK_NO_TOPIC_EDIT_HELP/);
-    assert.equal(topic.includes("विषय तयार / दुरुस्ती फक्त मार्गदर्शक"), false);
+    assert.match(topic, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
     assert.equal(topic.includes("या स्थळाचे"), false);
     assert.match(topic, /CHINTAN_LABEL/);
     assert.match(topic, /CHINTAN_WRITE_PLACEHOLDER/);
@@ -229,6 +263,8 @@ describe("चिंतन copy", () => {
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weeklyPage, /ThursdayTithiBar/);
     assert.match(weeklyPage, /VAHAK_NO_TOPIC_EDIT_HELP/);
+    assert.match(weeklyPage, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
+    assert.equal(weeklyPage.includes("या स्थळाचे"), false);
     const report = readFileSync(new URL("../app/(app)/report/page.tsx", import.meta.url), "utf8");
     assert.match(report, /ThursdayTithiBar/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
@@ -247,6 +283,7 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
       VAHAK_NO_TOPIC_EDIT_HELP,

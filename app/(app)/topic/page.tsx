@@ -9,6 +9,7 @@ import {
   CHINTAN_LABEL,
   CHINTAN_WRITE_PLACEHOLDER,
   GUIDE_TOPIC_HELP,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_APPOINT_HELP,
   VAHAK_JOB_HELP,
@@ -186,7 +187,7 @@ export default function TopicPage() {
         <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
       ) : (
         <p className="text-sm text-temple-muted">
-          {VAHAK_NO_TOPIC_EDIT_HELP} {VAHAK_LABEL} फक्त चिंतन पाठपुरावा व आले / बाकी पाहतात.
+          {TOPIC_EDIT_GUIDE_ONLY_HELP} {VAHAK_LABEL} फक्त चिंतन पाठपुरावा व आले / बाकी पाहतात.
         </p>
       )}
     </div>
