@@ -128,6 +128,8 @@ describe("one विचार वाहक per place per Thursday", () => {
     );
     assert.match(meetings, /फक्त मार्गदर्शक विषय तयार \/ दुरुस्त करू शकतात/);
     assert.equal(meetings.includes("विचार वाहक किंवा मार्गदर्शक विषय"), false);
+    assert.equal(meetings.includes("या स्थळाचे परमानंद विचार वाहक"), false);
+    assert.equal(meetings.includes("मार्गदर्शक / संगणक विषय"), false);
     const places = readFileSync(new URL("../app/api/places/route.ts", import.meta.url), "utf8");
     assert.match(places, /can_edit_topic: false/);
     assert.equal(/is_vahak: true[\s\S]*can_edit_topic: true/.test(places), false);

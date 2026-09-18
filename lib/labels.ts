@@ -69,8 +69,15 @@ export const WEEKLY_ARCHIVE_VAHAK_HELP =
 export const VAHAK_LABEL = "परमानंद विचार वाहक";
 export const VAHAK_LABEL_SHORT = "विचार वाहक";
 
+/** Village topic create/edit — मार्गदर्शक only. Never Vahak or संगणक. */
+export const TOPIC_EDIT_GUIDE_ONLY_HELP = "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.";
+
+/** Own sentence so it cannot be skimmed as «विचार वाहक विषय दुरुस्त करतात». */
+export const VAHAK_NO_TOPIC_EDIT_HELP =
+  "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.";
+
 export const VAHAK_JOB_HELP =
-  "या आठवड्याचे परमानंद विचार वाहक सर्वांचे चिंतन जमा करतात, पाठपुरावा करतात आणि लिहिण्यास मदत करतात. स्थिती: आले / बाकी. विषय तयार/दुरुस्ती फक्त मार्गदर्शक. पूर्ण चिंतन फक्त मार्गदर्शक (मधुसुदनदास) पाहतात. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
+  "या आठवड्याचे परमानंद विचार वाहक सर्वांचे चिंतन जमा करतात, पाठपुरावा करतात आणि लिहिण्यास मदत करतात. स्थिती: आले / बाकी. पूर्ण चिंतन फक्त मार्गदर्शक (मधुसुदनदास) पाहतात. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
 
 export const GUIDE_LABEL = "मार्गदर्शक चरणसेवक";
 export const GUIDE_LABEL_SHORT = "मार्गदर्शक";

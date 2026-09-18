@@ -7,11 +7,13 @@ import {
   CHINTAN_LABEL,
   CHINTAN_MISSING_REMINDER,
   CHINTAN_WRITE_PLACEHOLDER,
+  TOPIC_EDIT_GUIDE_ONLY_HELP,
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
   VAHAK_LABEL_SHORT,
   VAHAK_APPOINT_HELP,
+  VAHAK_NO_TOPIC_EDIT_HELP,
   GUIDE_LABEL,
   GUIDE_QUEUE_LABEL,
   GUIDE_CHINTAN_RANK_HELP,
@@ -44,8 +46,10 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
       VAHAK_APPOINT_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
@@ -61,7 +65,19 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP, "विषय तयार / दुरुस्ती फक्त मार्गदर्शक.");
+    assert.equal(
+      VAHAK_NO_TOPIC_EDIT_HELP,
+      "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.",
+    );
+    assert.match(VAHAK_NO_TOPIC_EDIT_HELP, /काम नाही/);
+    assert.match(VAHAK_NO_TOPIC_EDIT_HELP, /फक्त मार्गदर्शक/);
     assert.equal(VAHAK_JOB_HELP.includes("विषय दुरुस्त करतात"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("विषय तयार"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("दुरुस्त"), false);
+    assert.equal(VAHAK_JOB_HELP.includes("दुरुस्ती"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("विषय दुरुस्त करतात"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("विचार वाहक विषय"), false);
     assert.match(TOPIC_THURSDAY_HELP, /गावानुसार/);
     assert.match(GUIDE_TOPIC_HELP, /सर्व गावांना/);
     assert.match(GUIDE_CHINTAN_RANK_HELP, /क्रमवार योग्य तीन/);
@@ -73,6 +89,87 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_APPOINT_HELP, /सत्संग चरणसेवक/);
     assert.match(VAHAK_APPOINT_HELP, /दुपारी १२/);
     assert.match(VAHAK_APPOINT_HELP, /परमानंद चरणसेवकांपैकी एक/);
+  });
+
+  it("cannot be skimmed as विचार वाहक editing विषय", () => {
+    const skimAsVahakEditsTopic = [
+      "विषय दुरुस्त करतात",
+      "विषय तयार करतात",
+      "विचार वाहक विषय दुरुस्त",
+      "विचार वाहक विषय तयार",
+      "परमानंद विचार वाहक विषय",
+    ];
+    const copy = [
+      VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
+      VAHAK_APPOINT_HELP,
+      TOPIC_THURSDAY_HELP,
+      GUIDE_TOPIC_HELP,
+    ];
+    for (const s of copy) {
+      for (const bad of skimAsVahakEditsTopic) {
+        assert.equal(s.includes(bad), false, `${s} contains ${bad}`);
+      }
+      for (const sent of s.split(/(?<=[।.])\s*/).filter(Boolean)) {
+        if (/या आठवड्याचे परमानंद विचार वाहक/.test(sent)) {
+          assert.equal(/विषय/.test(sent), false, sent);
+          assert.equal(/दुरुस्त/.test(sent), false, sent);
+        }
+      }
+    }
+    const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
+    const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    for (const [rel, text] of [
+      ["topic", topic],
+      ["weekly", weekly],
+    ] as const) {
+      assert.match(text, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
+      assert.match(text, /VAHAK_NO_TOPIC_EDIT_HELP/);
+      assert.match(text, /VAHAK_JOB_HELP/);
+      for (const bad of skimAsVahakEditsTopic) {
+        assert.equal(text.includes(bad), false, `${rel} contains ${bad}`);
+      }
+    }
+  });
+
+  it("forbids the old Vahak/software topic-edit copy", () => {
+    const forbidden = [
+      "विषय दुरुस्ती फक्त या स्थळाचे",
+      "या स्थळाचे परमानंद विचार वाहक",
+      "या स्थळाचे {VAHAK_LABEL}",
+      "विचार वाहक किंवा मार्गदर्शक / संगणक",
+      "{VAHAK_LABEL} किंवा मार्गदर्शक / संगणक",
+      "किंवा मार्गदर्शक विषय दुरुस्त",
+      "विषय एडिट",
+      "own place topic",
+    ];
+    const files = [
+      "lib/labels.ts",
+      "app/(app)/topic/page.tsx",
+      "app/(app)/weekly/page.tsx",
+      "app/api/meetings/route.ts",
+      "app/me/page.tsx",
+      "README.md",
+      "docs/AJAPA_QA_FLOW.md",
+      "docs/AJAPA_WABA_TEMPLATES.md",
+      "docs/META_TEMPLATE_STEP_BY_STEP.md",
+      "docs/LOCAL_FIRST_PWA.md",
+    ];
+    for (const rel of files) {
+      const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+      for (const bad of forbidden) {
+        assert.equal(text.includes(bad), false, `${rel} still has ${bad}`);
+      }
+    }
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("या स्थळाचे"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("विचार वाहक"), false);
+    assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("संगणक"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("या स्थळाचे"), false);
+    assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("संगणक"), false);
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    assert.match(readme, /Never create\/edit विषय/);
+    assert.match(readme, /create\/edit \*\*मार्गदर्शक only\*\*/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {
@@ -106,7 +203,8 @@ describe("चिंतन copy", () => {
     assert.match(ajapa, /GUIDE_QUESTION_HELP/);
     const topic = readFileSync(new URL("../app/(app)/topic/page.tsx", import.meta.url), "utf8");
     assert.match(topic, /GUIDE_TOPIC_HELP/);
-    assert.match(topic, /विषय तयार \/ दुरुस्ती फक्त मार्गदर्शक/);
+    assert.match(topic, /VAHAK_NO_TOPIC_EDIT_HELP/);
+    assert.match(topic, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
     assert.equal(topic.includes("या स्थळाचे"), false);
     assert.match(topic, /CHINTAN_LABEL/);
     assert.match(topic, /CHINTAN_WRITE_PLACEHOLDER/);
@@ -174,6 +272,9 @@ describe("चिंतन copy", () => {
     assert.match(topic, /ThursdayTithiBar/);
     const weeklyPage = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weeklyPage, /ThursdayTithiBar/);
+    assert.match(weeklyPage, /VAHAK_NO_TOPIC_EDIT_HELP/);
+    assert.match(weeklyPage, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
+    assert.equal(weeklyPage.includes("या स्थळाचे"), false);
     const report = readFileSync(new URL("../app/(app)/report/page.tsx", import.meta.url), "utf8");
     assert.match(report, /ThursdayTithiBar/);
     const me = readFileSync(new URL("../app/me/page.tsx", import.meta.url), "utf8");
@@ -192,8 +293,10 @@ describe("चिंतन copy", () => {
       CHINTAN_WRITE_PLACEHOLDER,
       CHINTAN_DEADLINE_HELP,
       CHINTAN_MISSING_REMINDER,
+      TOPIC_EDIT_GUIDE_ONLY_HELP,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
+      VAHAK_NO_TOPIC_EDIT_HELP,
       VAHAK_LABEL,
       VAHAK_LABEL_SHORT,
       VAHAK_APPOINT_HELP,
