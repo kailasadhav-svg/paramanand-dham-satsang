@@ -117,5 +117,19 @@ describe("one विचार वाहक per place per Thursday", () => {
     assert.match(view, /canSeeChintanBody/);
     assert.match(view, /canEditWeeklyQuestion/);
     assert.match(view, /placeCodes = \[\]/);
+    assert.match(view, /canEditAnyPlaceTopic\(detectStaffRole/);
+    assert.equal(view.includes("actorIsVahak(phone, date, placeId)"), false);
+  });
+
+  it("does not let विचार वाहक edit the village topic", () => {
+    const meetings = readFileSync(
+      new URL("../app/api/meetings/route.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(meetings, /फक्त मार्गदर्शक विषय तयार \/ दुरुस्त करू शकतात/);
+    assert.equal(meetings.includes("विचार वाहक किंवा मार्गदर्शक विषय"), false);
+    const places = readFileSync(new URL("../app/api/places/route.ts", import.meta.url), "utf8");
+    assert.match(places, /can_edit_topic: false/);
+    assert.equal(/is_vahak: true[\s\S]*can_edit_topic: true/.test(places), false);
   });
 });

@@ -14,6 +14,8 @@ import {
   canApproveCharansevak,
   canAppointSatsangi,
   canAppointVahak,
+  canEditAnyPlaceTopic,
+  canEditWeeklyQuestion,
   canSeeAllAjapa,
   canSeeChintanBody,
   canSeeGuideScreens,
@@ -338,5 +340,17 @@ describe("चिंतन body visibility", () => {
     assert.equal(canSeeChintanBody("charansevak"), false);
     assert.equal(canSeeChintanBody(detectStaffRole("9225118811")), false);
     assert.equal(canSeeChintanBody(detectStaffRole("9423078811")), false);
+  });
+});
+
+describe("village topic create/edit", () => {
+  it("is मार्गदर्शक-only — विचार वाहक cannot edit", () => {
+    assert.equal(canEditAnyPlaceTopic("guru"), true);
+    assert.equal(canEditAnyPlaceTopic(detectStaffRole("9850120960")), true);
+    assert.equal(canEditAnyPlaceTopic("software"), false);
+    assert.equal(canEditAnyPlaceTopic("charansevak"), false);
+    assert.equal(canEditAnyPlaceTopic(detectStaffRole("9225118811")), false);
+    assert.equal(canEditAnyPlaceTopic(detectStaffRole("9423078811")), false);
+    assert.equal(canEditWeeklyQuestion("charansevak"), false);
   });
 });

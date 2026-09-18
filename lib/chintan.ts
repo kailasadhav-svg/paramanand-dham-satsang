@@ -35,14 +35,9 @@ export async function actorIsVahak(
   return duties.length > 0;
 }
 
-export async function actorCanEditPlaceTopic(
-  phone: string,
-  placeId: number,
-  date: string,
-): Promise<boolean> {
-  const role = detectStaffRole(phone);
-  if (canEditAnyPlaceTopic(role)) return true;
-  return actorIsVahak(phone, date, placeId);
+/** Topic create/edit — मार्गदर्शक only. विचार वाहक cannot edit. */
+export async function actorCanEditPlaceTopic(phone: string): Promise<boolean> {
+  return canEditAnyPlaceTopic(detectStaffRole(phone));
 }
 
 export async function listChintanRoster(opts: {
