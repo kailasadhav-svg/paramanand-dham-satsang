@@ -40,6 +40,7 @@ const config: Config = {
           "Noto Serif Devanagari",
           "serif",
         ],
+        kalam: ["var(--font-kalam)", "Kalam", "cursive"],
       },
       boxShadow: {
         card: "0 10px 30px -18px rgba(127, 46, 15, 0.45)",

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { api } from "@/lib/api";
 
 function MemberLoginForm() {
@@ -82,6 +83,7 @@ function MemberLoginForm() {
           प्रवेश पिन
         </Link>
       </p>
+      <AuthCoupletFooter />
     </div>
   );
 }
