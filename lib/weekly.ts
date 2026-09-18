@@ -89,7 +89,7 @@ export async function upsertWeeklyQuestion(input: {
     throw new WeeklyError("अवैध तारीख", 400);
   }
   const question = input.question.trim();
-  if (!question) throw new WeeklyError("प्रश्न लिहा", 400);
+  if (!question) throw new WeeklyError("विषय लिहा", 400);
   const source = input.source?.trim() || null;
   const now = new Date().toISOString();
   const db = await getDb();
@@ -103,7 +103,7 @@ export async function upsertWeeklyQuestion(input: {
     args: [input.week_start, question, source, now, now],
   });
   const saved = await getWeeklyQuestion(input.week_start);
-  if (!saved) throw new WeeklyError("प्रश्न जतन अयशस्वी", 500);
+  if (!saved) throw new WeeklyError("विषय जतन अयशस्वी", 500);
   return saved;
 }
 
@@ -126,12 +126,12 @@ export async function submitWeeklyAnswer(input: {
 }): Promise<WeeklyAnswer> {
   const weekStart = input.week_start || defaultThursdayYmd();
   const q = await getWeeklyQuestion(weekStart);
-  if (!q) throw new WeeklyError("या आठवड्याचा प्रश्न नाही", 404);
+  if (!q) throw new WeeklyError("या आठवड्याचा विषय नाही", 404);
   const existing = await getMemberAnswer(q.id, input.memberId);
-  if (existing) throw new WeeklyError("उत्तर आधी नोंदले आहे", 409);
+  if (existing) throw new WeeklyError("चिंतन आधी नोंदले आहे", 409);
   const answer = input.answer.trim();
-  if (!answer) throw new WeeklyError("उत्तर लिहा", 400);
-  if (answer.length > 4000) throw new WeeklyError("उत्तर खूप मोठे आहे", 400);
+  if (!answer) throw new WeeklyError("चिंतन लिहा", 400);
+  if (answer.length > 4000) throw new WeeklyError("चिंतन खूप मोठे आहे", 400);
   const now = new Date().toISOString();
   const db = await getDb();
   try {
@@ -145,12 +145,12 @@ export async function submitWeeklyAnswer(input: {
       sql: "SELECT * FROM weekly_answers WHERE id = ?",
       args: [id],
     });
-    if (!rs.rows[0]) throw new WeeklyError("उत्तर जतन अयशस्वी", 500);
+    if (!rs.rows[0]) throw new WeeklyError("चिंतन जतन अयशस्वी", 500);
     return asAnswer(rs.rows[0]);
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
     if (/UNIQUE|unique/i.test(message)) {
-      throw new WeeklyError("उत्तर आधी नोंदले आहे", 409);
+      throw new WeeklyError("चिंतन आधी नोंदले आहे", 409);
     }
     throw err;
   }

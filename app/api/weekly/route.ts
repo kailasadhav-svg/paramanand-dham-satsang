@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       answer: weekly.answer,
     });
   } catch (err) {
-    return routeErrorResponse(err, "साप्ताहिक प्रश्न लोड अयशस्वी");
+    return routeErrorResponse(err, "साप्ताहिक विषय लोड अयशस्वी");
   }
 }
 
@@ -57,6 +57,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ question });
   } catch (err) {
     if (err instanceof WeeklyError) return jsonError(err.message, err.status);
-    return routeErrorResponse(err, "प्रश्न जतन अयशस्वी");
+    return routeErrorResponse(err, "विषय जतन अयशस्वी");
   }
 }

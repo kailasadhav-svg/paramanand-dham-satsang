@@ -17,6 +17,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer }, { status: 201 });
   } catch (err) {
     if (err instanceof WeeklyError) return jsonError(err.message, err.status);
-    throw err;
+    return jsonError("चिंतन जतन अयशस्वी", 500);
   }
 }

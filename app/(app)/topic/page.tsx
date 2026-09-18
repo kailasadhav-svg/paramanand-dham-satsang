@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
 import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
+import { TOPIC_THURSDAY_HELP } from "@/lib/labels";
 
 type Meeting = {
   topic_kind: "atmaprabha" | "upadesh" | null;
@@ -72,6 +73,7 @@ export default function TopicPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold">विषय व संचालक</h2>
+      <p className="text-xs leading-relaxed text-temple-muted">{TOPIC_THURSDAY_HELP}</p>
       <PlaceDateBar
         places={places}
         placeId={placeId}
@@ -122,11 +124,13 @@ export default function TopicPage() {
         />
       </label>
       <label className="block text-xs font-semibold text-temple-muted">
-        टिपणी
+        विषय तपशील
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
+          placeholder="गावाला दिला विषय — अधिक मजकूर"
+          aria-label="विषय तपशील"
           className="mt-1 w-full rounded-xl bg-white px-3 py-2.5 ring-1 ring-saffron-200"
         />
       </label>

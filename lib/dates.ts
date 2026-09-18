@@ -39,6 +39,11 @@ export function weekFromThursday(thursdayYmd: string): { start: string; end: str
   return { start: thursdayYmd, end: addDaysYmd(thursdayYmd, 6) };
 }
 
+/** चिंतन due: Wednesday after that Thursday, 12:00 night (week end). */
+export function chintanDeadlineYmd(thursdayYmd: string): string {
+  return addDaysYmd(thursdayYmd, 6);
+}
+
 export function formatMarathiDate(ymd: string): string {
   const [y, m, d] = ymd.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d, 6, 30, 0));
