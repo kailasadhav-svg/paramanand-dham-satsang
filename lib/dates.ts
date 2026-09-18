@@ -67,3 +67,25 @@ export function formatMarathiShort(ymd: string): string {
 }
 
 export const DEFAULT_MEETING_TIME = "20:00";
+
+/** Minutes from 00:00 in Asia/Kolkata. */
+export function minutesInIndia(now = new Date()): number {
+  const hm = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(now);
+  const [h, m] = hm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/**
+ * शुक्रवार ०६:००–१२:०० (IST): सत्संग चरणसेवक may appoint विचार वाहक
+ * if मार्गदर्शक has not yet named one.
+ */
+export function isFridayVahakAppointWindow(now = new Date()): boolean {
+  if (weekdayInIndia(now) !== 5) return false;
+  const mins = minutesInIndia(now);
+  return mins >= 6 * 60 && mins <= 12 * 60;
+}

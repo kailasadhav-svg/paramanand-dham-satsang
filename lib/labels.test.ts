@@ -10,6 +10,8 @@ import {
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
   VAHAK_LABEL_SHORT,
+  VAHAK_APPOINT_HELP,
+  GUIDE_LABEL,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -26,6 +28,7 @@ describe("चिंतन copy", () => {
       CHINTAN_MISSING_REMINDER,
       TOPIC_THURSDAY_HELP,
       VAHAK_JOB_HELP,
+      VAHAK_APPOINT_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
       assert.equal(/\bcomment\b/i.test(s), false);
@@ -39,6 +42,10 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /पाठपुरावा/);
     assert.match(VAHAK_JOB_HELP, /चिंतन/);
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
+    assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
+    assert.equal(GUIDE_LABEL, "मार्गदर्शक चरणसेवक");
+    assert.match(VAHAK_APPOINT_HELP, /शुक्रवार/);
+    assert.match(VAHAK_APPOINT_HELP, /सत्संग चरणसेवक/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {

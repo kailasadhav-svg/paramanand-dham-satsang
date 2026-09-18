@@ -46,7 +46,7 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           {profile ? (
             <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
               {profile.role !== "charansevak" ? (
-                <Link href="/members">सेवक</Link>
+                <Link href="/members">चरणसेवक</Link>
               ) : null}
               <Link href="/weekly">चिंतन</Link>
             </nav>

@@ -13,10 +13,15 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 
 ## Roles
 
-| Role | Name | Phone |
+| Role | Marathi | Who |
 | --- | --- | --- |
-| Super admin | मधुसुदनदास विजयानंद | 9850120960 |
-| Software | KAILAS ADHAV | 9225118811 |
+| Base member | परमानंद चरणसेवक | everyone |
+| Attendance | सत्संग चरणसेवक | records Thursday satsang counts; Friday 06:00–12:00 IST may appoint विचार वाहक if none |
+| Weekly conductor | परमानंद विचार वाहक | always one of परमानंद चरणसेवक; one per place per Thursday (`place_duties`) |
+| Software | संगणक चरणसेवक | KAILAS · 9225118811 |
+| Guide / super admin | मार्गदर्शक चरणसेवक | मधुसुदनदास · 9850120960 — topics, all चिंतन, approve app access, appoint Vahak |
+
+विचार वाहक appointment: मार्गदर्शक first; if still empty, सत्संग चरणसेवक on Friday morning; if still empty, last week’s वाहक continues.
 
 App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
 

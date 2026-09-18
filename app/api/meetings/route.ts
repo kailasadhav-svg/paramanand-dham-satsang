@@ -112,7 +112,7 @@ export async function PUT(request: Request) {
       : false;
     if (!allowed) {
       return jsonError(
-        "फक्त या स्थळाचे परमानंद विचार वाहक, संवादक किंवा सेवक विषय दुरुस्त करू शकतात",
+        "फक्त या स्थळाचे परमानंद विचार वाहक, मार्गदर्शक किंवा संगणक विषय दुरुस्त करू शकतात",
         403,
       );
     }
@@ -129,7 +129,7 @@ export async function PUT(request: Request) {
     }
     if (place.latitude == null || place.longitude == null) {
       return jsonError(
-        "या ठिकाणाचे GPS अजून सेट नाही — संवादक / सॉफ्टवेअर प्रथम स्थळ चिन्हांकित करा",
+        "या ठिकाणाचे GPS अजून सेट नाही — मार्गदर्शक / संगणक प्रथम स्थळ चिन्हांकित करा",
         400,
       );
     }

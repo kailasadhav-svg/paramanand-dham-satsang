@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { defaultThursdayYmd } from "@/lib/dates";
 import {
   TOPIC_THURSDAY_HELP,
+  VAHAK_APPOINT_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
 } from "@/lib/labels";
@@ -102,7 +103,7 @@ export default function TopicPage() {
       <p className="text-xs leading-relaxed text-temple-muted">{VAHAK_JOB_HELP}</p>
       {places.length === 0 ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-sm text-temple-muted">
-          या गुरुवारी विचार वाहक नेमलेले नाही. संवादक नेमणूक करतील.
+          या गुरुवारी विचार वाहक नेमलेले नाही. {VAHAK_APPOINT_HELP}
         </p>
       ) : null}
       <PlaceDateBar
@@ -175,7 +176,7 @@ export default function TopicPage() {
         <SaveBar saving={saving} saved={saved} error={error} onSave={() => void save()} />
       ) : (
         <p className="text-sm text-temple-muted">
-          विषय दुरुस्ती फक्त या स्थळाचे {VAHAK_LABEL} किंवा संवादक / सेवक.
+          विषय दुरुस्ती फक्त या स्थळाचे {VAHAK_LABEL} किंवा मार्गदर्शक / संगणक.
         </p>
       )}
     </div>

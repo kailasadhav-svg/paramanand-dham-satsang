@@ -163,7 +163,7 @@ export default function WeeklyAdminPage() {
           {VAHAK_LABEL} फक्त स्थिती पाहतात. पूर्ण चिंतन फक्त मधुसुदनदास.
         </p>
       ) : (
-        <p className="text-[11px] text-temple-muted">पूर्ण चिंतन — फक्त संवादक (मधुसुदनदास)</p>
+        <p className="text-[11px] text-temple-muted">पूर्ण चिंतन — फक्त मार्गदर्शक (मधुसुदनदास)</p>
       )}
       <ul className="space-y-2">
         {roster.map((a) => (

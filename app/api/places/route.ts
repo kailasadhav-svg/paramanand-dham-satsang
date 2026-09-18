@@ -68,7 +68,7 @@ export async function GET(request: Request) {
   });
 }
 
-/** संवादक / सेवक: सत्संग स्थळाचे GPS सेट करा */
+/** मार्गदर्शक / संगणक: सत्संग स्थळाचे GPS सेट करा */
 export async function PUT(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
@@ -77,7 +77,7 @@ export async function PUT(request: Request) {
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
   if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
-    return jsonError("फक्त संवादक / सेवक स्थळ GPS सेट करू शकतात", 403);
+    return jsonError("फक्त मार्गदर्शक / संगणक स्थळ GPS सेट करू शकतात", 403);
   }
 
   const body = (await request.json().catch(() => ({}))) as {
