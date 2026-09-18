@@ -80,6 +80,15 @@ npm run test:ajapa
 - Native iOS/Android apps
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
 
+Future मार्गदर्शक / week archive product (not in this PR):
+- Dashboard: all questions to मार्गदर्शक; एकसमान/duplicate count; one shared answer or per-person
+- Rank top 3 चिंतन; same topic for all villages or per-village topic
+- One question per परमानंद चरणसेवक per week; चिंतन mandatory; village चिंतन PDF
+- AI answer first; escalate to मार्गदर्शक if unsatisfied
+- Question id = village + week + sequence (FIFO); handwritten-answer photo upload
+- Week 1 = first Thursday of January 2026 (`2026-01-01`); Thursday screens show Marathi panchang tithi
+- Thursday 17:00 immutable previous-week चिंतन + प्रश्न-उत्तर files; mandatory मार्गदर्शक summary (type / photo / voice); previous विचार वाहक reads/plays it at the place
+
 ## Run locally
 
 ```bash

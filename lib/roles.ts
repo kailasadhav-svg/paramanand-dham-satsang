@@ -46,9 +46,21 @@ export const SEEKER_DEMO_PHONES = (
  * - संगणक चरणसेवक — software (KAILAS)
  * - मार्गदर्शक चरणसेवक — Madhusudandas: topics, all चिंतन, approve app access, appoint Vahak
  *
- * Future (not built here): one question/week; village चिंतन PDF; AI-first then
- * escalate; similar-question dashboard; rank top 3 चिंतन; week numbers from
- * 2026-01-01; Thursday panchang; immutable Thursday 17:00 archive + summary.
+ * Future (not built here) — मार्गदर्शक product powers:
+ * - all member questions route to मार्गदर्शक; dashboard total + एकसमान count;
+ *   one shared answer for similars OR per-person answers
+ * - rank top 3 submitted चिंतन (क्रमवार योग्य तीन)
+ * - same Thursday topic for all villages OR different per village
+ * - one question per परमानंद चरणसेवक per week (hard limit); चिंतन mandatory
+ * - village-wise combined चिंतन PDF; AI answer first, then escalate if unsatisfied
+ * - question id = village + week number + sequence; process FIFO
+ * - मार्गदर्शक may upload handwritten-answer photo
+ * - week 1 = first Thursday of Jan 2026 (2026-01-01); later Thursdays +1 in-year
+ * - Thursday screens: Marathi panchang tithi in the top area
+ * - Thursday 17:00: previous week’s immutable per-village चिंतन + प्रश्न-उत्तर
+ *   files (मार्गदर्शक owns; no edits after generate). Optional visibility to
+ *   that Thursday’s विचार वाहक. Mandatory summary on the चिंतन file (type /
+ *   photo / voice). Previous वाहक must read or play that summary at the place.
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 
