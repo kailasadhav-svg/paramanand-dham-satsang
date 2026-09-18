@@ -47,7 +47,7 @@ Now:
 1. **One question per परमानंद चरणसेवक per week** (hard limit on `/api/questions` and WhatsApp `अजपा Q`). मार्गदर्शक unlimited.
 2. **चिंतन is mandatory** for everyone (copy + empty submit rejected).
 3. **Village चिंतन PDF** — `GET /api/weekly/chintan-pdf` returns a JSON stub grouped by village. TODO: real PDF.
-4. **Every question gets an automatic AI / परमानंद साहित्य answer first.**
+4. **Every question gets an automatic परमानंद साहित्य उत्तर first** (literature-grounded retrieval).
 5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
 6. **Question id** = village + year-week + FIFO sequence (computed on list; TODO persist). Week 1 = first Thursday of January 2026 (`2026-01-01`); later Thursdays +1 within the year.
 7. **हस्तलिखित उत्तर photo** — मार्गदर्शक stub `POST /api/questions/[id]/handwritten`. TODO: store image.
@@ -75,7 +75,7 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
 | विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
 | प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
-| संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→AI→guru · local-first PWA |
+| संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
 
 Short aliases: `/a` `/t` `/q` `/j` `/r`.
@@ -92,7 +92,7 @@ See [`docs/AJAPA_QA_FLOW.md`](docs/AJAPA_QA_FLOW.md) (locked) and [`docs/AJAPA_W
 
 | Who | Command | Next |
 | --- | --- | --- |
-| चरणसेवक | `अजपा Q` + प्रश्न | AI ≥200 words → `1` escalate to मधुसुदनदास |
+| चरणसेवक | `अजपा Q` + प्रश्न | परमानंद साहित्य उत्तर ≥200 words → `1` escalate to मधुसुदनदास |
 | मधुसुदनदास | `अजपा A` + mobile | show pending → `1` text / `2` voice → notify seeker |
 
 Webhook: `POST/GET /api/whatsapp/webhook` · App list: `GET /api/ajapa/questions` · WABA `7030111501`.

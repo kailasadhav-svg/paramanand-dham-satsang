@@ -120,7 +120,7 @@ async function llmAnswer(
 }
 
 /**
- * Automatic first answer for every question (AI-first, then escalate).
+ * Automatic first answer for every question (literature-grounded retrieval, then escalate).
  * TODO: production LLM via AJAPA_AI_API_KEY / OPENAI_API_KEY. Without a key,
  * परमानंद साहित्य knowledge is the first answer (not a blank stub).
  */

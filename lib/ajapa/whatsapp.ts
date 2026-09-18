@@ -226,7 +226,7 @@ export async function notifyGuruNewQuestion(opts: {
 प्रश्न:
 ${opts.question}
 
-परमानंद साहित्य (संक्षेप):
+परमानंद साहित्य उत्तर (संक्षेप):
 ${truncateParam(opts.aiAnswer, 800)}
 
 उत्तर देण्यासाठी लिहा:
