@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Kalam } from "next/font/google";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
+
+const kalam = Kalam({
+  subsets: ["devanagari", "latin"],
+  weight: ["400", "700"],
+  variable: "--font-kalam",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -34,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="mr">
+    <html lang="mr" className={kalam.variable}>
       <body className="min-h-dvh font-sans">
         {children}
         <PwaRegister />

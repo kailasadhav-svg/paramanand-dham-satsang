@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { loadProfile } from "@/lib/offline/profile";
 import { defaultHomePath } from "@/lib/roles";
 
@@ -136,15 +137,7 @@ function LoginForm() {
         </Link>
       </div>
 
-      <p className="mt-8 text-center text-xs leading-relaxed text-temple-muted">
-        मार्गदर्शक चरणसेवक: मधुसुदनदास · 9850120960
-        <br />
-        संगणक चरणसेवक: कैलास आढाव · 9225118811
-        <br />
-        परमानंद चरणसेवक (कैलास): 9423078811
-        <br />
-        परमानंद चरणसेवक (मधुसुदनदास): 9136443333
-      </p>
+      <AuthCoupletFooter />
     </div>
   );
 }

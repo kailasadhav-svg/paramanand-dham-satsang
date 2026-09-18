@@ -184,6 +184,7 @@ describe("user-facing terminology", () => {
     "app/member-login/page.tsx",
     "app/login/page.tsx",
     "app/register/page.tsx",
+    "components/AuthCoupletFooter.tsx",
     "app/me/page.tsx",
     "app/t/[role]/page.tsx",
     "app/layout.tsx",
@@ -213,12 +214,38 @@ describe("user-facing terminology", () => {
       assert.equal(text.includes("प्रशासक"), false, `${rel} still has प्रशासक`);
     }
     const login = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
-    assert.match(login, /मार्गदर्शक चरणसेवक/);
-    assert.match(login, /संगणक चरणसेवक/);
+    assert.match(login, /संगणक \/ मार्गदर्शक \/ चरणसेवक/);
     assert.match(login, /परमानंद चरणसेवक/);
     const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
     assert.match(ajapa, /GUIDE_LABEL/);
     assert.match(ajapa, /SOFTWARE_LABEL/);
     assert.match(ajapa, /MEMBER_ROLE_LABEL/);
+  });
+
+  it("auth entry footers show the couplet and no contact phones", () => {
+    const couplet =
+      "हंस सोहं अजपा ध्यान असो साधका | नीरक्षीर हंस तू परमानंद चरणसेवका ..!- मधुसूदनदास विजयानंद";
+    const footer = readFileSync(
+      new URL("../components/AuthCoupletFooter.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.equal(footer.includes(couplet), true);
+    const login = readFileSync(new URL("../app/login/page.tsx", import.meta.url), "utf8");
+    const memberLogin = readFileSync(
+      new URL("../app/member-login/page.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(login, /AuthCoupletFooter/);
+    assert.match(memberLogin, /AuthCoupletFooter/);
+    for (const phone of ["9850120960", "9225118811", "9423078811", "9136443333"]) {
+      assert.equal(footer.includes(phone), false, `footer still has ${phone}`);
+      assert.equal(login.includes(phone), false, `login still has ${phone}`);
+      assert.equal(memberLogin.includes(phone), false, `member-login still has ${phone}`);
+    }
+    const roles = readFileSync(new URL("./roles.ts", import.meta.url), "utf8");
+    assert.match(roles, /9850120960/);
+    assert.match(roles, /9225118811/);
+    assert.match(roles, /9423078811/);
+    assert.match(roles, /9136443333/);
   });
 });
