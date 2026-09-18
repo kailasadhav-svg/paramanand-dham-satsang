@@ -1,4 +1,5 @@
 import { listDutiesForPhone, getDuty } from "./db";
+import { archiveSourceWeekStart } from "./dates";
 import { listMembers } from "./members";
 import { placeCodeFromDbName, type PlaceCode } from "./places";
 import {
@@ -9,7 +10,8 @@ import {
   detectStaffRole,
   phonesEqual,
 } from "./roles";
-import { placeTopicLockState } from "./topic-lock";
+import { placeTopicLockState, priorWeekSummaryBlocksNewTopic } from "./topic-lock";
+import { isArchiveSummaryComplete, getStoredArchive } from "./weekly-archive";
 import { listWeeklyAnswers, getWeeklyQuestion } from "./weekly";
 import {
   redactChintanRoster,
@@ -56,11 +58,38 @@ export async function getPlaceTopicLock(opts: {
 export async function getMeetingTopicLock(opts: {
   placeName: string;
   weekStart: string;
-}): Promise<{ topic_locked: boolean; chintan_count: number }> {
-  return getPlaceTopicLock({
-    placeCode: placeCodeFromDbName(opts.placeName),
+}): Promise<{
+  topic_locked: boolean;
+  chintan_count: number;
+  prior_week_start: string;
+  prior_chintan_count: number;
+  prior_summary_complete: boolean;
+  topic_needs_prior_summary: boolean;
+}> {
+  const placeCode = placeCodeFromDbName(opts.placeName);
+  const priorWeek = archiveSourceWeekStart(opts.weekStart);
+  const current = await getPlaceTopicLock({
+    placeCode,
     weekStart: opts.weekStart,
   });
+  const prior = await getPlaceTopicLock({
+    placeCode,
+    weekStart: priorWeek,
+  });
+  const archive = placeCode ? getStoredArchive(priorWeek, placeCode) : undefined;
+  const prior_summary_complete = isArchiveSummaryComplete(archive?.summary);
+  return {
+    topic_locked: current.topic_locked,
+    chintan_count: current.chintan_count,
+    prior_week_start: priorWeek,
+    prior_chintan_count: prior.chintan_count,
+    prior_summary_complete,
+    topic_needs_prior_summary: priorWeekSummaryBlocksNewTopic({
+      priorArchiveExists: Boolean(archive),
+      priorSummaryComplete: prior_summary_complete,
+      priorChintanCount: prior.chintan_count,
+    }),
+  };
 }
 
 export async function listChintanRoster(opts: {

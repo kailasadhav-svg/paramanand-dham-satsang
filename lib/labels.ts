@@ -80,6 +80,10 @@ export const PLACE_TOPIC_LOCKED_HELP =
 export const PLACE_TOPIC_LOCK_SCOPE_HELP =
   "बंद होतो तो या गावाचा विषय (विषय पडदा). सर्व गावांचा साप्ताहिक विषय वेगळा.";
 
+/** Next Thursday विषय waits until prior-week per-गाव सारांश (type / upload / voice). */
+export const PLACE_TOPIC_PRIOR_SUMMARY_HELP =
+  "मागच्या आठवड्याचा सारांश (लिहा / upload / voice) पूर्ण करा; मगच नवीन विषय.";
+
 /** Own sentence so it cannot be skimmed as «विचार वाहक विषय दुरुस्त करतात». */
 export const VAHAK_NO_TOPIC_EDIT_HELP =
   "विषय तयार/दुरुस्ती विचार वाहकांचे काम नाही — फक्त मार्गदर्शक.";

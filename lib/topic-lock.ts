@@ -54,3 +54,20 @@ export function meetingTopicFieldsTouched(body: {
 }): boolean {
   return body.topic_kind !== undefined || body.topic_title !== undefined;
 }
+
+/** Next Thursday’s NEW विषय — only after prior-week सारांश (type / upload / voice). */
+export const PRIOR_WEEK_SUMMARY_REQUIRED_ERROR =
+  "मागच्या आठवड्याचा सारांश (लिहा / upload / voice) पूर्ण करा; मगच नवीन विषय.";
+
+/**
+ * Block creating/editing this Thursday’s per-place विषय when last week still
+ * needs a सारांश. Quiet first weeks (no archive, no चिंतन) stay editable.
+ */
+export function priorWeekSummaryBlocksNewTopic(opts: {
+  priorArchiveExists: boolean;
+  priorSummaryComplete: boolean;
+  priorChintanCount: number;
+}): boolean {
+  if (opts.priorSummaryComplete) return false;
+  return opts.priorArchiveExists || opts.priorChintanCount >= 1;
+}

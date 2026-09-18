@@ -13,6 +13,7 @@ import {
   applyArchiveVisibility,
   buildVillageArchives,
   filterArchivesForActor,
+  isArchiveSummaryComplete,
   resetArchiveStoreForTests,
   upsertGeneratedArchives,
 } from "./weekly-archive.ts";
@@ -61,6 +62,12 @@ describe("village archive stub rules", () => {
       (err: unknown) => err instanceof ArchiveError && err.status === 400,
     );
     const withSummary = applyArchiveSummary(first[0], { kind: "text", text: "सारांश" });
+    assert.equal(isArchiveSummaryComplete(null), false);
+    assert.equal(isArchiveSummaryComplete({ kind: "text", text: "  " }), false);
+    assert.equal(isArchiveSummaryComplete({ kind: "text", text: "सारांश" }), true);
+    assert.equal(isArchiveSummaryComplete({ kind: "photo", filename: "sum.jpg" }), true);
+    assert.equal(isArchiveSummaryComplete({ kind: "voice", filename: "sum.m4a" }), true);
+    assert.equal(isArchiveSummaryComplete({ kind: "photo", filename: "" }), false);
     const visible = applyArchiveVisibility(withSummary, true);
     assert.equal(visible.visible, true);
     const shared = applyArchiveShare(visible, true);
@@ -91,5 +98,8 @@ describe("village archive stub rules", () => {
     const weekly = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
     assert.match(weekly, /\/api\/weekly\/archive/);
     assert.match(weekly, /WEEKLY_ARCHIVE_HELP/);
+    assert.match(weekly, /PLACE_TOPIC_PRIOR_SUMMARY_HELP/);
+    assert.match(weekly, /action === "summary"|runArchive\("summary"/);
+    assert.match(weekly, /kind: summaryKind/);
   });
 });

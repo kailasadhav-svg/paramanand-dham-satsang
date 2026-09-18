@@ -27,6 +27,7 @@ import {
   GUIDE_TOPIC_HELP,
   PLACE_TOPIC_LOCKED_HELP,
   PLACE_TOPIC_LOCK_SCOPE_HELP,
+  PLACE_TOPIC_PRIOR_SUMMARY_HELP,
   ONE_QUESTION_HELP,
   LITERATURE_ANSWER_LABEL,
   LITERATURE_ANSWERS_LABEL,
@@ -61,6 +62,7 @@ describe("चिंतन copy", () => {
       VAHAK_APPOINT_HELP,
       PLACE_TOPIC_LOCKED_HELP,
       PLACE_TOPIC_LOCK_SCOPE_HELP,
+      PLACE_TOPIC_PRIOR_SUMMARY_HELP,
     ]) {
       assert.equal(s.includes("टिपणी"), false);
       assert.equal(/\bcomment\b/i.test(s), false);
@@ -94,6 +96,10 @@ describe("चिंतन copy", () => {
     assert.match(PLACE_TOPIC_LOCKED_HELP, /मार्गदर्शकही नाही/);
     assert.match(PLACE_TOPIC_LOCK_SCOPE_HELP, /विषय पडदा/);
     assert.match(PLACE_TOPIC_LOCK_SCOPE_HELP, /साप्ताहिक विषय/);
+    assert.equal(
+      PLACE_TOPIC_PRIOR_SUMMARY_HELP,
+      "मागच्या आठवड्याचा सारांश (लिहा / upload / voice) पूर्ण करा; मगच नवीन विषय.",
+    );
     assert.match(GUIDE_CHINTAN_RANK_HELP, /क्रमवार योग्य तीन/);
     assert.match(GUIDE_QUESTION_HELP, /एकसमान/);
     assert.match(GUIDE_QUESTION_HELP, /मार्गदर्शक चरणसेवकांकडे/);
@@ -147,6 +153,7 @@ describe("चिंतन copy", () => {
       GUIDE_TOPIC_HELP,
       PLACE_TOPIC_LOCKED_HELP,
       PLACE_TOPIC_LOCK_SCOPE_HELP,
+      PLACE_TOPIC_PRIOR_SUMMARY_HELP,
     ];
     for (const s of copy) {
       for (const bad of skimAsVahakEditsTopic) {
@@ -240,6 +247,7 @@ describe("चिंतन copy", () => {
     assert.match(weekly, /GUIDE_TOPIC_HELP/);
     assert.match(weekly, /GUIDE_CHINTAN_RANK_HELP/);
     assert.match(weekly, /PLACE_TOPIC_LOCK_SCOPE_HELP/);
+    assert.match(weekly, /PLACE_TOPIC_PRIOR_SUMMARY_HELP/);
     const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
     assert.match(questions, /GUIDE_QUESTION_HELP/);
     const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
@@ -250,7 +258,9 @@ describe("चिंतन copy", () => {
     assert.match(topic, /TOPIC_EDIT_GUIDE_ONLY_HELP/);
     assert.match(topic, /PLACE_TOPIC_LOCKED_HELP/);
     assert.match(topic, /PLACE_TOPIC_LOCK_SCOPE_HELP/);
+    assert.match(topic, /PLACE_TOPIC_PRIOR_SUMMARY_HELP/);
     assert.match(topic, /topic_locked/);
+    assert.match(topic, /topic_needs_prior_summary/);
     assert.match(topic, /topicEditable/);
     assert.equal(topic.includes("या स्थळाचे"), false);
     assert.match(topic, /CHINTAN_LABEL/);
@@ -404,6 +414,7 @@ describe("चिंतन copy", () => {
       GUIDE_TOPIC_HELP,
       PLACE_TOPIC_LOCKED_HELP,
       PLACE_TOPIC_LOCK_SCOPE_HELP,
+      PLACE_TOPIC_PRIOR_SUMMARY_HELP,
       ONE_QUESTION_HELP,
       LITERATURE_ANSWER_LABEL,
       LITERATURE_ANSWERS_LABEL,

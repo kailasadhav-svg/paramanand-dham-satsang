@@ -3,11 +3,13 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   PLACE_TOPIC_LOCKED_ERROR,
+  PRIOR_WEEK_SUMMARY_REQUIRED_ERROR,
   countPlaceChintan,
   isNonEmptyChintan,
   isPlaceTopicLocked,
   meetingTopicFieldsTouched,
   placeTopicLockState,
+  priorWeekSummaryBlocksNewTopic,
   topicLockPlaceCode,
 } from "./topic-lock.ts";
 
@@ -87,6 +89,48 @@ describe("place topic lock helper", () => {
   });
 });
 
+describe("prior-week सारांश gate for next Thursday विषय", () => {
+  it("allows a quiet first week and blocks when last week still needs सारांश", () => {
+    assert.equal(
+      priorWeekSummaryBlocksNewTopic({
+        priorArchiveExists: false,
+        priorSummaryComplete: false,
+        priorChintanCount: 0,
+      }),
+      false,
+    );
+    assert.equal(
+      priorWeekSummaryBlocksNewTopic({
+        priorArchiveExists: false,
+        priorSummaryComplete: false,
+        priorChintanCount: 1,
+      }),
+      true,
+    );
+    assert.equal(
+      priorWeekSummaryBlocksNewTopic({
+        priorArchiveExists: true,
+        priorSummaryComplete: false,
+        priorChintanCount: 0,
+      }),
+      true,
+    );
+    assert.equal(
+      priorWeekSummaryBlocksNewTopic({
+        priorArchiveExists: true,
+        priorSummaryComplete: true,
+        priorChintanCount: 4,
+      }),
+      false,
+    );
+    assert.equal(
+      PRIOR_WEEK_SUMMARY_REQUIRED_ERROR,
+      "मागच्या आठवड्याचा सारांश (लिहा / upload / voice) पूर्ण करा; मगच नवीन विषय.",
+    );
+    assert.equal(PRIOR_WEEK_SUMMARY_REQUIRED_ERROR.includes("टिपणी"), false);
+  });
+});
+
 describe("meetings API enforces the गाव विषय lock", () => {
   it("exposes topic_locked on GET and rejects विषय PUT when locked", () => {
     const meetings = readFileSync(
@@ -97,9 +141,13 @@ describe("meetings API enforces the गाव विषय lock", () => {
     assert.match(meetings, /topic_locked/);
     assert.match(meetings, /chintan_count/);
     assert.match(meetings, /PLACE_TOPIC_LOCKED_ERROR/);
+    assert.match(meetings, /PRIOR_WEEK_SUMMARY_REQUIRED_ERROR/);
+    assert.match(meetings, /topic_needs_prior_summary/);
     assert.match(meetings, /meetingTopicFieldsTouched/);
     const chintan = readFileSync(new URL("./chintan.ts", import.meta.url), "utf8");
     assert.match(chintan, /placeTopicLockState/);
     assert.match(chintan, /listWeeklyAnswers/);
+    assert.match(chintan, /getStoredArchive/);
+    assert.match(chintan, /priorWeekSummaryBlocksNewTopic/);
   });
 });
