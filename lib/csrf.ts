@@ -85,13 +85,47 @@ export function isAllowedOrigin(origin: string, env: EnvLike = process.env): boo
   return false;
 }
 
+/** Fetch opaque origin (`Origin: null`). Not a real origin — never pass to isAllowedOrigin. */
+function isOpaqueOriginHeader(value: string | null): boolean {
+  return value === "null";
+}
+
+/**
+ * CSRF check for mutating /api requests.
+ *
+ * Policy:
+ * - Real Origin (not the literal "null") is authoritative: allow only if allowlisted.
+ * - Origin absent or Origin: "null" (Safari / in-app / standalone sometimes send this on
+ *   same-site POSTs) falls back to Referer via originFromUrl + isAllowedOrigin.
+ * - If Referer is also unusable, allow when Sec-Fetch-Site is same-origin or none
+ *   (browser-controlled Fetch Metadata; cross-site is never allowed).
+ * - Both Origin and Referer omitted (curl / server clients): allow.
+ * - Origin: "null" with no Referer and no same-origin/none Sec-Fetch-Site: deny.
+ *   That token is not treated as "missing headers" — browsers send it; non-browsers omit Origin.
+ */
 export function csrfOriginOk(request: Request, env: EnvLike = process.env): boolean {
-  const origin = request.headers.get("origin");
+  const originHeader = request.headers.get("origin");
   const referer = request.headers.get("referer");
-  if (!origin && !referer) return true;
-  if (origin) return isAllowedOrigin(origin, env);
-  const refOrigin = originFromUrl(referer || "");
-  return refOrigin ? isAllowedOrigin(refOrigin, env) : false;
+  const secFetchSite = (request.headers.get("sec-fetch-site") ?? "").toLowerCase();
+  const originMissing = !originHeader || isOpaqueOriginHeader(originHeader);
+
+  if (!originMissing && originHeader) {
+    return isAllowedOrigin(originHeader, env);
+  }
+
+  const refOrigin = referer ? originFromUrl(referer) : null;
+  if (refOrigin) {
+    return isAllowedOrigin(refOrigin, env);
+  }
+
+  if (secFetchSite === "same-origin" || secFetchSite === "none") {
+    return true;
+  }
+  if (secFetchSite === "cross-site") {
+    return false;
+  }
+
+  return !originHeader && !referer;
 }
 
 export function csrfExemptPath(pathname: string): boolean {

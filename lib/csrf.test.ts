@@ -101,27 +101,33 @@ describe("isAllowedOrigin — Vercel + VPS + localhost", () => {
 });
 
 describe("csrfOriginOk — WhatsApp mobile bind (POST /api/auth/actor)", () => {
-  function actorPost(origin: string | null, referer?: string) {
+  const vercel = "https://paramanand-dham-satsang.vercel.app";
+
+  function actorPost(init: {
+    origin?: string | null;
+    referer?: string;
+    secFetchSite?: string;
+  } = {}) {
     const headers: Record<string, string> = {};
-    if (origin) headers.origin = origin;
-    if (referer) headers.referer = referer;
-    return new Request("https://paramanand-dham-satsang.vercel.app/api/auth/actor", {
+    if (typeof init.origin === "string") headers.origin = init.origin;
+    if (init.referer) headers.referer = init.referer;
+    if (init.secFetchSite) headers["sec-fetch-site"] = init.secFetchSite;
+    return new Request(`${vercel}/api/auth/actor`, {
       method: "POST",
       headers,
     });
   }
 
   it("allows Vercel production origin (the Forbidden origin bug)", () => {
-    assert.equal(
-      csrfOriginOk(actorPost("https://paramanand-dham-satsang.vercel.app"), emptyEnv),
-      true,
-    );
+    assert.equal(csrfOriginOk(actorPost({ origin: vercel }), emptyEnv), true);
   });
 
   it("allows Vercel preview origin and VPS origin", () => {
     assert.equal(
       csrfOriginOk(
-        actorPost("https://paramanand-dham-satsang-git-main-kailasadhav-svg.vercel.app"),
+        actorPost({
+          origin: "https://paramanand-dham-satsang-git-main-kailasadhav-svg.vercel.app",
+        }),
         emptyEnv,
       ),
       true,
@@ -152,18 +158,89 @@ describe("csrfOriginOk — WhatsApp mobile bind (POST /api/auth/actor)", () => {
   });
 
   it("rejects cross-site Origin (CSRF still blocked)", () => {
-    assert.equal(csrfOriginOk(actorPost("https://evil.example"), emptyEnv), false);
-    assert.equal(csrfOriginOk(actorPost("https://evil.vercel.app"), emptyEnv), false);
+    assert.equal(csrfOriginOk(actorPost({ origin: "https://evil.example" }), emptyEnv), false);
+    assert.equal(csrfOriginOk(actorPost({ origin: "https://evil.vercel.app" }), emptyEnv), false);
+    assert.equal(csrfOriginOk(actorPost({ origin: "https://evil.com" }), emptyEnv), false);
   });
 
   it("allows missing Origin (non-browser) and Referer-only Vercel", () => {
-    assert.equal(csrfOriginOk(actorPost(null), emptyEnv), true);
+    assert.equal(csrfOriginOk(actorPost({}), emptyEnv), true);
+    assert.equal(
+      csrfOriginOk(actorPost({ referer: `${vercel}/login` }), emptyEnv),
+      true,
+    );
+  });
+
+  it("treats Origin: null as missing and allows an allowlisted Referer (Safari / in-app)", () => {
+    assert.equal(isAllowedOrigin("null", emptyEnv), false);
+    assert.equal(
+      csrfOriginOk(actorPost({ origin: "null", referer: `${vercel}/m` }), emptyEnv),
+      true,
+    );
+  });
+
+  it("allows Origin: null when Sec-Fetch-Site is same-origin", () => {
+    assert.equal(
+      csrfOriginOk(actorPost({ origin: "null", secFetchSite: "same-origin" }), emptyEnv),
+      true,
+    );
+  });
+
+  it("allows Origin: null + allowlisted Referer + Sec-Fetch-Site same-origin (iPhone Safari)", () => {
     assert.equal(
       csrfOriginOk(
-        actorPost(null, "https://paramanand-dham-satsang.vercel.app/login"),
+        actorPost({
+          origin: "null",
+          referer: `${vercel}/m`,
+          secFetchSite: "same-origin",
+        }),
         emptyEnv,
       ),
       true,
+    );
+  });
+
+  it("denies Origin: null alone — not equivalent to both Origin and Referer omitted", () => {
+    // Prefer deny when Sec-Fetch-Site is absent. Origin: "null" is a browser token,
+    // not a non-browser client (those omit Origin entirely).
+    assert.equal(csrfOriginOk(actorPost({ origin: "null" }), emptyEnv), false);
+  });
+
+  it("denies Origin: null with a cross-site Referer", () => {
+    assert.equal(
+      csrfOriginOk(
+        actorPost({ origin: "null", referer: "https://evil.com/phish" }),
+        emptyEnv,
+      ),
+      false,
+    );
+    assert.equal(
+      csrfOriginOk(
+        actorPost({
+          origin: "null",
+          referer: "https://evil.com/phish",
+          secFetchSite: "same-origin",
+        }),
+        emptyEnv,
+      ),
+      false,
+    );
+  });
+
+  it("denies Origin: null with Sec-Fetch-Site: cross-site", () => {
+    assert.equal(
+      csrfOriginOk(actorPost({ origin: "null", secFetchSite: "cross-site" }), emptyEnv),
+      false,
+    );
+  });
+
+  it("does not let Sec-Fetch-Site override a real forbidden Origin", () => {
+    assert.equal(
+      csrfOriginOk(
+        actorPost({ origin: "https://evil.com", secFetchSite: "same-origin" }),
+        emptyEnv,
+      ),
+      false,
     );
   });
 
