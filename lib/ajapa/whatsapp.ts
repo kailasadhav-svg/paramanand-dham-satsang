@@ -204,17 +204,27 @@ async function postMessage(body: Record<string, unknown>): Promise<WaSendResult>
     if (body.type === "template") {
       const tpl = body.template as {
         name?: string;
-        components?: { parameters?: { text?: string }[] }[];
+        components?: {
+          type?: string;
+          parameters?: { text?: string }[];
+        }[];
       };
+      // Prefer body parameters; AUTHENTICATION also repeats code on button.
+      const bodyComp = tpl.components?.find(
+        (comp) => String(comp.type || "").toLowerCase() === "body",
+      );
       const params =
+        (bodyComp?.parameters || []).map((p) => String(p.text || "")) ||
         tpl.components?.flatMap((comp) =>
           (comp.parameters || []).map((p) => String(p.text || "")),
-        ) || [];
+        ) ||
+        [];
+      const uniqueParams = [...new Set(params.filter(Boolean))];
       return postTuriya({
         to,
         templateName: tpl.name,
-        templateParams: params,
-        text: params[0],
+        templateParams: uniqueParams,
+        text: uniqueParams[0],
       });
     }
     const textBody = body.text as { body?: string } | undefined;
@@ -288,6 +298,44 @@ export async function sendTemplate(
   });
 }
 
+/**
+ * Meta AUTHENTICATION OTP templates require the code in both body and button
+ * (copy_code is stored as URL subtype after approval).
+ */
+export async function sendAuthenticationOtpTemplate(opts: {
+  to: string;
+  name: string;
+  code: string;
+  languageCode?: string;
+}): Promise<WaSendResult> {
+  const code = String(opts.code || "").replace(/\D/g, "").slice(0, 15);
+  const languageCode =
+    opts.languageCode ||
+    process.env.WHATSAPP_OTP_LANG ||
+    process.env.WHATSAPP_OTP_LANGUAGE ||
+    "en";
+  return postMessage({
+    to: opts.to,
+    type: "template",
+    template: {
+      name: opts.name,
+      language: { code: languageCode },
+      components: [
+        {
+          type: "body",
+          parameters: [{ type: "text", text: code }],
+        },
+        {
+          type: "button",
+          sub_type: "url",
+          index: "0",
+          parameters: [{ type: "text", text: code }],
+        },
+      ],
+    },
+  });
+}
+
 export async function sendAudioById(to: string, mediaId: string): Promise<WaSendResult> {
   return postMessage({
     to,
@@ -319,7 +367,8 @@ export async function sendSmart(opts: {
 
 /**
  * OTP delivery for app login / escalate.
- * Outside the 24h session Meta rejects free-form text — use Utility template first.
+ * Prefer Meta AUTHENTICATION OTP template (already approved on WABA), then
+ * Utility templates, then free-form text inside a 24h session.
  */
 export async function sendOtpMessage(opts: {
   to: string;
@@ -334,10 +383,27 @@ export async function sendOtpMessage(opts: {
 
   const primary =
     process.env.WHATSAPP_OTP_TEMPLATE?.trim() || "ajapa_app_otp";
-  const fallbacks = [primary, "ajapa_welcome_code"].filter(
-    (name, i, arr) => name && arr.indexOf(name) === i,
+  const authMode =
+    process.env.WHATSAPP_OTP_AUTH !== "0" &&
+    process.env.WHATSAPP_OTP_AUTH !== "false";
+  const utilityFallbacks = ["ajapa_app_otp", "ajapa_welcome_code"].filter(
+    (name, i, arr) => name && name !== primary && arr.indexOf(name) === i,
   );
 
+  let lastErr = "OTP template send failed";
+
+  // 1) Approved Meta AUTHENTICATION OTP template (body + copy-code button)
+  if (authMode) {
+    const auth = await sendAuthenticationOtpTemplate({
+      to: opts.to,
+      name: primary,
+      code,
+    });
+    if (auth.ok) return auth;
+    lastErr = ("error" in auth ? auth.error : null) || lastErr;
+  }
+
+  // 2) Open session → free-form text is allowed
   const sessionOpen = within24h(opts.lastInboundAt) && !cfg().forceTemplates;
   if (sessionOpen) {
     const label =
@@ -347,16 +413,19 @@ export async function sendOtpMessage(opts: {
     const text = `परमानंद धाम · ${label}\n\nमोबाइल खात्री OTP: *${code}*\n\nअ‍ॅपमध्ये टाका (१० मिनिटे वैध).`;
     const live = await sendText(opts.to, text);
     if (live.ok) return live;
+    lastErr = ("error" in live ? live.error : null) || lastErr;
   }
 
-  let lastErr = "OTP template send failed";
-  for (const name of fallbacks) {
+  // 3) Utility templates (custom Marathi body)
+  for (const name of [primary, ...utilityFallbacks].filter(
+    (n, i, a) => n && a.indexOf(n) === i,
+  )) {
     const tpl = await sendTemplate(opts.to, name, [code]);
     if (tpl.ok) return tpl;
     lastErr = ("error" in tpl ? tpl.error : null) || lastErr;
   }
 
-  // Last resort: free-form (works in dry-run / open session / some BSPs)
+  // 4) Last resort free-form
   const text = `परमानंद धाम\n\nOTP: *${code}*\n\nअ‍ॅपमध्ये टाका (१० मिनिटे वैध).`;
   const fallback = await sendText(opts.to, text);
   if (fallback.ok) return fallback;

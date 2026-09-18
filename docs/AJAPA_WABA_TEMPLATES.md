@@ -105,9 +105,16 @@ AI उत्तर थोडक्यात: {{4}}
 ### ६b) `ajapa_app_otp` — अ‍ॅप लॉगिन / escalate OTP (आवश्यक)
 
 *संगणक (`9225118811`) व मार्गदर्शक (`9850120960`) मोबाइल खात्रीसाठी.*  
-*२४तास session बाहेर free-form OTP Meta नाकारते — हा Utility टेम्प्लेट हवा.*
+*२४तास session बाहेर free-form OTP Meta नाकारते — AUTHENTICATION / Utility टेम्प्लेट हवा.*
 
-**मजकूर:**
+**Preferred:** Meta portal मध्ये आधीच **Approved AUTHENTICATION OTP** (copy code) असल्यास  
+`WHATSAPP_OTP_TEMPLATE=<exact_template_name>` + `WHATSAPP_OTP_AUTH=1` + `WHATSAPP_OTP_LANG=en` (किंवा टेम्प्लेटची language).
+
+App send shape (AUTHENTICATION):
+- body parameter = OTP  
+- button `sub_type=url` index `0` parameter = same OTP  
+
+**Utility fallback मजकूर (`ajapa_app_otp`):**
 ```
 परमानंद धाम · अ‍ॅप OTP: {{1}}
 अ‍ॅपमध्ये टाका. १० मिनिटे वैध.
@@ -115,8 +122,8 @@ AI उत्तर थोडक्यात: {{4}}
 || हरि ॐ परमानंद विश्वव्यापकम् ||
 ```
 
-**बटणे:** नाही (फक्त OTP कोड)  
-**Env:** `WHATSAPP_OTP_TEMPLATE=ajapa_app_otp` (fallback: `ajapa_welcome_code`)
+**बटणे:** Utility = नाही · AUTHENTICATION = Copy code (Meta)  
+**Env:** `WHATSAPP_OTP_TEMPLATE` (fallback Utility: `ajapa_welcome_code`)
 
 ---
 
