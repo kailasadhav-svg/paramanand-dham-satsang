@@ -141,6 +141,8 @@ describe("चिंतन copy", () => {
       "विचार वाहक किंवा मार्गदर्शक / संगणक",
       "{VAHAK_LABEL} किंवा मार्गदर्शक / संगणक",
       "किंवा मार्गदर्शक विषय दुरुस्त",
+      "विषय एडिट",
+      "own place topic",
     ];
     const files = [
       "lib/labels.ts",
@@ -148,6 +150,11 @@ describe("चिंतन copy", () => {
       "app/(app)/weekly/page.tsx",
       "app/api/meetings/route.ts",
       "app/me/page.tsx",
+      "README.md",
+      "docs/AJAPA_QA_FLOW.md",
+      "docs/AJAPA_WABA_TEMPLATES.md",
+      "docs/META_TEMPLATE_STEP_BY_STEP.md",
+      "docs/LOCAL_FIRST_PWA.md",
     ];
     for (const rel of files) {
       const text = readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
@@ -160,6 +167,9 @@ describe("चिंतन copy", () => {
     assert.equal(TOPIC_EDIT_GUIDE_ONLY_HELP.includes("संगणक"), false);
     assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("या स्थळाचे"), false);
     assert.equal(VAHAK_NO_TOPIC_EDIT_HELP.includes("संगणक"), false);
+    const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+    assert.match(readme, /Never create\/edit विषय/);
+    assert.match(readme, /create\/edit \*\*मार्गदर्शक only\*\*/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {

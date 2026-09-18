@@ -31,7 +31,7 @@ App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `19
 Isolation (role-scoped screens/data do not leak):
 - **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak appoint.
 - **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all member questions.
-- **परमानंद विचार वाहक** — own place topic + चिंतन status only (never bodies).
+- **परमानंद विचार वाहक** — चिंतन collect / follow-up / help; आले vs बाकी names only (never चिंतन text). Never create/edit विषय — मार्गदर्शक only.
 - **सत्संग चरणसेवक** — attendance counts; Friday 06:00–12:00 IST Vahak window if empty.
 
 ## मार्गदर्शक चरणसेवक powers (मधुसुदनदास)
@@ -73,7 +73,7 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 | Tab | Route | Use |
 | --- | --- | --- |
 | उपस्थिती | `/attendance` | Place + Thursday + counts |
-| विषय | `/topic` | Atmaprabha / Upadesh, title, conductor |
+| विषय | `/topic` | Thursday विषय (create/edit **मार्गदर्शक only**); विचार वाहक name; चिंतन follow-up status |
 | प्रश्न | `/questions` | Weekly satsang Q&A (manual) |
 | संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
