@@ -14,7 +14,7 @@ type NavItem = {
 
 const ITEMS: NavItem[] = [
   { href: "/attendance", label: "उपस्थिती", icon: UsersIcon },
-  { href: "/topic", label: "विषय", icon: BookIcon, staffOnly: true },
+  { href: "/topic", label: "विषय", icon: BookIcon },
   { href: "/questions", label: "प्रश्न", icon: QuestionIcon },
   { href: "/ajapa", label: "संवाद", icon: AjapaIcon },
   { href: "/report", label: "अहवाल", icon: ReportIcon, staffOnly: true },
@@ -28,11 +28,13 @@ export function BottomNav() {
   const cols =
     items.length >= 5
       ? "grid-cols-5"
-      : items.length === 2
-        ? "grid-cols-2"
-        : items.length === 1
-          ? "grid-cols-1"
-          : "grid-cols-3";
+      : items.length === 4
+        ? "grid-cols-4"
+        : items.length === 2
+          ? "grid-cols-2"
+          : items.length === 1
+            ? "grid-cols-1"
+            : "grid-cols-3";
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-saffron-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">

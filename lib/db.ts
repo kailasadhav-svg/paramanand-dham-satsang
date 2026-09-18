@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { createClient, type Client, type Row } from "@libsql/client";
-import { DEFAULT_MEETING_TIME } from "./dates";
+import { DEFAULT_MEETING_TIME, addDaysYmd } from "./dates";
+import { phonesEqual } from "./offline/phone";
 import { renameAmbashiToShindi } from "./place-rename";
 import {
   productionFileStoreBlockedReason,
@@ -683,7 +684,15 @@ function asPlaceDutyWithPlace(row: Row): PlaceDutyWithPlace {
   return { ...asPlaceDuty(row), place_name: str(row.place_name) };
 }
 
-export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace[]> {
+export async function listDutiesForPhone(
+  phone: string,
+  date: string,
+): Promise<PlaceDutyWithPlace[]> {
+  const all = await listDutiesOnDate(date);
+  return all.filter((d) => phonesEqual(phone, d.charansevak_phone));
+}
+
+async function listDutiesOnDateRaw(date: string): Promise<PlaceDutyWithPlace[]> {
   const db = await getDb();
   const rs = await db.execute({
     sql: `SELECT d.*, p.name AS place_name
@@ -694,6 +703,29 @@ export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace
     args: [date],
   });
   return rs.rows.map(asPlaceDutyWithPlace);
+}
+
+/** If this Thursday has no वाहक, keep last week's person (still a परमानंद चरणसेवक). */
+async function continuePreviousVahak(date: string): Promise<void> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const existing = await listDutiesOnDateRaw(date);
+  const taken = new Set(existing.map((d) => d.place_id));
+  const prev = await listDutiesOnDateRaw(addDaysYmd(date, -7));
+  for (const duty of prev) {
+    if (taken.has(duty.place_id)) continue;
+    await upsertDuty({
+      place_id: duty.place_id,
+      meeting_date: date,
+      charansevak_phone: duty.charansevak_phone,
+      charansevak_name: duty.charansevak_name,
+      assigned_by_phone: "auto-continue",
+    });
+  }
+}
+
+export async function listDutiesOnDate(date: string): Promise<PlaceDutyWithPlace[]> {
+  await continuePreviousVahak(date);
+  return listDutiesOnDateRaw(date);
 }
 
 export async function getDuty(

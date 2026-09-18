@@ -2,16 +2,22 @@ import { NextResponse } from "next/server";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import {
   clearDuty,
+  getDuty,
   listDutiesOnDate,
   listPlaces,
   upsertDuty,
 } from "@/lib/db";
-import { displayPhone, normalizePhone } from "@/lib/offline/phone";
-import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
+import { isFridayVahakAppointWindow } from "@/lib/dates";
+import { VAHAK_APPOINT_HELP } from "@/lib/labels";
+import { displayPhone, phonesEqual } from "@/lib/offline/phone";
+import {
+  canAppointVahak,
+  canSeeStaffScreens,
+  detectStaffRole,
+} from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();
@@ -25,12 +31,10 @@ export async function GET(request: Request) {
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
   const role = actor ? detectStaffRole(actor) : "charansevak";
+  const staff = canSeeStaffScreens(role);
+  const friday = isFridayVahakAppointWindow();
   const places = await listPlaces();
-  let duties = await listDutiesOnDate(date);
-
-  if (!canSeeStaffScreens(role) && actor) {
-    duties = duties.filter((d) => normalizePhone(d.charansevak_phone) === actor);
-  }
+  const duties = await listDutiesOnDate(date);
 
   const rows = places.map((place) => {
     const duty = duties.find((d) => d.place_id === place.id) ?? null;
@@ -45,14 +49,21 @@ export async function GET(request: Request) {
     };
   });
 
-  const visible = canSeeStaffScreens(role)
+  const visible = staff
     ? rows
-    : rows.filter((r) => r.duty != null);
+    : rows.filter((r) => {
+        if (r.duty && actor && phonesEqual(r.duty.charansevak_phone, actor)) {
+          return true;
+        }
+        if (friday && !r.duty) return true;
+        return false;
+      });
 
   return NextResponse.json({
     date,
     role,
-    can_assign: canSeeStaffScreens(role),
+    can_assign: staff || friday,
+    friday_window: friday,
     rows: visible,
   });
 }
@@ -64,9 +75,10 @@ export async function PUT(request: Request) {
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
-  if (!actor || !canSeeStaffScreens(detectStaffRole(actor))) {
-    return jsonError("फक्त संवादक / सॉफ्टवेअर नेमणूक करू शकतात", 403);
+  if (!actor) {
+    return jsonError("मोबाइल प्रोफाइल आवश्यक — पुन्हा निवडा", 401);
   }
+  const role = detectStaffRole(actor);
 
   const body = (await request.json().catch(() => ({}))) as {
     place_id?: number;
@@ -80,16 +92,25 @@ export async function PUT(request: Request) {
     return jsonError("place_id आणि meeting_date आवश्यक", 400);
   }
 
+  const existing = await getDuty(Number(body.place_id), String(body.meeting_date));
+
   if (body.clear) {
+    if (!canSeeStaffScreens(role)) {
+      return jsonError("फक्त मार्गदर्शक / संगणक नेमणूक काढू शकतात", 403);
+    }
     await clearDuty(Number(body.place_id), String(body.meeting_date));
     return NextResponse.json({ ok: true, cleared: true });
+  }
+
+  if (!canAppointVahak(role, { hasDuty: Boolean(existing) })) {
+    return jsonError(VAHAK_APPOINT_HELP, 403);
   }
 
   if (
     !body.charansevak_phone ||
     String(body.charansevak_phone).replace(/\D/g, "").length < 10
   ) {
-    return jsonError("चरणसेवक मोबाइल आवश्यक", 400);
+    return jsonError("विचार वाहक मोबाइल आवश्यक", 400);
   }
 
   const duty = await upsertDuty({

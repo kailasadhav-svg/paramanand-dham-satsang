@@ -96,7 +96,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
     if (!ready || !profile) return;
     if (
       profile.role === "charansevak" &&
-      ["/topic", "/report", "/members", "/weekly"].some((p) => pathname.startsWith(p))
+      ["/report", "/members"].some((p) => pathname.startsWith(p))
     ) {
       router.replace("/ajapa");
     }
@@ -160,7 +160,7 @@ export function PhoneGate({ children }: { children: ReactNode }) {
           <p className="text-sm font-semibold text-saffron-700">परमानंद धाम</p>
           <h1 className="font-display text-3xl text-saffron-900">मोबाइल खात्री</h1>
           <p className="mt-2 text-sm text-temple-muted">
-            सेवक / संवादक मोबाइलसाठी WhatsApp OTP लागेल. चरणसेवक थेट जोडता येईल.
+            संगणक / मार्गदर्शक मोबाइलसाठी WhatsApp OTP लागेल. चरणसेवक थेट जोडता येईल.
           </p>
         </div>
         <form

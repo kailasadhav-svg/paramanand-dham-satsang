@@ -12,6 +12,10 @@ import {
 } from "@/lib/geo";
 import { canApproveCharansevak, canSeeStaffScreens } from "@/lib/roles";
 import { displayPhone } from "@/lib/offline/phone";
+import {
+  SATSANG_CHARANSEVAK_LABEL,
+  VAHAK_APPOINT_HELP,
+} from "@/lib/labels";
 
 type Meeting = {
   place_id: number;
@@ -336,9 +340,7 @@ export default function AttendancePage() {
       <div className="space-y-3">
         <h2 className="text-lg font-bold">उपस्थिती</h2>
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
-          या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. संवादक (
-          <strong>9850120960</strong>) किंवा सेवक (
-          <strong>9225118811</strong>) नेमणूक ठरतील — मग तुमचे काम येथे दिसेल.
+          या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. {VAHAK_APPOINT_HELP}
         </p>
       </div>
     );
@@ -348,7 +350,7 @@ export default function AttendancePage() {
     <div className="space-y-4 pb-8">
       <div>
         <h2 className="text-lg font-bold">
-          {staff ? "उपस्थिती · एडिट" : "उपस्थिती · परमानंद चरणसेवक"}
+          {staff ? "उपस्थिती · एडिट" : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}
         </h2>
         <p className="text-xs text-temple-muted">
           {staff
@@ -367,7 +369,7 @@ export default function AttendancePage() {
 
       {!canApprove && !staff ? (
         <p className="rounded-xl bg-saffron-50 px-3 py-2 text-[11px] leading-relaxed text-temple-muted">
-          तुमचे काम: उपस्थित परमानंद चरणसेवक संख्या नोंदवा. नवीन सदस्य मंजुरी फक्त संवादक (मधुसुदनदास) करतात.
+          तुमचे काम: उपस्थित परमानंद चरणसेवक संख्या नोंदवा. नवीन सदस्य मंजुरी फक्त मार्गदर्शक (मधुसुदनदास) करतात.
         </p>
       ) : null}
 
@@ -377,7 +379,7 @@ export default function AttendancePage() {
             नवीन परमानंद चरणसेवक मंजूर करा
           </h3>
           <p className="break-words text-[11px] text-temple-muted">
-            फक्त संवादक (मधुसुदनदास) · नाव + मोबाइल · स्थळ{" "}
+            फक्त मार्गदर्शक (मधुसुदनदास) · नाव + मोबाइल · स्थळ{" "}
             <strong>{selectedPlace?.name || "—"}</strong>
           </p>
           <input
@@ -458,10 +460,10 @@ export default function AttendancePage() {
       {canAssign ? (
         <section className="space-y-3 rounded-2xl bg-white p-3 ring-1 ring-saffron-200">
           <h3 className="text-sm font-bold text-saffron-900">
-            गुरुवारी चरणसेवक नेमणूक (एडिट)
+            गुरुवारी परमानंद विचार वाहक नेमणूक (एडिट)
           </h3>
           <p className="text-[11px] text-temple-muted">
-            9850120960 व 9225118811 ठरवतील · नाव/मोबाइल बदलून पुन्हा जतन करा
+            {VAHAK_APPOINT_HELP} प्रत्येक स्थळी आठवड्यात एकच विचार वाहक.
           </p>
           {dutyRows.map((row) => {
             const draft = drafts[row.place.id] || { phone: "", name: "" };
@@ -514,7 +516,7 @@ export default function AttendancePage() {
       ) : null}
 
       {assignedLabel ? (
-        <p className="text-xs text-temple-muted">चरणसेवक: {assignedLabel}</p>
+        <p className="text-xs text-temple-muted">विचार वाहक: {assignedLabel}</p>
       ) : null}
 
       {staff && placeId ? (

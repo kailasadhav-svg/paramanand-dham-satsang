@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireMemberApi, requireStaffActor, routeErrorResponse } from "@/lib/api-guard";
+import { getActorPhone, getSession } from "@/lib/auth";
+import {
+  jsonError,
+  requireMemberApi,
+  requireStaffActor,
+  routeErrorResponse,
+} from "@/lib/api-guard";
+import { chintanViewForActor } from "@/lib/chintan";
 import { defaultThursdayYmd } from "@/lib/dates";
 import {
   getWeeklyQuestion,
-  listWeeklyAnswers,
   memberWeeklyView,
   upsertWeeklyQuestion,
   WeeklyError,
@@ -20,11 +26,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    const staff = await requireStaffActor();
-    if (staff.ok) {
-      const question = (await getWeeklyQuestion(weekStart)) ?? null;
-      const answers = question ? await listWeeklyAnswers(question.id) : [];
-      return NextResponse.json({ week_start: weekStart, question, answers });
+    if (await getSession()) {
+      const phone = await getActorPhone();
+      if (phone) {
+        const view = await chintanViewForActor({
+          phone,
+          weekStart,
+        });
+        const question = (await getWeeklyQuestion(weekStart)) ?? null;
+        return NextResponse.json({
+          week_start: weekStart,
+          question,
+          ...view,
+        });
+      }
     }
 
     const memberAuth = await requireMemberApi();

@@ -2,15 +2,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
+  appDisplayName,
   canAppointSatsangi,
+  canAppointVahak,
   canApproveCharansevak,
+  canSeeChintanBody,
   canSeeStaffScreens,
   detectStaffRole,
   roleLabelMarathi,
 } from "./roles.ts";
+import { isFridayVahakAppointWindow } from "./dates.ts";
+import {
+  GUIDE_LABEL,
+  MEMBER_ROLE_LABEL,
+  SOFTWARE_LABEL,
+} from "./labels.ts";
 
 describe("detectStaffRole", () => {
-  it("maps locked phones to सेवक / संवादक / चरणसेवक", () => {
+  it("maps locked phones to संगणक / मार्गदर्शक / चरणसेवक", () => {
     assert.equal(detectStaffRole("9225118811"), "software");
     assert.equal(detectStaffRole("9850120960"), "guru");
     assert.equal(detectStaffRole("9423078811"), "charansevak");
@@ -38,11 +47,42 @@ describe("canApproveCharansevak", () => {
   });
 });
 
+describe("canSeeChintanBody", () => {
+  it("is true only for guru (मधुसुदनदास)", () => {
+    assert.equal(canSeeChintanBody("guru"), true);
+    assert.equal(canSeeChintanBody("software"), false);
+    assert.equal(canSeeChintanBody("charansevak"), false);
+  });
+});
+
 describe("role labels", () => {
-  it("uses चरणसेवक short label (UI prefers पूर्ण परमानंद चरणसेवक on main titles)", () => {
+  it("uses official चरणसेवक family names", () => {
     assert.equal(roleLabelMarathi("charansevak"), "चरणसेवक");
-    assert.equal(roleLabelMarathi("guru"), "संवादक");
-    assert.equal(roleLabelMarathi("software"), "सेवक");
+    assert.equal(roleLabelMarathi("guru"), "मार्गदर्शक");
+    assert.equal(roleLabelMarathi("software"), "संगणक");
+    assert.equal(appDisplayName("charansevak"), MEMBER_ROLE_LABEL);
+    assert.equal(appDisplayName("guru"), GUIDE_LABEL);
+    assert.equal(appDisplayName("software"), SOFTWARE_LABEL);
+  });
+});
+
+describe("canAppointVahak", () => {
+  const fridayMorning = new Date("2026-09-18T01:30:00.000Z"); // 07:00 IST
+  const fridayAfternoon = new Date("2026-09-18T07:00:00.000Z"); // 12:30 IST
+  const thursday = new Date("2026-09-17T04:00:00.000Z");
+
+  it("is Friday 06:00–12:00 IST for the सत्संग चरणसेवक window", () => {
+    assert.equal(isFridayVahakAppointWindow(fridayMorning), true);
+    assert.equal(isFridayVahakAppointWindow(fridayAfternoon), false);
+    assert.equal(isFridayVahakAppointWindow(thursday), false);
+  });
+
+  it("lets मार्गदर्शक / संगणक appoint anytime; चरणसेवक only empty + Friday window", () => {
+    assert.equal(canAppointVahak("guru", { hasDuty: true, now: thursday }), true);
+    assert.equal(canAppointVahak("software", { hasDuty: true, now: thursday }), true);
+    assert.equal(canAppointVahak("charansevak", { hasDuty: false, now: fridayMorning }), true);
+    assert.equal(canAppointVahak("charansevak", { hasDuty: true, now: fridayMorning }), false);
+    assert.equal(canAppointVahak("charansevak", { hasDuty: false, now: thursday }), false);
   });
 });
 

@@ -6,6 +6,7 @@ import {
   upsertMeeting,
   type MeetingPatch,
 } from "@/lib/db";
+import { actorCanEditPlaceTopic } from "@/lib/chintan";
 import { DEFAULT_MEETING_TIME } from "@/lib/dates";
 import {
   ATTENDANCE_GEO_MAX_METERS,
@@ -74,6 +75,10 @@ export async function PUT(request: Request) {
   if (!body.place_id || !body.meeting_date) {
     return jsonError("place_id आणि meeting_date आवश्यक", 400);
   }
+  if (!staff) {
+    // Duty assignment is the source of truth — विचार वाहक cannot rename themselves.
+    delete body.conductor;
+  }
   const kind = body.topic_kind;
   if (kind && kind !== "atmaprabha" && kind !== "upadesh") {
     return jsonError("अवैध विषय प्रकार", 400);
@@ -82,10 +87,41 @@ export async function PUT(request: Request) {
   const place = await getPlace(Number(body.place_id));
   if (!place) return jsonError("स्थान सापडले नाही", 404);
 
+  const topicTouched =
+    body.topic_kind !== undefined ||
+    body.topic_title !== undefined ||
+    body.conductor !== undefined ||
+    body.notes !== undefined;
+  const attendanceTouched =
+    body.men !== undefined ||
+    body.women !== undefined ||
+    body.children !== undefined ||
+    body.meeting_time !== undefined;
+  const hasGeo =
+    Number.isFinite(Number(body.latitude)) &&
+    Number.isFinite(Number(body.longitude));
+  const topicOnly = topicTouched && !attendanceTouched && !hasGeo;
+
+  if (topicTouched) {
+    const allowed = actor
+      ? await actorCanEditPlaceTopic(
+          actor,
+          Number(body.place_id),
+          String(body.meeting_date),
+        )
+      : false;
+    if (!allowed) {
+      return jsonError(
+        "फक्त या स्थळाचे परमानंद विचार वाहक, मार्गदर्शक किंवा संगणक विषय दुरुस्त करू शकतात",
+        403,
+      );
+    }
+  }
+
   let checkin: Partial<MeetingPatch> = {};
 
-  // चरणसेवक: सत्संग स्थळापासून ≤20m आवश्यक
-  if (!staff) {
+  // चरणसेवक attendance: सत्संग स्थळापासून ≤20m आवश्यक (विषय-only विचार वाहक जतन GPS नको)
+  if (!staff && !topicOnly) {
     const lat = Number(body.latitude);
     const lng = Number(body.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -93,7 +129,7 @@ export async function PUT(request: Request) {
     }
     if (place.latitude == null || place.longitude == null) {
       return jsonError(
-        "या ठिकाणाचे GPS अजून सेट नाही — संवादक / सॉफ्टवेअर प्रथम स्थळ चिन्हांकित करा",
+        "या ठिकाणाचे GPS अजून सेट नाही — मार्गदर्शक / संगणक प्रथम स्थळ चिन्हांकित करा",
         400,
       );
     }
