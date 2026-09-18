@@ -6,6 +6,12 @@ import {
   isGuruPhone,
   normalizePhone,
 } from "./phone";
+import { ymdInIndia } from "@/lib/dates";
+import { ONE_QUESTION_HELP } from "@/lib/labels";
+import {
+  actorNeedsWeeklyQuestionLimit,
+  seekerHasQuestionThisWeek,
+} from "@/lib/weekly-limits";
 import {
   createAjapaQuestion,
   escalateAjapaQuestion,
@@ -78,6 +84,13 @@ async function handleAjapaQ(
   name?: string,
 ): Promise<BotResult> {
   const session = await touchWaSession(from);
+  if (
+    actorNeedsWeeklyQuestionLimit(from) &&
+    (await seekerHasQuestionThisWeek(from, ymdInIndia()))
+  ) {
+    await sendText(from, ONE_QUESTION_HELP);
+    return { handled: true, replies: ["week limit"] };
+  }
   const { answer } = await generateAjapaAiAnswer(question);
   const row = await createAjapaQuestion({
     seeker_phone: from,

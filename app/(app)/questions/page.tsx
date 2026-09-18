@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
-import { ANSWERED_BY_LABEL, GUIDE_QUESTION_HELP } from "@/lib/labels";
+import {
+  ANSWERED_BY_LABEL,
+  GUIDE_QUESTION_HELP,
+  HANDWRITTEN_PHOTO_HELP,
+  ONE_QUESTION_HELP,
+  QUESTION_AI_FIRST_HELP,
+  QUESTION_ID_HELP,
+} from "@/lib/labels";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 import { canSeeGuideScreens } from "@/lib/roles";
 
@@ -15,6 +23,7 @@ type Question = {
   question: string;
   answer: string | null;
   answered_by: "atmaprabha" | "madhusudandas" | null;
+  public_id?: string;
 };
 
 export default function QuestionsPage() {
@@ -25,6 +34,7 @@ export default function QuestionsPage() {
   const [placeLocked, setPlaceLocked] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
   const [items, setItems] = useState<Question[]>([]);
+  const [askedThisWeek, setAskedThisWeek] = useState(false);
   const [draft, setDraft] = useState("");
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +68,11 @@ export default function QuestionsPage() {
     const q = new URLSearchParams({ from: week.start, to: week.end });
     if (placeId) q.set("place_id", String(placeId));
     if (onlyOpen) q.set("unanswered", "1");
-    const data = await api<{ questions: Question[] }>(
+    const data = await api<{ questions: Question[]; asked_this_week?: boolean }>(
       `/api/questions?${q.toString()}`,
     );
     setItems(data.questions);
+    setAskedThisWeek(Boolean(data.asked_this_week));
   }
 
   useEffect(() => {
@@ -156,14 +167,33 @@ export default function QuestionsPage() {
     }
   }
 
+  async function stubHandwritten(id: number) {
+    if (!guide) return;
+    setSavingId(id);
+    setError(null);
+    setOkMsg(null);
+    try {
+      const res = await api<{ todo?: boolean; message?: string }>(
+        `/api/questions/${id}/handwritten`,
+        { method: "POST", body: JSON.stringify({ filename: "stub.jpg" }) },
+      );
+      setOkMsg(res.message || HANDWRITTEN_PHOTO_HELP);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "हस्तलिखित अयशस्वी");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={date} />
       <div>
         <h2 className="text-lg font-bold">प्रश्नोत्तर</h2>
         <p className="break-words text-xs text-temple-muted">
           {guide
-            ? GUIDE_QUESTION_HELP
-            : "परमानंद चरणसेवक — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
+            ? `${GUIDE_QUESTION_HELP} ${QUESTION_ID_HELP} ${HANDWRITTEN_PHOTO_HELP}`
+            : `${ONE_QUESTION_HELP} ${QUESTION_AI_FIRST_HELP} ${QUESTION_ID_HELP}`}
         </p>
       </div>
       <PlaceDateBar
@@ -184,6 +214,11 @@ export default function QuestionsPage() {
           फक्त प्रलंबित प्रश्न
         </label>
       ) : null}
+      {!guide && askedThisWeek ? (
+        <p className="rounded-xl bg-saffron-50 px-3 py-2 text-xs leading-relaxed text-saffron-900">
+          {ONE_QUESTION_HELP} उत्तर «संवाद» मध्ये दिसेल.
+        </p>
+      ) : (
       <div className="card space-y-2 p-3">
         <textarea
           value={draft}
@@ -206,6 +241,7 @@ export default function QuestionsPage() {
           </p>
         ) : null}
       </div>
+      )}
       {error ? (
         <p className="break-words text-sm text-red-700">{error}</p>
       ) : null}
@@ -213,7 +249,10 @@ export default function QuestionsPage() {
         {items.map((q) => (
           <li key={q.id} className="card space-y-2 p-3">
             <p className="break-words font-semibold">{q.question}</p>
-            <p className="text-xs text-temple-muted">{q.place_name}</p>
+            <p className="text-xs text-temple-muted">
+              {q.public_id ? `${q.public_id} · ` : ""}
+              {q.place_name}
+            </p>
             {guide ? (
               <>
                 <textarea
@@ -268,6 +307,14 @@ export default function QuestionsPage() {
                     काढा
                   </button>
                 </div>
+                <button
+                  type="button"
+                  disabled={savingId === q.id}
+                  onClick={() => void stubHandwritten(q.id)}
+                  className="w-full rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+                >
+                  हस्तलिखित उत्तर (stub)
+                </button>
               </>
             ) : q.answer ? (
               <div className="rounded-xl bg-saffron-50/70 p-2 text-sm">
@@ -301,7 +348,9 @@ export default function QuestionsPage() {
       </ul>
       {items.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          या आठवड्यात प्रश्न नाहीत — वर लिहून «प्रश्न जोडा»
+          {!guide && askedThisWeek
+            ? `${ONE_QUESTION_HELP} उत्तर «संवाद» मध्ये दिसेल.`
+            : "या आठवड्यात प्रश्न नाहीत — वर लिहून «प्रश्न जोडा»"}
         </p>
       ) : null}
     </div>

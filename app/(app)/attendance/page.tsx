@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NumberStepper, PlaceDateBar, SaveBar, type Place } from "@/components/FormBits";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
 import { DEFAULT_MEETING_TIME, defaultThursdayYmd } from "@/lib/dates";
@@ -338,6 +339,7 @@ export default function AttendancePage() {
   if (!staff && places.length === 0) {
     return (
       <div className="space-y-3">
+        <ThursdayTithiBar ymd={date} />
         <h2 className="text-lg font-bold">उपस्थिती</h2>
         <p className="rounded-2xl bg-saffron-50 p-4 text-sm text-temple-muted">
           या गुरुवारी तुमच्या नावावर ठिकाण नेमलेले नाही. {VAHAK_APPOINT_HELP}
@@ -348,6 +350,7 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-4 pb-8">
+      <ThursdayTithiBar ymd={date} />
       <div>
         <h2 className="text-lg font-bold">
           {staff ? "उपस्थिती · एडिट" : `उपस्थिती · ${SATSANG_CHARANSEVAK_LABEL}`}

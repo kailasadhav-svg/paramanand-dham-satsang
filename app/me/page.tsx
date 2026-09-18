@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AJPA_LABEL } from "@/lib/ajpa";
 import { api } from "@/lib/api";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { chintanDeadlineYmd, formatMarathiDate } from "@/lib/dates";
 import {
   CHINTAN_DEADLINE_HELP,
@@ -68,6 +69,7 @@ export default function MemberHomePage() {
 
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={weekly.week_start} />
       <div className="card space-y-2 p-4">
         <p className="text-sm text-temple-muted">नमस्कार</p>
         <h2 className="text-xl font-bold">{member.name}</h2>

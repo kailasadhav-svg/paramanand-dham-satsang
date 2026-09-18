@@ -19,6 +19,8 @@ import {
   GUIDE_QUESTION_HELP,
   GUIDE_QUEUE_LABEL,
   MEMBER_ROLE_LABEL,
+  ONE_QUESTION_HELP,
+  QUESTION_AI_FIRST_HELP,
   SOFTWARE_LABEL,
 } from "@/lib/labels";
 
@@ -290,10 +292,10 @@ export default function AjapaPage() {
 
   const viewHint =
     profile.role === "software"
-      ? "संगणक चरणसेवक — फक्त तुमचे प्रश्न"
+      ? `संगणक चरणसेवक — फक्त तुमचे प्रश्न. ${ONE_QUESTION_HELP} ${QUESTION_AI_FIRST_HELP}`
       : profile.role === "guru"
         ? GUIDE_QUESTION_HELP
-        : "तुमचे प्रश्न · साहित्य · Meta WhatsApp OTP → मार्गदर्शक";
+        : `${ONE_QUESTION_HELP} ${QUESTION_AI_FIRST_HELP}`;
 
   return (
     <div className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SaveBar } from "@/components/FormBits";
+import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { api } from "@/lib/api";
 import {
   addDaysYmd,
@@ -17,6 +18,9 @@ import {
   TOPIC_THURSDAY_HELP,
   VAHAK_JOB_HELP,
   VAHAK_LABEL,
+  WEEKLY_ARCHIVE_HELP,
+  WEEKLY_ARCHIVE_SUMMARY_HELP,
+  WEEKLY_ARCHIVE_VAHAK_HELP,
 } from "@/lib/labels";
 import { placeLabel } from "@/lib/places";
 
@@ -48,6 +52,10 @@ export default function WeeklyAdminPage() {
   const [isVahak, setIsVahak] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfNote, setPdfNote] = useState<string | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveNote, setArchiveNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -82,11 +90,64 @@ export default function WeeklyAdminPage() {
     }
   }
 
+  async function exportVillagePdf() {
+    if (!canSeeBodies) return;
+    setPdfBusy(true);
+    setPdfNote(null);
+    try {
+      const data = await api<{
+        todo?: boolean;
+        message?: string;
+        villages?: { place_label: string; submitted: unknown[]; pending: unknown[] }[];
+      }>(`/api/weekly/chintan-pdf?week_start=${thursday}`);
+      const n = data.villages?.length ?? 0;
+      setPdfNote(
+        `${data.message || "गावानुसार चिंतन"} · ${n} स्थळे` +
+          (data.todo ? " (PDF stub)" : ""),
+      );
+    } catch (e) {
+      setPdfNote(e instanceof Error ? e.message : "PDF अयशस्वी");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  async function runArchive(action: string, extra: Record<string, unknown> = {}) {
+    setArchiveBusy(true);
+    setArchiveNote(null);
+    try {
+      const data = await api<{
+        message?: string;
+        archives?: unknown[];
+        archive?: { place_code?: string; visible?: boolean; summary_read?: boolean };
+      }>("/api/weekly/archive", {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          this_thursday: thursday,
+          week_start: addDaysYmd(thursday, -7),
+          ...extra,
+        }),
+      });
+      const n = data.archives?.length;
+      setArchiveNote(
+        data.message ||
+          (n != null ? `संग्रह · ${n} गावे` : "संग्रह जतन") +
+            (data.archive?.place_code ? ` · ${data.archive.place_code}` : ""),
+      );
+    } catch (e) {
+      setArchiveNote(e instanceof Error ? e.message : "संग्रह अयशस्वी");
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
   const pending = roster.filter((r) => !r.submitted);
   const done = roster.filter((r) => r.submitted);
 
   return (
     <div className="space-y-4">
+      <ThursdayTithiBar ymd={thursday} />
       <h2 className="text-lg font-bold">
         {isVahak ? `${VAHAK_LABEL} · ${CHINTAN_LABEL}` : `साप्ताहिक विषय · ${CHINTAN_LABEL}`}
       </h2>
@@ -171,6 +232,48 @@ export default function WeeklyAdminPage() {
           पूर्ण चिंतन — फक्त मार्गदर्शक (मधुसुदनदास). {GUIDE_CHINTAN_RANK_HELP}
         </p>
       )}
+      {canSeeBodies ? (
+        <div className="space-y-1">
+          <button
+            type="button"
+            disabled={pdfBusy}
+            onClick={() => void exportVillagePdf()}
+            className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+          >
+            {pdfBusy ? "तयार…" : "गावानुसार चिंतन PDF (stub)"}
+          </button>
+          {pdfNote ? <p className="text-[11px] text-temple-muted">{pdfNote}</p> : null}
+        </div>
+      ) : null}
+      <div className="space-y-2 rounded-xl bg-white p-3 ring-1 ring-saffron-200">
+        <p className="text-xs font-semibold text-saffron-900">मागच्या आठवड्याचा संग्रह (stub)</p>
+        <p className="text-[11px] leading-relaxed text-temple-muted">
+          {canSeeBodies ? WEEKLY_ARCHIVE_HELP : WEEKLY_ARCHIVE_VAHAK_HELP}{" "}
+          {canSeeBodies ? WEEKLY_ARCHIVE_SUMMARY_HELP : ""}
+        </p>
+        {canSeeBodies ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={archiveBusy}
+              onClick={() => void runArchive("generate")}
+              className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+            >
+              {archiveBusy ? "तयार…" : "गुरुवार १७:०० संग्रह तयार (stub)"}
+            </button>
+          </div>
+        ) : isVahak ? (
+          <button
+            type="button"
+            disabled={archiveBusy}
+            onClick={() => void runArchive("ack_read", { place_code: roster[0]?.place_code })}
+            className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+          >
+            सारांश वाचला / ऐकला (stub)
+          </button>
+        ) : null}
+        {archiveNote ? <p className="text-[11px] text-temple-muted">{archiveNote}</p> : null}
+      </div>
       <ul className="space-y-2">
         {roster.map((a) => (
           <li key={a.member_id} className="card p-3 text-sm">

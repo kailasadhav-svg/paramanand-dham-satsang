@@ -41,6 +41,19 @@ Now in the app:
 - Full चिंतन bodies (`/weekly`); per-place Thursday topic (`/topic`, `/weekly`)
 - Approve app access; appoint विचार वाहक
 
+## Weekly question + चिंतन rules
+
+Now:
+1. **One question per परमानंद चरणसेवक per week** (hard limit on `/api/questions` and WhatsApp `अजपा Q`). मार्गदर्शक unlimited.
+2. **चिंतन is mandatory** for everyone (copy + empty submit rejected).
+3. **Village चिंतन PDF** — `GET /api/weekly/chintan-pdf` returns a JSON stub grouped by village. TODO: real PDF.
+4. **Every question gets an automatic AI / परमानंद साहित्य answer first.**
+5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
+6. **Question id** = village + year-week + FIFO sequence (computed on list; TODO persist). Week 1 = first Thursday of January 2026 (`2026-01-01`); later Thursdays +1 within the year.
+7. **हस्तलिखित उत्तर photo** — मार्गदर्शक stub `POST /api/questions/[id]/handwritten`. TODO: store image.
+8. **Thursday tithi bar** — Marathi panchang stub + week number at the top of Thursday screens. TODO: live panchang.
+9. **Thursday 17:00 archive** — previous week’s per-village immutable चिंतन + प्रश्न-उत्तर files (`GET/POST /api/weekly/archive` stub). मार्गदर्शक owns; summary (type/photo/voice) mandatory before visible; previous विचार वाहक must read/play at the place. TODO: cron + persist + media.
+
 Specified — copy is on मार्गदर्शक screens; tools not built yet:
 1. **All member questions route to them.**
 2. **Dashboard:** total questions + **एकसमान** (similar/duplicate) count; answer similars with **one shared answer** or per-person answers.
@@ -92,13 +105,6 @@ npm run test:ajapa
 
 - Native iOS/Android apps
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
-
-Future week / archive product (not in this PR):
-- One question per परमानंद चरणसेवक per week; चिंतन mandatory; village चिंतन PDF
-- AI answer first; escalate to मार्गदर्शक if unsatisfied
-- Question id = village + week + sequence (FIFO); handwritten-answer photo upload
-- Week 1 = first Thursday of January 2026 (`2026-01-01`); Thursday screens show Marathi panchang tithi
-- Thursday 17:00 immutable previous-week चिंतन + प्रश्न-उत्तर files; mandatory मार्गदर्शक summary (type / photo / voice); previous विचार वाहक reads/plays it at the place
 
 ## Run locally
 

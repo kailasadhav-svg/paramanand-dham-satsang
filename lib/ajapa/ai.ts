@@ -119,7 +119,11 @@ async function llmAnswer(
   return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
-/** Generate Marathi literature answer ≥200 words — question-first, seeker-facing. */
+/**
+ * Automatic first answer for every question (AI-first, then escalate).
+ * TODO: production LLM via AJAPA_AI_API_KEY / OPENAI_API_KEY. Without a key,
+ * परमानंद साहित्य knowledge is the first answer (not a blank stub).
+ */
 export async function generateAjapaAiAnswer(
   question: string,
   topic?: AjapaTopicContext | null,
