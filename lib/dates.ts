@@ -81,11 +81,37 @@ export function minutesInIndia(now = new Date()): number {
 }
 
 /**
- * शुक्रवार ०६:००–१२:०० (IST): सत्संग चरणसेवक may appoint विचार वाहक
- * if मार्गदर्शक has not yet named one.
+ * शुक्रवार ०६:००–१२:०० IST of the Friday after `thursdayYmd`.
+ * सत्संग चरणसेवक may appoint विचार वाहक only in this window, and only if empty.
  */
-export function isFridayVahakAppointWindow(now = new Date()): boolean {
-  if (weekdayInIndia(now) !== 5) return false;
+export function isFridayVahakAppointWindowForWeek(
+  thursdayYmd: string,
+  now = new Date(),
+): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(thursdayYmd)) return false;
+  const friday = addDaysYmd(thursdayYmd, 1);
+  if (ymdInIndia(now) !== friday) return false;
   const mins = minutesInIndia(now);
   return mins >= 6 * 60 && mins <= 12 * 60;
+}
+
+/**
+ * शुक्रवार ०६:००–१२:०० (IST) for the current satsang week
+ * (most recent Thursday’s following Friday).
+ */
+export function isFridayVahakAppointWindow(now = new Date()): boolean {
+  return isFridayVahakAppointWindowForWeek(defaultThursdayYmd(now), now);
+}
+
+/**
+ * After Friday 12:00 noon IST of that week: if still no वाहक,
+ * last Thursday’s person continues.
+ */
+export function shouldAutoContinueVahak(thursdayYmd: string, now = new Date()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(thursdayYmd)) return false;
+  const friday = addDaysYmd(thursdayYmd, 1);
+  const today = ymdInIndia(now);
+  if (today > friday) return true;
+  if (today < friday) return false;
+  return minutesInIndia(now) > 12 * 60;
 }

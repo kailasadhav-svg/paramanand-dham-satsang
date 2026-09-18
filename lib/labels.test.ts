@@ -46,6 +46,8 @@ describe("चिंतन copy", () => {
     assert.equal(GUIDE_LABEL, "मार्गदर्शक चरणसेवक");
     assert.match(VAHAK_APPOINT_HELP, /शुक्रवार/);
     assert.match(VAHAK_APPOINT_HELP, /सत्संग चरणसेवक/);
+    assert.match(VAHAK_APPOINT_HELP, /दुपारी १२/);
+    assert.match(VAHAK_APPOINT_HELP, /परमानंद चरणसेवकांपैकी एक/);
   });
 
   it("puts चिंतन due on the Wednesday after Thursday satsang", () => {

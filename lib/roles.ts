@@ -1,4 +1,4 @@
-import { isFridayVahakAppointWindow } from "./dates.ts";
+import { isFridayVahakAppointWindow, isFridayVahakAppointWindowForWeek } from "./dates.ts";
 import { normalizePhone } from "./offline/phone.ts";
 import {
   GUIDE_LABEL,
@@ -46,8 +46,9 @@ export const SEEKER_DEMO_PHONES = (
  * - संगणक चरणसेवक — software (KAILAS)
  * - मार्गदर्शक चरणसेवक — Madhusudandas: topics, all चिंतन, approve app access, appoint Vahak
  *
- * Future (not in this PR): one question/week; village चिंतन PDF; AI-first answers
- * then escalate to मार्गदर्शक; dashboard similar-question counts; rank top 3 चिंतन.
+ * Future (not built here): one question/week; village चिंतन PDF; AI-first then
+ * escalate; similar-question dashboard; rank top 3 चिंतन; week numbers from
+ * 2026-01-01; Thursday panchang; immutable Thursday 17:00 archive + summary.
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 
@@ -101,17 +102,23 @@ export function canSeeChintanBody(role: StaffRole): boolean {
 }
 
 /**
- * Appoint परमानंद विचार वाहक for a place/Thursday.
- * मार्गदर्शक (and संगणक) anytime; सत्संग चरणसेवक only Friday 06:00–12:00 IST
- * when that place still has no वाहक for the week.
+ * Appoint परमानंद विचार वाहक for a place/Thursday (always a परमानंद चरणसेवक).
+ * Cascade:
+ * 1. मार्गदर्शक (मधुसुदनदास) — main weekly duty, anytime.
+ * 2. Else सत्संग चरणसेवक — only that week’s Friday 06:00–12:00 IST, empty slot.
+ * 3. Else after Friday noon — previous Thursday’s वाहक auto-continues (see dates.shouldAutoContinueVahak).
+ * संगणक may also appoint (staff tool); not a separate user class for वाहक.
  */
 export function canAppointVahak(
   role: StaffRole,
-  opts: { hasDuty: boolean; now?: Date } = { hasDuty: false },
+  opts: { hasDuty: boolean; now?: Date; meetingDate?: string } = { hasDuty: false },
 ): boolean {
   if (role === "guru" || role === "software") return true;
   if (role !== "charansevak") return false;
   if (opts.hasDuty) return false;
+  if (opts.meetingDate) {
+    return isFridayVahakAppointWindowForWeek(opts.meetingDate, opts.now);
+  }
   return isFridayVahakAppointWindow(opts.now);
 }
 
