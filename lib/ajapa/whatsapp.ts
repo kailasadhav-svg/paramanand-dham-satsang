@@ -130,7 +130,7 @@ async function postTuriya(body: Record<string, unknown>): Promise<WaSendResult> 
   }
   const host = c.turiyaBase.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const url = `https://${host}/REST/directApi/message`;
-  const payload = {
+  const payload: Record<string, unknown> = {
     ...body,
     to: String(body.to || "").replace(/\D/g, ""),
   };
