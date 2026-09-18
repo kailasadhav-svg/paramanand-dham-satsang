@@ -12,16 +12,25 @@ import { searchLocal, upsertQuestions } from "@/lib/offline/idb";
 import { displayPhone, phonesEqual } from "@/lib/offline/phone";
 import { readLocalForProfile, syncAjapaFromServer } from "@/lib/offline/sync";
 
+import { canSeeGuideScreens } from "@/lib/roles";
+import {
+  GUIDE_ANSWER_LABEL,
+  GUIDE_LABEL,
+  GUIDE_QUEUE_LABEL,
+  MEMBER_ROLE_LABEL,
+  SOFTWARE_LABEL,
+} from "@/lib/labels";
+
 const STATUS_LABEL: Record<AjapaQuestion["status"], string> = {
   ai_answered: "परमानंद साहित्य",
-  escalated: "संवादकांकडे",
-  guru_answered: "संवादक उत्तर",
+  escalated: GUIDE_QUEUE_LABEL,
+  guru_answered: GUIDE_ANSWER_LABEL,
 };
 
 const ROLE_LABEL = {
-  charansevak: "परमानंद चरणसेवक",
-  guru: "संवादक",
-  software: "सेवक",
+  charansevak: MEMBER_ROLE_LABEL,
+  guru: GUIDE_LABEL,
+  software: SOFTWARE_LABEL,
 } as const;
 
 export default function AjapaPage() {
@@ -50,7 +59,7 @@ export default function AjapaPage() {
   const chunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const canAnswer = profile.role === "guru" || profile.role === "software";
+  const canAnswer = canSeeGuideScreens(profile.role);
 
   useEffect(() => {
     return () => {
@@ -100,7 +109,7 @@ export default function AjapaPage() {
       const hasEscalated = items.some((q) => q.status === "escalated");
       if (hasEscalated) setFilter("escalated");
     }
-    // Only once after first load for संवादक convenience
+    // Only once after first load for मार्गदर्शक convenience
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, canAnswer]);
 
@@ -145,7 +154,7 @@ export default function AjapaPage() {
           body: JSON.stringify({ otp: otpValue }),
         },
       );
-      setOkMsg(data.message || "OTP खात्री · संवादकांकडे पाठवले");
+      setOkMsg(data.message || `OTP खात्री · ${GUIDE_QUEUE_LABEL} पाठवले`);
       setOtpForId(null);
       setOtpValue("");
       setOtpHint(null);
@@ -280,10 +289,10 @@ export default function AjapaPage() {
 
   const viewHint =
     profile.role === "software"
-      ? "सेवक — सर्व प्रश्न"
+      ? "संगणक चरणसेवक — फक्त तुमचे प्रश्न"
       : profile.role === "guru"
-        ? "संवादक — उत्तर द्यावयाचे प्रश्न · मजकूर / व्हॉइस (२ मि)"
-        : "तुमचे प्रश्न · साहित्य · Meta WhatsApp OTP → संवादक";
+        ? "मार्गदर्शक चरणसेवक — उत्तर द्यावयाचे प्रश्न · मजकूर / व्हॉइस (२ मि)"
+        : "तुमचे प्रश्न · साहित्य · Meta WhatsApp OTP → मार्गदर्शक";
 
   return (
     <div className="space-y-4">
@@ -325,7 +334,7 @@ export default function AjapaPage() {
           [
             ["all", "सर्व"],
             ["ai_answered", "परमानंद साहित्य"],
-            ["escalated", "संवादकांकडे"],
+            ["escalated", GUIDE_QUEUE_LABEL],
             ["guru_answered", "पूर्ण"],
           ] as const
         ).map(([value, label]) => (
@@ -358,7 +367,7 @@ export default function AjapaPage() {
                   {STATUS_LABEL[q.status]}
                 </span>
               </div>
-              {profile.role !== "charansevak" ? (
+              {profile.role === "guru" ? (
                 <div className="flex items-center justify-between gap-2">
                   <p className="min-w-0 break-words text-xs text-temple-muted">
                     {q.seeker_name ? `${q.seeker_name} · ` : ""}
@@ -397,7 +406,7 @@ export default function AjapaPage() {
                       onClick={() => void verifyOtp(q)}
                       className="w-full rounded-xl bg-saffron-700 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                     >
-                      {otpBusy ? "तपास…" : "OTP खात्री · संवादकांकडे पाठवा"}
+                      {otpBusy ? "तपास…" : `OTP खात्री · ${GUIDE_QUEUE_LABEL} पाठवा`}
                     </button>
                     <button
                       type="button"
@@ -424,14 +433,14 @@ export default function AjapaPage() {
 
               {q.status === "ai_answered" && !isOwner ? (
                 <p className="text-xs text-temple-muted">
-                  संवादकांकडे पाठवण्यासाठी प्रश्नकर्त्याने Meta WhatsApp OTP
+                  {GUIDE_QUEUE_LABEL} पाठवण्यासाठी प्रश्नकर्त्याने Meta WhatsApp OTP
                   खात्री करावी
                 </p>
               ) : null}
 
               {q.status === "escalated" && !canAnswer ? (
                 <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
-                  संवादकांकडे पाठवले — उत्तर येईल तेव्हा येथे दिसेल
+                  {GUIDE_QUEUE_LABEL} पाठवले — उत्तर येईल तेव्हा येथे दिसेल
                 </p>
               ) : null}
 
@@ -440,7 +449,7 @@ export default function AjapaPage() {
                   {replyForId === q.id ? (
                     <>
                       <p className="text-sm font-bold text-saffron-900">
-                        संवादक उत्तर (मजकूर / व्हॉइस · कमाल २ मि)
+                        {GUIDE_ANSWER_LABEL} (मजकूर / व्हॉइस · कमाल २ मि)
                       </p>
                       <textarea
                         value={replyText}
@@ -542,14 +551,14 @@ export default function AjapaPage() {
               ) : null}
               {q.guru_answer_text ? (
                 <div className="rounded-xl bg-saffron-50/60 p-2 text-sm">
-                  <p className="font-semibold text-saffron-900">संवादक उत्तर</p>
+                  <p className="font-semibold text-saffron-900">{GUIDE_ANSWER_LABEL}</p>
                   <p className="whitespace-pre-wrap">{q.guru_answer_text}</p>
                 </div>
               ) : null}
               {q.guru_answer_audio_url ? (
                 <VoiceNotePlayer
                   src={q.guru_answer_audio_url}
-                  label="व्हॉइस नोट · संवादक"
+                  label={`व्हॉइस नोट · ${GUIDE_LABEL}`}
                   filenameBase={`ajapa-voice-${q.id}`}
                 />
               ) : null}
@@ -563,7 +572,7 @@ export default function AjapaPage() {
           {query
             ? "शोध रिक्त"
             : canAnswer
-              ? "«संवादकांकडे» फिल्टर तपासा — किंवा सिंक करा. उत्तर/व्हॉइस बटण तेथे दिसेल."
+              ? `«${GUIDE_QUEUE_LABEL}» फिल्टर तपासा — किंवा सिंक करा. उत्तर/व्हॉइस बटण तेथे दिसेल.`
               : "अजपा संवाद मध्ये प्रश्न नाहीत — सिंक करा (किंवा प्रश्न टॅबवर नवीन प्रश्न विचारा)"}
         </p>
       ) : null}

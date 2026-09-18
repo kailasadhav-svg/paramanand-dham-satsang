@@ -100,6 +100,9 @@ export function PhoneGate({ children }: { children: ReactNode }) {
     ) {
       router.replace("/ajapa");
     }
+    if (profile.role === "software" && pathname.startsWith("/weekly")) {
+      router.replace("/attendance");
+    }
   }, [ready, profile, pathname, router]);
 
   useEffect(() => {

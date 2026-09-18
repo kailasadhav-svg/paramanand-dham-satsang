@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getActorPhone, getSession } from "@/lib/auth";
 import {
   jsonError,
+  requireGuideActor,
   requireMemberApi,
-  requireStaffActor,
   routeErrorResponse,
 } from "@/lib/api-guard";
 import { chintanViewForActor } from "@/lib/chintan";
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireStaffActor();
+  const auth = await requireGuideActor();
   if (!auth.ok) return auth.response;
   const body = (await request.json().catch(() => ({}))) as {
     week_start?: string;

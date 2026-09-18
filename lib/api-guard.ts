@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getActorPhone, getMemberId, getSession } from "@/lib/auth";
 import { getMemberById, type Member } from "@/lib/members";
-import { canSeeStaffScreens, detectStaffRole, type StaffRole } from "@/lib/roles";
+import {
+  canSeeGuideScreens,
+  canSeeStaffScreens,
+  detectStaffRole,
+  type StaffRole,
+} from "@/lib/roles";
 
 export async function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -24,7 +29,7 @@ export async function requireApiSession() {
   return { ok: true as const };
 }
 
-/** संवादक / सेवक only — weekly report + member login-code list. */
+/** संगणक / मार्गदर्शक — weekly report + GPS + login-code list. */
 export async function requireStaffActor(): Promise<
   | { ok: true; phone: string; role: StaffRole }
   | { ok: false; response: NextResponse }
@@ -33,7 +38,27 @@ export async function requireStaffActor(): Promise<
   if (!actor.ok) return actor;
   const role = detectStaffRole(actor.phone);
   if (!canSeeStaffScreens(role)) {
-    return { ok: false as const, response: await jsonError("फक्त सेवक / संवादक", 403) };
+    return {
+      ok: false as const,
+      response: await jsonError("फक्त संगणक / मार्गदर्शक", 403),
+    };
+  }
+  return { ok: true as const, phone: actor.phone, role };
+}
+
+/** मार्गदर्शक only — topics, all चिंतन, member approval, Vahak, all अजपा. */
+export async function requireGuideActor(): Promise<
+  | { ok: true; phone: string; role: StaffRole }
+  | { ok: false; response: NextResponse }
+> {
+  const actor = await requireActorPhone();
+  if (!actor.ok) return actor;
+  const role = detectStaffRole(actor.phone);
+  if (!canSeeGuideScreens(role)) {
+    return {
+      ok: false as const,
+      response: await jsonError("फक्त मार्गदर्शक चरणसेवक", 403),
+    };
   }
   return { ok: true as const, phone: actor.phone, role };
 }

@@ -1,4 +1,5 @@
 import type { AjapaQuestion } from "./types";
+import { GUIDE_QUEUE_LABEL } from "@/lib/labels";
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || "v21.0";
 
@@ -176,7 +177,7 @@ export async function askEscalate(opts: {
   if (within24h(opts.lastInboundAt) && !cfg().forceTemplates) {
     await sendButtons(opts.to, body, [
       // WhatsApp interactive title ≤20 chars (full label on Meta template)
-      { id: "ajapa_escalate", title: "संवादकांकडे पाठवा" },
+      { id: "ajapa_escalate", title: GUIDE_QUEUE_LABEL },
       { id: "ajapa_enough", title: "पुरे आहे" },
       { id: "ajapa_open_app", title: "अ‍ॅप उघडा" },
     ]);
@@ -218,9 +219,9 @@ export async function notifyGuruNewQuestion(opts: {
   question: string;
   aiAnswer: string;
 }): Promise<void> {
-  const short = truncateParam(`सेवक ${opts.seekerPhone}: ${opts.question}`, 200);
+  const short = truncateParam(`चरणसेवक ${opts.seekerPhone}: ${opts.question}`, 200);
   const text = `नवा अजपा प्रश्न (एस्केलेट)
-सेवक: ${opts.seekerPhone}
+चरणसेवक: ${opts.seekerPhone}
 
 प्रश्न:
 ${opts.question}

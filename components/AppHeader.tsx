@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfileChip, useClearProfile, useProfileOptional } from "@/components/PhoneGate";
 import { profileAppName } from "@/lib/offline/profile";
+import { canSeeStaffScreens } from "@/lib/roles";
 
 export function AppHeader({ subtitle }: { subtitle?: string }) {
   const router = useRouter();
@@ -45,10 +46,12 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           </button>
           {profile ? (
             <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
-              {profile.role !== "charansevak" ? (
+              {profile && canSeeStaffScreens(profile.role) ? (
                 <Link href="/members">चरणसेवक</Link>
               ) : null}
-              <Link href="/weekly">चिंतन</Link>
+              {profile.role !== "software" ? (
+                <Link href="/weekly">चिंतन</Link>
+              ) : null}
             </nav>
           ) : null}
           {profile ? (

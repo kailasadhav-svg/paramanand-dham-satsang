@@ -76,7 +76,7 @@ export default function RegisterPage() {
         <div className="card mt-8 space-y-3 px-5 py-6">
           <p className="text-sm text-temple-muted">{done.name} · {done.place_label}</p>
           <div className="rounded-2xl bg-saffron-50 px-4 py-3 text-center">
-            <p className="text-xs font-semibold text-temple-muted">सेवक क्रमांक</p>
+            <p className="text-xs font-semibold text-temple-muted">चरणसेवक क्रमांक</p>
             <p className="text-3xl font-bold text-saffron-800">{done.id}</p>
           </div>
           <div className="rounded-2xl bg-saffron-50 px-4 py-3 text-center">
@@ -180,7 +180,7 @@ export default function RegisterPage() {
       </p>
       <p className="mt-2 text-center text-sm">
         <Link href="/login" className="text-temple-muted">
-          प्रशासक पिन
+          प्रवेश पिन
         </Link>
       </p>
     </div>

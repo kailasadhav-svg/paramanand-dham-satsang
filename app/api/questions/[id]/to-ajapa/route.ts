@@ -3,7 +3,7 @@ import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { phonesEqual } from "@/lib/ajapa/phone";
 import { getDb, getQuestion } from "@/lib/db";
-import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
+import { canSeeGuideScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export async function POST(request: Request, ctx: Ctx) {
   const q = await getQuestion(id);
   if (!q) return jsonError("प्रश्न सापडला नाही", 404);
 
-  const staff = canSeeStaffScreens(detectStaffRole(actor));
+  const staff = canSeeGuideScreens(detectStaffRole(actor));
   if (q.asked_by_phone && !phonesEqual(q.asked_by_phone, actor) && !staff) {
     return jsonError("हा प्रश्न दुसऱ्याचा आहे", 403);
   }

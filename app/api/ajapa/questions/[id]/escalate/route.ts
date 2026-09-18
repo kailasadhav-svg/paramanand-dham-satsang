@@ -14,7 +14,7 @@ export async function POST(_request: Request, _ctx: Ctx) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
   return jsonError(
-    "संवादकांकडे पाठवण्यासाठी Meta WhatsApp OTP आवश्यक — «OTP मागा» दाबा",
+    "मार्गदर्शकांकडे पाठवण्यासाठी Meta WhatsApp OTP आवश्यक — «OTP मागा» दाबा",
     400,
   );
 }

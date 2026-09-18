@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import { redactChintanRoster, scopeChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
-import { canSeeChintanBody } from "./roles.ts";
+import { canEditWeeklyQuestion, canSeeChintanBody, canSeeGuideScreens } from "./roles.ts";
 import { VAHAK_LABEL, VAHAK_LABEL_SHORT } from "./labels.ts";
 
 const sample: ChintanStatusRow[] = [
@@ -43,6 +43,9 @@ describe("redactChintanRoster", () => {
     assert.equal(sevak[0].answer, undefined);
     const vahak = redactChintanRoster(sample, canSeeChintanBody("charansevak"));
     assert.equal(vahak[0].answer, undefined);
+    assert.equal(canSeeGuideScreens("software"), false);
+    assert.equal(canEditWeeklyQuestion("software"), false);
+    assert.equal(canEditWeeklyQuestion("guru"), true);
   });
 });
 
@@ -78,5 +81,7 @@ describe("one विचार वाहक per place per Thursday", () => {
     const view = readFileSync(new URL("./chintan.ts", import.meta.url), "utf8");
     assert.match(view, /redactChintanRoster\(raw, seeBody\)/);
     assert.match(view, /canSeeChintanBody/);
+    assert.match(view, /canEditWeeklyQuestion/);
+    assert.match(view, /placeCodes = \[\]/);
   });
 });

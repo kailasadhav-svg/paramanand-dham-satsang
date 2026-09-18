@@ -81,7 +81,7 @@ function LoginForm() {
       </div>
 
       <div className="mt-10 card px-5 py-6">
-        <p className="text-center text-sm font-semibold">प्रशासक पिन</p>
+        <p className="text-center text-sm font-semibold">प्रवेश पिन</p>
         <div className="mt-4 flex justify-center gap-2">
           {Array.from({ length: Math.max(4, pin.length) }).map((_, i) => (
             <span
@@ -137,13 +137,13 @@ function LoginForm() {
       </div>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-temple-muted">
-        मार्गदर्शक: मधुसुदनदास · 9850120960
+        मार्गदर्शक चरणसेवक: मधुसुदनदास · 9850120960
         <br />
-        संगणक: कैलास आढाव · 9225118811
+        संगणक चरणसेवक: कैलास आढाव · 9225118811
         <br />
-        चरणसेवक (कैलास): 9423078811 · shortcut: परमानंद चरणसेवक
+        परमानंद चरणसेवक (कैलास): 9423078811
         <br />
-        चरणसेवक (मधुसुदनदास): 9136443333
+        परमानंद चरणसेवक (मधुसुदनदास): 9136443333
       </p>
     </div>
   );

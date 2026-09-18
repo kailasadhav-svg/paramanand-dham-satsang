@@ -78,13 +78,34 @@ export function detectStaffRole(phone: string): StaffRole {
   return "charansevak";
 }
 
-/** Attendance + report (+ topic/questions staff tools). */
+/** Attendance GPS/report staff tools — संगणक + मार्गदर्शक. Not चिंतन / members / Vahak. */
 export function canSeeStaffScreens(role: StaffRole): boolean {
   return role === "software" || role === "guru";
 }
 
 export function canSeeSoftwareRights(role: StaffRole): boolean {
   return role === "software";
+}
+
+/**
+ * मार्गदर्शक-only screens/data: weekly topic, all चिंतन bodies, member
+ * approval, Vahak appoint, all-seeker अजपा.
+ * संगणक must not see these.
+ */
+export function canSeeGuideScreens(role: StaffRole): boolean {
+  return role === "guru";
+}
+
+export function canEditWeeklyQuestion(role: StaffRole): boolean {
+  return canSeeGuideScreens(role);
+}
+
+export function canSeeAllAjapa(role: StaffRole): boolean {
+  return canSeeGuideScreens(role);
+}
+
+export function canEditAnyPlaceTopic(role: StaffRole): boolean {
+  return canSeeGuideScreens(role);
 }
 
 /**
@@ -107,13 +128,13 @@ export function canSeeChintanBody(role: StaffRole): boolean {
  * 1. मार्गदर्शक (मधुसुदनदास) — main weekly duty, anytime.
  * 2. Else सत्संग चरणसेवक — only that week’s Friday 06:00–12:00 IST, empty slot.
  * 3. Else after Friday noon — previous Thursday’s वाहक auto-continues (see dates.shouldAutoContinueVahak).
- * संगणक may also appoint (staff tool); not a separate user class for वाहक.
+ * संगणक does not appoint — that screen is मार्गदर्शक / सत्संग चरणसेवक only.
  */
 export function canAppointVahak(
   role: StaffRole,
   opts: { hasDuty: boolean; now?: Date; meetingDate?: string } = { hasDuty: false },
 ): boolean {
-  if (role === "guru" || role === "software") return true;
+  if (canSeeGuideScreens(role)) return true;
   if (role !== "charansevak") return false;
   if (opts.hasDuty) return false;
   if (opts.meetingDate) {

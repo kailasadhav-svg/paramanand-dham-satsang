@@ -1,6 +1,7 @@
 import { normalizePhone, phonesEqual } from "./phone";
 import {
   appDisplayName,
+  canSeeGuideScreens,
   canSeeSoftwareRights,
   canSeeStaffScreens,
   detectStaffRole,
@@ -70,7 +71,7 @@ export function isOwnQuestion(
   profile: LocalProfile,
   q: { seeker_phone: string },
 ): boolean {
-  if (canSeeStaffScreens(profile.role)) return true;
+  if (canSeeGuideScreens(profile.role)) return true;
   return phonesEqual(profile.phone, q.seeker_phone);
 }
 

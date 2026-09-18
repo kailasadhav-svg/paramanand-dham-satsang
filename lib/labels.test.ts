@@ -12,6 +12,7 @@ import {
   VAHAK_LABEL_SHORT,
   VAHAK_APPOINT_HELP,
   GUIDE_LABEL,
+  GUIDE_QUEUE_LABEL,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
@@ -44,6 +45,8 @@ describe("चिंतन copy", () => {
     assert.match(VAHAK_JOB_HELP, /मधुसुदनदास/);
     assert.match(VAHAK_JOB_HELP, /परमानंद चरणसेवकांपैकी एक/);
     assert.equal(GUIDE_LABEL, "मार्गदर्शक चरणसेवक");
+    assert.ok(GUIDE_QUEUE_LABEL.length <= 20, "WhatsApp button title must be ≤20");
+    assert.equal(GUIDE_QUEUE_LABEL, "मार्गदर्शकांकडे");
     assert.match(VAHAK_APPOINT_HELP, /शुक्रवार/);
     assert.match(VAHAK_APPOINT_HELP, /सत्संग चरणसेवक/);
     assert.match(VAHAK_APPOINT_HELP, /दुपारी १२/);

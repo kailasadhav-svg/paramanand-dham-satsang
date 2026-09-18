@@ -3,7 +3,7 @@ import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } f
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
-import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
+import { canSeeGuideScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
-  const staff = canSeeStaffScreens(detectStaffRole(actorAuth.phone));
+  const staff = canSeeGuideScreens(detectStaffRole(actorAuth.phone));
   const { searchParams } = new URL(request.url);
   const placeId = searchParams.get("place_id");
   const unanswered = searchParams.get("unanswered") === "1";

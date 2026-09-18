@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const actor = actorAuth.phone;
   if (!actor || !canApproveCharansevak(detectStaffRole(actor))) {
     return jsonError(
-      "फक्त संवादक (मधुसुदनदास) परमानंद चरणसेवक यादी पाहू शकतात",
+      "फक्त मार्गदर्शक चरणसेवक (मधुसुदनदास) परमानंद चरणसेवक यादी पाहू शकतात",
       403,
     );
   }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const actor = actorAuth.phone;
   if (!actor || !canApproveCharansevak(detectStaffRole(actor))) {
     return jsonError(
-      "फक्त संवादक (मधुसुदनदास) परमानंद चरणसेवक मंजूर करू शकतात",
+      "फक्त मार्गदर्शक चरणसेवक (मधुसुदनदास) परमानंद चरणसेवक मंजूर करू शकतात",
       403,
     );
   }

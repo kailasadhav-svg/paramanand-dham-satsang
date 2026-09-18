@@ -3,7 +3,7 @@ import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
 import { getAllQuestions, getMeta, setMeta, upsertQuestions } from "./idb";
 import { phonesEqual } from "./phone";
 import type { LocalProfile } from "./profile";
-import { canSeeStaffScreens } from "@/lib/roles";
+import { canSeeAllAjapa } from "@/lib/roles";
 
 export type SyncResult = {
   pulled: number;
@@ -18,11 +18,8 @@ function sinceKey(profile: LocalProfile): string {
 }
 
 function filterForRole(profile: LocalProfile, questions: AjapaQuestion[]): AjapaQuestion[] {
-  if (canSeeStaffScreens(profile.role)) {
-    if (profile.role === "guru") {
-      return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
-    }
-    return questions; // software
+  if (canSeeAllAjapa(profile.role)) {
+    return questions.filter((q) => q.status === "escalated" || q.status === "guru_answered");
   }
   return questions.filter((q) => phonesEqual(q.seeker_phone, profile.phone));
 }

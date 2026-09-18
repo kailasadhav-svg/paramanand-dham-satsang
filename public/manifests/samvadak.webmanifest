@@ -1,8 +1,8 @@
 {
   "id": "/i/samvadak",
-  "name": "अजपा संवादक",
-  "short_name": "संवादक",
-  "description": "परमानंद धाम · अजपा संवादक",
+  "name": "मार्गदर्शक चरणसेवक",
+  "short_name": "मार्गदर्शक",
+  "description": "परमानंद धाम · मार्गदर्शक चरणसेवक",
   "start_url": "/i/samvadak?src=pwa",
   "scope": "/",
   "display": "standalone",

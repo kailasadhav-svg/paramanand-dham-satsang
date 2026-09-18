@@ -9,7 +9,7 @@ import {
   type QuestionWithPlace,
 } from "./db";
 import { formatMarathiDate, formatMarathiShort, weekFromThursday } from "./dates";
-import { ANSWERED_BY_LABEL, TOPIC_LABEL } from "./labels";
+import { ANSWERED_BY_LABEL, TOPIC_LABEL, VAHAK_LABEL_SHORT } from "./labels";
 import { displayPhone } from "./offline/phone";
 
 export { ANSWERED_BY_LABEL, TOPIC_LABEL } from "./labels";
@@ -56,7 +56,7 @@ export async function buildWeeklyReport(thursdayYmd: string) {
       const who =
         row.duty.charansevak_name ||
         displayPhone(row.duty.charansevak_phone);
-      lines.push(`🙏 चरणसेवक: ${who} (${displayPhone(row.duty.charansevak_phone)})`);
+      lines.push(`🙏 ${VAHAK_LABEL_SHORT}: ${who} (${displayPhone(row.duty.charansevak_phone)})`);
     }
     if (row.meeting?.checkin_ok != null) {
       const d = row.meeting.checkin_distance_m;

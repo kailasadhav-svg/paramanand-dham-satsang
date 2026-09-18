@@ -290,7 +290,7 @@ export async function saveGuruVoiceAnswer(
   return getAjapaQuestion(id);
 }
 
-/** In-app संवादक उत्तर — text and/or voice (data URL). */
+/** In-app मार्गदर्शक उत्तर — text and/or voice (data URL). */
 export async function saveGuruInAppAnswer(
   id: number,
   opts: {

@@ -26,7 +26,13 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 2. If still empty: सत्संग चरणसेवक on **that week’s Friday 06:00–12:00 noon IST**.
 3. After Friday noon, if still empty: last Thursday’s वाहक continues automatically.
 
-App login is a simple **admin PIN** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
+App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
+
+Isolation (role-scoped screens/data do not leak):
+- **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak appoint.
+- **मार्गदर्शक** — topics, all चिंतन text, approve app access, appoint विचार वाहक, all-seeker अजपा answers.
+- **परमानंद विचार वाहक** — own place topic + चिंतन status only (never bodies).
+- **सत्संग चरणसेवक** — attendance counts; Friday 06:00–12:00 IST Vahak window if empty.
 
 ## Seed places
 

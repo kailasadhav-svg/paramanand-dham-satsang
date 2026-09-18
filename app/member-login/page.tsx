@@ -79,7 +79,7 @@ function MemberLoginForm() {
       </p>
       <p className="mt-2 text-center text-sm">
         <Link href="/login" className="text-temple-muted">
-          प्रशासक पिन
+          प्रवेश पिन
         </Link>
       </p>
     </div>
