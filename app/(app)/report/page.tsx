@@ -39,9 +39,13 @@ export default function ReportPage() {
   }, [thursday]);
 
   useEffect(() => {
-    void api<{ collision_count: number }>("/api/members").then((data) => {
-      setCollisionCount(data.collision_count);
-    });
+    void api<{ collision_count: number }>("/api/members")
+      .then((data) => {
+        setCollisionCount(data.collision_count);
+      })
+      .catch(() => {
+        setCollisionCount(0);
+      });
   }, []);
 
   async function copyText() {

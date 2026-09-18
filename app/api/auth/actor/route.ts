@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   ACTOR_COOKIE,
   actorSessionToken,
+  clearCookieOptions,
   getActorPhone,
   productionAuthBlockedReason,
   sessionCookieOptions,
@@ -125,6 +126,6 @@ export async function DELETE() {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(ACTOR_COOKIE, "", { path: "/", maxAge: 0 });
+  res.cookies.set(ACTOR_COOKIE, "", { ...clearCookieOptions() });
   return res;
 }

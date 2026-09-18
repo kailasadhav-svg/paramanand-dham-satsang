@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } from "@/lib/api-guard";
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
-import { normalizePhone } from "@/lib/ajapa/phone";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
+import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,18 +12,26 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const auth = await requireApiSession();
   if (!auth.ok) return auth.response;
+  const actorAuth = await requireActorPhone();
+  if (!actorAuth.ok) return actorAuth.response;
+  const staff = canSeeStaffScreens(detectStaffRole(actorAuth.phone));
   const { searchParams } = new URL(request.url);
   const placeId = searchParams.get("place_id");
   const unanswered = searchParams.get("unanswered") === "1";
   const from = searchParams.get("from") || undefined;
   const to = searchParams.get("to") || undefined;
-  const questions = await listQuestions({
-    place_id: placeId ? Number(placeId) : undefined,
-    unanswered,
-    from,
-    to,
-  });
-  return NextResponse.json({ questions });
+  try {
+    const questions = await listQuestions({
+      place_id: placeId ? Number(placeId) : undefined,
+      unanswered,
+      from,
+      to,
+      asked_by_phone: staff ? undefined : actorAuth.phone,
+    });
+    return NextResponse.json({ questions });
+  } catch (err) {
+    return routeErrorResponse(err, "प्रश्न लोड अयशस्वी");
+  }
 }
 
 export async function POST(request: Request) {
@@ -49,13 +57,18 @@ export async function POST(request: Request) {
     body.asked_on && /^\d{4}-\d{2}-\d{2}$/.test(body.asked_on)
       ? body.asked_on
       : ymdInIndia();
-  const question = await createQuestion({
-    question: body.question,
-    place_id: body.place_id ?? null,
-    meeting_id: body.meeting_id ?? null,
-    asked_on: askedOn,
-    asked_by_phone: actor,
-  });
+  let question;
+  try {
+    question = await createQuestion({
+      question: body.question,
+      place_id: body.place_id ?? null,
+      meeting_id: body.meeting_id ?? null,
+      asked_on: askedOn,
+      asked_by_phone: actor,
+    });
+  } catch (err) {
+    return routeErrorResponse(err, "प्रश्न जतन अयशस्वी");
+  }
 
   // संवाद: literature / AI उत्तर (knowledge fallback if no API key)
   let ajapa_id: number | null = null;

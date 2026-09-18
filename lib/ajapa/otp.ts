@@ -42,14 +42,14 @@ export function generateOtpCode(): string {
   return String(randomInt(100000, 1000000));
 }
 
-/** Never expose OTP codes on Vercel / production. */
-export function allowDebugOtp(): boolean {
-  if (process.env.VERCEL) return false;
-  if (process.env.NODE_ENV === "production") return false;
+/** Never expose OTP codes in production / Vercel. */
+export function allowDebugOtp(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.VERCEL) return false;
+  if (env.NODE_ENV === "production") return false;
   return (
-    process.env.WHATSAPP_DRY_RUN === "1" ||
-    process.env.WHATSAPP_DRY_RUN === "true" ||
-    process.env.ALLOW_DEBUG_OTP === "1"
+    env.WHATSAPP_DRY_RUN === "1" ||
+    env.WHATSAPP_DRY_RUN === "true" ||
+    env.ALLOW_DEBUG_OTP === "1"
   );
 }
 

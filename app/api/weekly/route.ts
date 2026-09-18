@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError, requireApiSession, requireMemberApi } from "@/lib/api-guard";
-import { getSession } from "@/lib/auth";
+import { jsonError, requireMemberApi, requireStaffActor, routeErrorResponse } from "@/lib/api-guard";
 import { defaultThursdayYmd } from "@/lib/dates";
 import {
   getWeeklyQuestion,
@@ -20,25 +19,29 @@ export async function GET(request: Request) {
     return jsonError("अवैध तारीख", 400);
   }
 
-  const admin = await getSession();
-  if (admin) {
-    const question = (await getWeeklyQuestion(weekStart)) ?? null;
-    const answers = question ? await listWeeklyAnswers(question.id) : [];
-    return NextResponse.json({ week_start: weekStart, question, answers });
-  }
+  try {
+    const staff = await requireStaffActor();
+    if (staff.ok) {
+      const question = (await getWeeklyQuestion(weekStart)) ?? null;
+      const answers = question ? await listWeeklyAnswers(question.id) : [];
+      return NextResponse.json({ week_start: weekStart, question, answers });
+    }
 
-  const memberAuth = await requireMemberApi();
-  if (!memberAuth.ok) return memberAuth.response;
-  const weekly = await memberWeeklyView(memberAuth.member, weekStart);
-  return NextResponse.json({
-    week_start: weekly.week_start,
-    question: weekly.question,
-    answer: weekly.answer,
-  });
+    const memberAuth = await requireMemberApi();
+    if (!memberAuth.ok) return memberAuth.response;
+    const weekly = await memberWeeklyView(memberAuth.member, weekStart);
+    return NextResponse.json({
+      week_start: weekly.week_start,
+      question: weekly.question,
+      answer: weekly.answer,
+    });
+  } catch (err) {
+    return routeErrorResponse(err, "साप्ताहिक प्रश्न लोड अयशस्वी");
+  }
 }
 
 export async function POST(request: Request) {
-  const auth = await requireApiSession();
+  const auth = await requireStaffActor();
   if (!auth.ok) return auth.response;
   const body = (await request.json().catch(() => ({}))) as {
     week_start?: string;
@@ -54,6 +57,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ question });
   } catch (err) {
     if (err instanceof WeeklyError) return jsonError(err.message, err.status);
-    throw err;
+    return routeErrorResponse(err, "प्रश्न जतन अयशस्वी");
   }
 }

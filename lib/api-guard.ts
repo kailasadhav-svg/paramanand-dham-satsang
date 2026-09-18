@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { getActorPhone, getMemberId, getSession } from "@/lib/auth";
 import { getMemberById, type Member } from "@/lib/members";
+import { canSeeStaffScreens, detectStaffRole, type StaffRole } from "@/lib/roles";
 
 export async function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
+}
+
+export function routeErrorResponse(err: unknown, fallback = "सेवा त्रुटी") {
+  console.error(err);
+  const status = (err as { status?: number }).status;
+  if (status === 401) return jsonError("Unauthorized", 401);
+  const message = err instanceof Error && err.message ? err.message : fallback;
+  return jsonError(message, 503);
 }
 
 /** Admin PIN session — attendance / topic / questions / report APIs. */
@@ -13,6 +22,20 @@ export async function requireApiSession() {
     return { ok: false as const, response: await jsonError("Unauthorized", 401) };
   }
   return { ok: true as const };
+}
+
+/** संवादक / सेवक only — weekly report + member login-code list. */
+export async function requireStaffActor(): Promise<
+  | { ok: true; phone: string; role: StaffRole }
+  | { ok: false; response: NextResponse }
+> {
+  const actor = await requireActorPhone();
+  if (!actor.ok) return actor;
+  const role = detectStaffRole(actor.phone);
+  if (!canSeeStaffScreens(role)) {
+    return { ok: false as const, response: await jsonError("फक्त सेवक / संवादक", 403) };
+  }
+  return { ok: true as const, phone: actor.phone, role };
 }
 
 /**

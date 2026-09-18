@@ -12,7 +12,8 @@ import {
   updateAjapaAiAnswer,
 } from "@/lib/ajapa/store";
 import type { AjapaQuestion, AjapaStatus } from "@/lib/ajapa/types";
-import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
+import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } from "@/lib/api-guard";
+import { canSeeStaffScreens, detectStaffRole } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,37 +68,45 @@ export async function GET(request: Request) {
   const actorAuth = await requireActorPhone();
   if (!actorAuth.ok) return actorAuth.response;
   const actor = actorAuth.phone;
+  const staff = canSeeStaffScreens(detectStaffRole(actor));
+  if (!staff) {
+    seeker = actor;
+  }
   const mirrorFor = seeker || actor;
 
-  let mirrored = 0;
-  if (mirrorFor) {
-    try {
-      mirrored = await mirrorRecentWeeklyQuestions({
-        days: 21,
-        limit: 8,
-        default_seeker_phone: mirrorFor,
-        include_null_asker: claimOrphans,
-      });
-    } catch (err) {
-      console.error("weekly→ajapa backfill failed", err);
+  try {
+    let mirrored = 0;
+    if (mirrorFor) {
+      try {
+        mirrored = await mirrorRecentWeeklyQuestions({
+          days: 21,
+          limit: 8,
+          default_seeker_phone: mirrorFor,
+          include_null_asker: staff ? claimOrphans : false,
+        });
+      } catch (err) {
+        console.error("weekly→ajapa backfill failed", err);
+      }
     }
+
+    let questions = await listAjapaQuestions({
+      status: status || undefined,
+      seeker_phone: seeker,
+      since: mirrored > 0 ? undefined : since,
+      limit: limit ? Number(limit) : 100,
+    });
+
+    questions = await healAjapaAnswers(questions);
+    if (heal) {
+      questions = await healStaleAnswers(questions);
+    }
+
+    return NextResponse.json({
+      questions,
+      mirrored,
+      server_time: new Date().toISOString(),
+    });
+  } catch (err) {
+    return routeErrorResponse(err, "संवाद यादी लोड अयशस्वी");
   }
-
-  let questions = await listAjapaQuestions({
-    status: status || undefined,
-    seeker_phone: seeker,
-    since: mirrored > 0 ? undefined : since,
-    limit: limit ? Number(limit) : 100,
-  });
-
-  questions = await healAjapaAnswers(questions);
-  if (heal) {
-    questions = await healStaleAnswers(questions);
-  }
-
-  return NextResponse.json({
-    questions,
-    mirrored,
-    server_time: new Date().toISOString(),
-  });
 }

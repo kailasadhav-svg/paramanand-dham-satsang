@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { jsonError } from "@/lib/api-guard";
+import { jsonError, routeErrorResponse } from "@/lib/api-guard";
 import { MemberError, publicMember, registerMember } from "@/lib/members";
 import { PLACE_OPTIONS } from "@/lib/places";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const ip = clientIp(request);
+  const limited = rateLimit(`register:${ip}`, { limit: 8, windowMs: 15 * 60 * 1000 });
+  if (!limited.ok) {
+    return jsonError("खूप प्रयत्न — थोड्या वेळाने पुन्हा करा", 429);
+  }
+
   const body = (await request.json().catch(() => ({}))) as {
     name?: string;
     mobile?: string;
@@ -25,6 +32,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ member: publicMember(member) }, { status: 201 });
   } catch (err) {
     if (err instanceof MemberError) return jsonError(err.message, err.status);
-    throw err;
+    return routeErrorResponse(err, "अजपा अयशस्वी");
   }
 }
