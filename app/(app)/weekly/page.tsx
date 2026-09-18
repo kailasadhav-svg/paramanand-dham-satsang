@@ -48,6 +48,8 @@ export default function WeeklyAdminPage() {
   const [isVahak, setIsVahak] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfNote, setPdfNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,6 +81,28 @@ export default function WeeklyAdminPage() {
       setError(e instanceof Error ? e.message : "जतन अयशस्वी");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function exportVillagePdf() {
+    if (!canSeeBodies) return;
+    setPdfBusy(true);
+    setPdfNote(null);
+    try {
+      const data = await api<{
+        todo?: boolean;
+        message?: string;
+        villages?: { place_label: string; submitted: unknown[]; pending: unknown[] }[];
+      }>(`/api/weekly/chintan-pdf?week_start=${thursday}`);
+      const n = data.villages?.length ?? 0;
+      setPdfNote(
+        `${data.message || "गावानुसार चिंतन"} · ${n} स्थळे` +
+          (data.todo ? " (PDF stub)" : ""),
+      );
+    } catch (e) {
+      setPdfNote(e instanceof Error ? e.message : "PDF अयशस्वी");
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -171,6 +195,19 @@ export default function WeeklyAdminPage() {
           पूर्ण चिंतन — फक्त मार्गदर्शक (मधुसुदनदास). {GUIDE_CHINTAN_RANK_HELP}
         </p>
       )}
+      {canSeeBodies ? (
+        <div className="space-y-1">
+          <button
+            type="button"
+            disabled={pdfBusy}
+            onClick={() => void exportVillagePdf()}
+            className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
+          >
+            {pdfBusy ? "तयार…" : "गावानुसार चिंतन PDF (stub)"}
+          </button>
+          {pdfNote ? <p className="text-[11px] text-temple-muted">{pdfNote}</p> : null}
+        </div>
+      ) : null}
       <ul className="space-y-2">
         {roster.map((a) => (
           <li key={a.member_id} className="card p-3 text-sm">

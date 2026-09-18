@@ -15,7 +15,13 @@ import {
   detectStaffRole,
   roleLabelMarathi,
 } from "./roles.ts";
-import { isFridayVahakAppointWindow, isFridayVahakAppointWindowForWeek, shouldAutoContinueVahak } from "./dates.ts";
+import {
+  defaultThursdayYmd,
+  isFridayVahakAppointWindow,
+  isFridayVahakAppointWindowForWeek,
+  shouldAutoContinueVahak,
+  thursdayContainingYmd,
+} from "./dates.ts";
 import {
   GUIDE_LABEL,
   MEMBER_ROLE_LABEL,
@@ -120,6 +126,30 @@ describe("canAppointVahak", () => {
       }),
       false,
     );
+  });
+});
+
+describe("thursdayContainingYmd", () => {
+  it("maps any IST day onto that satsang week's Thursday", () => {
+    assert.equal(thursdayContainingYmd("2026-09-17"), "2026-09-17");
+    assert.equal(thursdayContainingYmd("2026-09-18"), "2026-09-17");
+    assert.equal(thursdayContainingYmd("2026-09-23"), "2026-09-17");
+    assert.equal(thursdayContainingYmd("2026-09-24"), "2026-09-24");
+    assert.equal(thursdayContainingYmd("bad"), defaultThursdayYmd());
+  });
+});
+
+describe("weekly question limit (non-मार्गदर्शक)", () => {
+  it("applies to everyone except मार्गदर्शक (same as !canSeeGuideScreens)", () => {
+    assert.equal(canSeeGuideScreens("guru"), true);
+    assert.equal(canSeeGuideScreens("software"), false);
+    assert.equal(canSeeGuideScreens("charansevak"), false);
+    const limits = readFileSync(new URL("./weekly-limits.ts", import.meta.url), "utf8");
+    assert.match(limits, /actorNeedsWeeklyQuestionLimit/);
+    assert.match(limits, /!canSeeGuideScreens/);
+    assert.match(limits, /seekerHasQuestionThisWeek/);
+    assert.match(limits, /FROM questions/);
+    assert.match(limits, /FROM ajapa_questions/);
   });
 });
 

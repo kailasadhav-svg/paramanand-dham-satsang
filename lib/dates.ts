@@ -115,3 +115,10 @@ export function shouldAutoContinueVahak(thursdayYmd: string, now = new Date()): 
   if (today < friday) return false;
   return minutesInIndia(now) > 12 * 60;
 }
+
+/** Thursday that opens the satsang week containing `ymd` (IST). */
+export function thursdayContainingYmd(ymd: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return defaultThursdayYmd();
+  const [y, m, d] = ymd.split("-").map(Number);
+  return defaultThursdayYmd(new Date(Date.UTC(y, m - 1, d, 6, 30, 0)));
+}

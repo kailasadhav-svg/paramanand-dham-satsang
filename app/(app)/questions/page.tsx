@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
-import { ANSWERED_BY_LABEL, GUIDE_QUESTION_HELP } from "@/lib/labels";
+import { ANSWERED_BY_LABEL, GUIDE_QUESTION_HELP, ONE_QUESTION_HELP, QUESTION_AI_FIRST_HELP } from "@/lib/labels";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 import { canSeeGuideScreens } from "@/lib/roles";
 
@@ -25,6 +25,7 @@ export default function QuestionsPage() {
   const [placeLocked, setPlaceLocked] = useState(false);
   const [date, setDate] = useState(defaultThursdayYmd());
   const [items, setItems] = useState<Question[]>([]);
+  const [askedThisWeek, setAskedThisWeek] = useState(false);
   const [draft, setDraft] = useState("");
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +59,11 @@ export default function QuestionsPage() {
     const q = new URLSearchParams({ from: week.start, to: week.end });
     if (placeId) q.set("place_id", String(placeId));
     if (onlyOpen) q.set("unanswered", "1");
-    const data = await api<{ questions: Question[] }>(
+    const data = await api<{ questions: Question[]; asked_this_week?: boolean }>(
       `/api/questions?${q.toString()}`,
     );
     setItems(data.questions);
+    setAskedThisWeek(Boolean(data.asked_this_week));
   }
 
   useEffect(() => {
@@ -163,7 +165,7 @@ export default function QuestionsPage() {
         <p className="break-words text-xs text-temple-muted">
           {guide
             ? GUIDE_QUESTION_HELP
-            : "परमानंद चरणसेवक — प्रश्न विचारा; उत्तर «संवाद» मध्ये दिसेल (सिंक)"}
+            : `${ONE_QUESTION_HELP} ${QUESTION_AI_FIRST_HELP}`}
         </p>
       </div>
       <PlaceDateBar
@@ -184,6 +186,11 @@ export default function QuestionsPage() {
           फक्त प्रलंबित प्रश्न
         </label>
       ) : null}
+      {!guide && askedThisWeek ? (
+        <p className="rounded-xl bg-saffron-50 px-3 py-2 text-xs leading-relaxed text-saffron-900">
+          {ONE_QUESTION_HELP} उत्तर «संवाद» मध्ये दिसेल.
+        </p>
+      ) : (
       <div className="card space-y-2 p-3">
         <textarea
           value={draft}
@@ -206,6 +213,7 @@ export default function QuestionsPage() {
           </p>
         ) : null}
       </div>
+      )}
       {error ? (
         <p className="break-words text-sm text-red-700">{error}</p>
       ) : null}
@@ -301,7 +309,9 @@ export default function QuestionsPage() {
       </ul>
       {items.length === 0 ? (
         <p className="text-center text-sm text-temple-muted">
-          या आठवड्यात प्रश्न नाहीत — वर लिहून «प्रश्न जोडा»
+          {!guide && askedThisWeek
+            ? `${ONE_QUESTION_HELP} उत्तर «संवाद» मध्ये दिसेल.`
+            : "या आठवड्यात प्रश्न नाहीत — वर लिहून «प्रश्न जोडा»"}
         </p>
       ) : null}
     </div>

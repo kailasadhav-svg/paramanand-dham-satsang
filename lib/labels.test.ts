@@ -16,12 +16,15 @@ import {
   GUIDE_CHINTAN_RANK_HELP,
   GUIDE_QUESTION_HELP,
   GUIDE_TOPIC_HELP,
+  ONE_QUESTION_HELP,
+  QUESTION_AI_FIRST_HELP,
 } from "./labels.ts";
 
 describe("चिंतन copy", () => {
   it("uses चिंतन, never टिपणी, in the shared strings", () => {
     assert.equal(CHINTAN_LABEL, "चिंतन");
-    assert.match(CHINTAN_DEADLINE_HELP, /चिंतन/);
+    assert.match(CHINTAN_DEADLINE_HELP, /अनिवार्य/);
+    assert.match(CHINTAN_MISSING_REMINDER, /अनिवार्य/);
     assert.match(CHINTAN_DEADLINE_HELP, /बुधवार रात्री १२:००/);
     assert.match(CHINTAN_MISSING_REMINDER, /दररोज आठवण/);
     assert.match(TOPIC_THURSDAY_HELP, /मधुसुदनदास/);
@@ -94,5 +97,35 @@ describe("चिंतन copy", () => {
     assert.match(me, /aria-label="चिंतन"/);
     assert.equal(me.includes("उत्तर लिहा"), false);
     assert.equal(me.includes("तुमचे उत्तर"), false);
+  });
+
+  it("documents one-question / AI-first / escalate copy", () => {
+    assert.match(ONE_QUESTION_HELP, /फक्त एकच प्रश्न/);
+    assert.match(QUESTION_AI_FIRST_HELP, /साहित्य \(AI\) उत्तर/);
+    assert.match(QUESTION_AI_FIRST_HELP, /मार्गदर्शक चरणसेवकांकडे पाठवा/);
+    const questions = readFileSync(new URL("../app/(app)/questions/page.tsx", import.meta.url), "utf8");
+    assert.match(questions, /ONE_QUESTION_HELP/);
+    assert.match(questions, /QUESTION_AI_FIRST_HELP/);
+    assert.match(questions, /asked_this_week/);
+    const ajapa = readFileSync(new URL("../app/(app)/ajapa/page.tsx", import.meta.url), "utf8");
+    assert.match(ajapa, /ONE_QUESTION_HELP/);
+    assert.match(ajapa, /QUESTION_AI_FIRST_HELP/);
+    const weeklyUi = readFileSync(new URL("../app/(app)/weekly/page.tsx", import.meta.url), "utf8");
+    assert.match(weeklyUi, /chintan-pdf/);
+    assert.match(weeklyUi, /गावानुसार चिंतन PDF \(stub\)/);
+    const qRoute = readFileSync(new URL("../app/api/questions/route.ts", import.meta.url), "utf8");
+    assert.match(qRoute, /seekerHasQuestionThisWeek/);
+    assert.match(qRoute, /ONE_QUESTION_HELP/);
+    assert.match(qRoute, /mirrorWeeklyQuestionToAjapa/);
+    const bot = readFileSync(new URL("./ajapa/bot.ts", import.meta.url), "utf8");
+    assert.match(bot, /seekerHasQuestionThisWeek/);
+    assert.match(bot, /generateAjapaAiAnswer/);
+    const pdf = readFileSync(new URL("./chintan-pdf.ts", import.meta.url), "utf8");
+    assert.match(pdf, /TODO/);
+    assert.match(pdf, /json-stub/);
+    const pdfRoute = readFileSync(new URL("../app/api/weekly/chintan-pdf/route.ts", import.meta.url), "utf8");
+    assert.match(pdfRoute, /requireGuideActor/);
+    const weeklyLib = readFileSync(new URL("./weekly.ts", import.meta.url), "utf8");
+    assert.match(weeklyLib, /चिंतन लिहा/);
   });
 });

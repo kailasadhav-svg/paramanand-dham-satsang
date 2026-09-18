@@ -3,7 +3,12 @@ import { jsonError, requireApiSession, requireActorPhone, routeErrorResponse } f
 import { mirrorWeeklyQuestionToAjapa } from "@/lib/ajapa/mirror-weekly";
 import { ymdInIndia } from "@/lib/dates";
 import { createQuestion, listQuestions } from "@/lib/db";
+import { ONE_QUESTION_HELP } from "@/lib/labels";
 import { canSeeGuideScreens, detectStaffRole } from "@/lib/roles";
+import {
+  actorNeedsWeeklyQuestionLimit,
+  seekerHasQuestionThisWeek,
+} from "@/lib/weekly-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +33,11 @@ export async function GET(request: Request) {
       to,
       asked_by_phone: staff ? undefined : actorAuth.phone,
     });
-    return NextResponse.json({ questions });
+    const around = from || ymdInIndia();
+    const asked_this_week = staff
+      ? false
+      : await seekerHasQuestionThisWeek(actorAuth.phone, around);
+    return NextResponse.json({ questions, asked_this_week });
   } catch (err) {
     return routeErrorResponse(err, "प्रश्न लोड अयशस्वी");
   }
@@ -57,6 +66,12 @@ export async function POST(request: Request) {
     body.asked_on && /^\d{4}-\d{2}-\d{2}$/.test(body.asked_on)
       ? body.asked_on
       : ymdInIndia();
+  if (
+    actorNeedsWeeklyQuestionLimit(actor) &&
+    (await seekerHasQuestionThisWeek(actor, askedOn))
+  ) {
+    return jsonError(ONE_QUESTION_HELP, 400);
+  }
   let question;
   try {
     question = await createQuestion({

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { redactChintanRoster, scopeChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
 import { canEditWeeklyQuestion, canSeeChintanBody, canSeeGuideScreens } from "./roles.ts";
 import { VAHAK_LABEL, VAHAK_LABEL_SHORT } from "./labels.ts";
+import { groupChintanByVillage, redactChintanRoster, scopeChintanRoster, type ChintanStatusRow } from "./chintan-roster.ts";
 
 const sample: ChintanStatusRow[] = [
   {
@@ -56,6 +56,40 @@ describe("scopeChintanRoster", () => {
     const nashik = scopeChintanRoster(sample, ["nashik"]);
     assert.equal(nashik.length, 2);
     assert.equal(scopeChintanRoster(sample, ["shindi"]).length, 0);
+  });
+});
+
+describe("groupChintanByVillage", () => {
+  it("bundles submitted and pending per place for the PDF stub", () => {
+    const extra: ChintanStatusRow = {
+      member_id: 3,
+      member_name: "शिंदी",
+      place_code: "shindi",
+      place_label: "शिंदी",
+      submitted: true,
+      answer: "गाव चिंतन",
+    };
+    const groups = groupChintanByVillage([...sample, extra]);
+    assert.equal(groups.length, 2);
+    assert.equal(groups[0].place_code, "nashik");
+    assert.equal(groups[0].submitted.length, 1);
+    assert.equal(groups[0].pending.length, 1);
+    assert.equal(groups[1].place_code, "shindi");
+    assert.equal(groups[1].submitted[0].answer, "गाव चिंतन");
+  });
+});
+
+describe("village चिंतन PDF stub", () => {
+  it("is मार्गदर्शक-only JSON until a real renderer exists", () => {
+    const pdf = readFileSync(new URL("./chintan-pdf.ts", import.meta.url), "utf8");
+    assert.match(pdf, /TODO/);
+    assert.match(pdf, /groupChintanByVillage/);
+    const route = readFileSync(
+      new URL("../app/api/weekly/chintan-pdf/route.ts", import.meta.url),
+      "utf8",
+    );
+    assert.match(route, /requireGuideActor/);
+    assert.match(route, /villageChintanPdfStub/);
   });
 });
 

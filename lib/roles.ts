@@ -54,10 +54,15 @@ export const SEEKER_DEMO_PHONES = (
  * 4. Topic authority: same topic for all villages OR different per village.
  *    (per-village save exists; same-for-all bulk TBD)
  *
- * Also specified, not built: one question/week; चिंतन mandatory; village PDF;
- * AI-first then escalate; question id = village+week+seq FIFO; handwritten
- * photo; week 1 = first Thursday 2026-01-01; Thursday panchang tithi;
- * Thursday 17:00 immutable archive + mandatory summary.
+ * Also specified:
+ * - One question per परमानंद चरणसेवक per week (hard limit; see weekly-limits).
+ * - चिंतन mandatory for everyone (copy + empty submit rejected).
+ * - Village-wise combined चिंतन PDF: JSON stub GET /api/weekly/chintan-pdf (TODO renderer).
+ * - Every question gets automatic AI / साहित्य answer first; escalate to
+ *   मार्गदर्शक if unsatisfied (अजपा OTP flow).
+ * - Question id = village+week+seq FIFO; handwritten photo; week 1 = first
+ *   Thursday 2026-01-01; Thursday panchang tithi; Thursday 17:00 immutable
+ *   archive + mandatory summary. (not built)
  */
 export type StaffRole = "software" | "guru" | "charansevak";
 

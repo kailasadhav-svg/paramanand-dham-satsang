@@ -41,6 +41,15 @@ Now in the app:
 - Full चिंतन bodies (`/weekly`); per-place Thursday topic (`/topic`, `/weekly`)
 - Approve app access; appoint विचार वाहक
 
+## Weekly question + चिंतन rules
+
+Now:
+1. **One question per परमानंद चरणसेवक per week** (hard limit on `/api/questions` and WhatsApp `अजपा Q`). मार्गदर्शक unlimited.
+2. **चिंतन is mandatory** for everyone (copy + empty submit rejected).
+3. **Village चिंतन PDF** — `GET /api/weekly/chintan-pdf` returns a JSON stub grouped by village. TODO: real PDF.
+4. **Every question gets an automatic AI / परमानंद साहित्य answer first.**
+5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
+
 Specified — copy is on मार्गदर्शक screens; tools not built yet:
 1. **All member questions route to them.**
 2. **Dashboard:** total questions + **एकसमान** (similar/duplicate) count; answer similars with **one shared answer** or per-person answers.
@@ -94,8 +103,6 @@ npm run test:ajapa
 - Production media hosting for voice (stores WhatsApp media id/URL; add R2/S3 for permanence)
 
 Future week / archive product (not in this PR):
-- One question per परमानंद चरणसेवक per week; चिंतन mandatory; village चिंतन PDF
-- AI answer first; escalate to मार्गदर्शक if unsatisfied
 - Question id = village + week + sequence (FIFO); handwritten-answer photo upload
 - Week 1 = first Thursday of January 2026 (`2026-01-01`); Thursday screens show Marathi panchang tithi
 - Thursday 17:00 immutable previous-week चिंतन + प्रश्न-उत्तर files; mandatory मार्गदर्शक summary (type / photo / voice); previous विचार वाहक reads/plays it at the place
