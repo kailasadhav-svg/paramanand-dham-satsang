@@ -12,12 +12,20 @@ BRANCH="${1:-main}"
 
 echo "== git fetch origin $BRANCH"
 git fetch origin "$BRANCH"
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "सर्व्हरवर न-commit केलेले बदल आहेत — बाजूला ठेवतो (git stash list मध्ये दिसतील)."
+# .env.local / data/ are gitignored, so they are never touched by the stash.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "सर्व्हरवर न-commit केलेले बदल/फाइल्स आहेत — बाजूला ठेवतो (git stash list मध्ये दिसतील)."
   git stash push -u -m "deploy.sh $(date +%F_%T)" >/dev/null
 fi
-git checkout -q "$BRANCH" 2>/dev/null || git checkout -q -b "$BRANCH" "origin/$BRANCH"
-git pull --ff-only origin "$BRANCH"
+if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+  git checkout -q "$BRANCH"
+else
+  git checkout -q -b "$BRANCH" "origin/$BRANCH"
+fi
+if ! git pull --ff-only origin "$BRANCH"; then
+  echo "सर्व्हरवरील $BRANCH मध्ये वेगळे commits आहेत — fast-forward होत नाही. आधी पाहा: git log origin/$BRANCH..HEAD" >&2
+  exit 1
+fi
 
 echo "== npm ci (dev deps सह — build ला लागतात)"
 npm ci --include=dev
