@@ -85,7 +85,16 @@ Specified — copy is on मार्गदर्शक screens; tools not built
 | संवाद | `/ajapa` | **अजपा संवाद** — WhatsApp Q→साहित्य उत्तर→guru · local-first PWA |
 | अहवाल | `/report` | Per-place summary + copy/open WhatsApp |
 
-Short aliases: `/a` `/t` `/q` `/j` `/r`.
+Short aliases: `/a` `/t` `/q` `/j` `/r` `/e` `/p`.
+
+## Header links
+
+| Link | Route | Use |
+| --- | --- | --- |
+| चरणसेवक | `/members` | Staff only — registered members + login codes |
+| चिंतन | `/weekly` | Hidden for संगणक |
+| कार्यक्रम | `/events` | आगामी / झालेले satsang events (title, date, time, place, note). Everyone sees; संगणक / मार्गदर्शक add + remove |
+| फोटो | `/photos` | Photo gallery — grid, tap for full view. Stores image **links** (`photos.image_url`), not uploads; संगणक / मार्गदर्शक add + remove, optional link to an event |
 
 ## अजपा संवाद (PWA)
 

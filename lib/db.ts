@@ -14,6 +14,7 @@ import {
   productionFileStoreBlockedReason,
   remoteDatabaseUrl,
 } from "./runtime";
+import type { EventInput, PhotoInput } from "./events";
 
 const DB_PATH = path.join(process.cwd(), "data", "satsang.db");
 
@@ -298,6 +299,29 @@ async function migrate(db: Client) {
       created_at TEXT NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_satsangi_phone ON satsangi_members(phone)`,
+    `CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      event_date TEXT NOT NULL,
+      event_time TEXT,
+      location TEXT,
+      description TEXT,
+      created_by_phone TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date)`,
+    `CREATE TABLE IF NOT EXISTS photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      image_url TEXT NOT NULL,
+      caption TEXT,
+      taken_on TEXT,
+      event_id INTEGER REFERENCES events(id),
+      created_by_phone TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_photos_event ON photos(event_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_photos_taken ON photos(taken_on)`,
   ];
   for (const sql of statements) {
     await db.execute(sql);
@@ -895,4 +919,151 @@ export async function upsertSatsangiMember(input: {
   const saved = await getSatsangiByPhone(phone);
   if (!saved) throw new Error("Failed to save member");
   return saved;
+}
+
+export type SatsangEvent = {
+  id: number;
+  title: string;
+  event_date: string;
+  event_time: string | null;
+  location: string | null;
+  description: string | null;
+  created_by_phone: string | null;
+  created_at: string;
+};
+
+export type Photo = {
+  id: number;
+  image_url: string;
+  caption: string | null;
+  taken_on: string | null;
+  event_id: number | null;
+  created_by_phone: string | null;
+  created_at: string;
+};
+
+export type PhotoWithEvent = Photo & { event_title: string | null };
+
+function asEvent(row: Row): SatsangEvent {
+  return {
+    id: num(row.id),
+    title: str(row.title),
+    event_date: str(row.event_date),
+    event_time: strOrNull(row.event_time),
+    location: strOrNull(row.location),
+    description: strOrNull(row.description),
+    created_by_phone: strOrNull(row.created_by_phone),
+    created_at: str(row.created_at),
+  };
+}
+
+function asPhotoWithEvent(row: Row): PhotoWithEvent {
+  return {
+    id: num(row.id),
+    image_url: str(row.image_url),
+    caption: strOrNull(row.caption),
+    taken_on: strOrNull(row.taken_on),
+    event_id: row.event_id == null ? null : num(row.event_id),
+    created_by_phone: strOrNull(row.created_by_phone),
+    created_at: str(row.created_at),
+    event_title: strOrNull(row.event_title),
+  };
+}
+
+export async function listEvents(): Promise<SatsangEvent[]> {
+  const db = await getDb();
+  const rs = await db.execute(
+    "SELECT * FROM events ORDER BY event_date DESC, event_time DESC, id DESC",
+  );
+  return rs.rows.map(asEvent);
+}
+
+export async function getEvent(id: number): Promise<SatsangEvent | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({ sql: "SELECT * FROM events WHERE id = ?", args: [id] });
+  return rs.rows[0] ? asEvent(rs.rows[0]) : undefined;
+}
+
+export async function createEvent(
+  input: EventInput & { created_by_phone?: string | null },
+): Promise<SatsangEvent> {
+  const now = nowIso();
+  const db = await getDb();
+  const result = await db.execute({
+    sql: `INSERT INTO events (title, event_date, event_time, location, description, created_by_phone, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      input.title,
+      input.event_date,
+      input.event_time,
+      input.location,
+      input.description,
+      input.created_by_phone ?? null,
+      now,
+      now,
+    ],
+  });
+  const saved = await getEvent(Number(result.lastInsertRowid));
+  if (!saved) throw new Error("Failed to save event");
+  return saved;
+}
+
+export async function deleteEvent(id: number): Promise<boolean> {
+  const db = await getDb();
+  await db.execute({ sql: "UPDATE photos SET event_id = NULL WHERE event_id = ?", args: [id] });
+  const result = await db.execute({ sql: "DELETE FROM events WHERE id = ?", args: [id] });
+  return (result.rowsAffected ?? 0) > 0;
+}
+
+export async function listPhotos(): Promise<PhotoWithEvent[]> {
+  const db = await getDb();
+  const rs = await db.execute(
+    `SELECT ph.*, e.title AS event_title
+       FROM photos ph
+       LEFT JOIN events e ON e.id = ph.event_id
+       ORDER BY COALESCE(ph.taken_on, substr(ph.created_at, 1, 10)) DESC, ph.id DESC`,
+  );
+  return rs.rows.map(asPhotoWithEvent);
+}
+
+export async function getPhoto(id: number): Promise<PhotoWithEvent | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: `SELECT ph.*, e.title AS event_title
+       FROM photos ph
+       LEFT JOIN events e ON e.id = ph.event_id
+       WHERE ph.id = ?`,
+    args: [id],
+  });
+  return rs.rows[0] ? asPhotoWithEvent(rs.rows[0]) : undefined;
+}
+
+export async function createPhoto(
+  input: PhotoInput & { created_by_phone?: string | null },
+): Promise<PhotoWithEvent> {
+  if (input.event_id != null && !(await getEvent(input.event_id))) {
+    throw new Error("कार्यक्रम सापडला नाही");
+  }
+  const db = await getDb();
+  const result = await db.execute({
+    sql: `INSERT INTO photos (image_url, caption, taken_on, event_id, created_by_phone, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      input.image_url,
+      input.caption,
+      input.taken_on,
+      input.event_id,
+      input.created_by_phone ?? null,
+      nowIso(),
+    ],
+  });
+  const saved = await getPhoto(Number(result.lastInsertRowid));
+  if (!saved) throw new Error("Failed to save photo");
+  return saved;
+}
+
+export async function deletePhoto(id: number): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.execute({ sql: "DELETE FROM photos WHERE id = ?", args: [id] });
+  return (result.rowsAffected ?? 0) > 0;
 }

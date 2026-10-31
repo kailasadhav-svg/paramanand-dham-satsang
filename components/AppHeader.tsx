@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfileChip, useClearProfile, useProfileOptional } from "@/components/PhoneGate";
+import { EVENTS_LABEL, PHOTOS_LABEL_SHORT } from "@/lib/labels";
 import { profileAppName } from "@/lib/offline/profile";
 import { canSeeStaffScreens } from "@/lib/roles";
 
@@ -45,13 +46,15 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
             बाहेर पडा
           </button>
           {profile ? (
-            <nav className="flex gap-2 text-[11px] font-semibold text-saffron-800">
+            <nav className="flex flex-wrap justify-end gap-x-2 gap-y-1 text-[11px] font-semibold text-saffron-800">
               {profile && canSeeStaffScreens(profile.role) ? (
                 <Link href="/members">चरणसेवक</Link>
               ) : null}
               {profile.role !== "software" ? (
                 <Link href="/weekly">चिंतन</Link>
               ) : null}
+              <Link href="/events">{EVENTS_LABEL}</Link>
+              <Link href="/photos">{PHOTOS_LABEL_SHORT}</Link>
             </nav>
           ) : null}
           {profile ? (

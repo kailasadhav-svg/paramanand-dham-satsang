@@ -79,6 +79,10 @@ export const VAHAK_NO_TOPIC_EDIT_HELP =
 export const VAHAK_JOB_HELP =
   "या आठवड्याचे परमानंद विचार वाहक सर्वांचे चिंतन जमा करतात, पाठपुरावा करतात आणि लिहिण्यास मदत करतात. स्थिती: आले / बाकी. पूर्ण चिंतन फक्त मार्गदर्शक (मधुसुदनदास) पाहतात. विचार वाहक नेहमी परमानंद चरणसेवकांपैकी एक.";
 
+export const EVENTS_LABEL = "कार्यक्रम";
+export const PHOTOS_LABEL = "छायाचित्रे";
+export const PHOTOS_LABEL_SHORT = "फोटो";
+
 export const GUIDE_LABEL = "मार्गदर्शक चरणसेवक";
 export const GUIDE_LABEL_SHORT = "मार्गदर्शक";
 export const SOFTWARE_LABEL = "संगणक चरणसेवक";
