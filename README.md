@@ -56,7 +56,7 @@ Now:
 4. **Every question gets an automatic परमानंद साहित्य उत्तर first** (literature-grounded retrieval).
 5. **If unsatisfied → escalate** to मार्गदर्शक (`मार्गदर्शकांकडे`, Meta WhatsApp OTP). One escalate to मधुसुदनदास per week already enforced.
 6. **Question id** = village + year-week + FIFO sequence (computed on list; TODO persist). Week 1 = first Thursday of January 2026 (`2026-01-01`); later Thursdays +1 within the year.
-7. **हस्तलिखित उत्तर photo** — मार्गदर्शक stub `POST /api/questions/[id]/handwritten`. TODO: store image.
+7. **हस्तलिखित उत्तर photo** — मार्गदर्शक uploads a photo of the handwritten answer per question (`POST /api/questions/[id]/handwritten`, multipart; browser downsizes like the फोटो gallery). Stored as blobs on the `questions` row, served by `GET /api/questions/[id]/handwritten?size=thumb|full` to मार्गदर्शक and the asker only. Counts as answered; `answered_by` defaults to मधुसुदनदास.
 8. **Thursday tithi bar** — Marathi panchang stub + week number at the top of Thursday screens. TODO: live panchang.
 9. **Thursday 17:00 archive** — previous week’s per-village immutable चिंतन + प्रश्न-उत्तर files (`GET/POST /api/weekly/archive` stub). मार्गदर्शक owns; summary (type/photo/voice) mandatory before visible; previous विचार वाहक must read/play at the place. TODO: cron + persist + media.
 

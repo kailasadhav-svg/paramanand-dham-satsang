@@ -72,6 +72,10 @@ export type Question = {
   asked_by_phone: string | null;
   created_at: string;
   updated_at: string;
+  /** मार्गदर्शक's handwritten-answer photo (served by /api/questions/[id]/handwritten). */
+  handwritten_url: string | null;
+  handwritten_thumb_url: string | null;
+  handwritten_at: string | null;
 };
 
 export type MeetingWithPlace = Meeting & { place_name: string };
@@ -140,9 +144,17 @@ function asMeetingWithPlace(row: Row): MeetingWithPlace {
   return { ...asMeeting(row), place_name: str(row.place_name) };
 }
 
+/** Explicit columns — handwritten blobs must never ride along with list queries. */
+const QUESTION_COLUMNS = `q.id, q.meeting_id, q.place_id, q.question, q.answer, q.answered_by,
+       q.asked_on, q.asked_by_phone, q.created_at, q.updated_at,
+       q.handwritten_mime, q.handwritten_at,
+       (q.handwritten_thumb_blob IS NOT NULL) AS has_handwritten_thumb`;
+
 function asQuestion(row: Row): Question {
+  const id = num(row.id);
+  const handwritten_url = row.handwritten_mime == null ? null : `/api/questions/${id}/handwritten`;
   return {
-    id: num(row.id),
+    id,
     meeting_id: row.meeting_id == null ? null : num(row.meeting_id),
     place_id: row.place_id == null ? null : num(row.place_id),
     question: str(row.question),
@@ -152,6 +164,12 @@ function asQuestion(row: Row): Question {
     asked_by_phone: strOrNull(row.asked_by_phone),
     created_at: str(row.created_at),
     updated_at: str(row.updated_at),
+    handwritten_url,
+    handwritten_thumb_url:
+      handwritten_url && num(row.has_handwritten_thumb) === 1
+        ? `${handwritten_url}?size=thumb`
+        : handwritten_url,
+    handwritten_at: strOrNull(row.handwritten_at),
   };
 }
 
@@ -354,6 +372,10 @@ async function migrate(db: Client) {
   await ensureColumn(db, "photos", "mime", "TEXT");
   await ensureColumn(db, "photos", "width", "INTEGER");
   await ensureColumn(db, "photos", "height", "INTEGER");
+  await ensureColumn(db, "questions", "handwritten_blob", "BLOB");
+  await ensureColumn(db, "questions", "handwritten_thumb_blob", "BLOB");
+  await ensureColumn(db, "questions", "handwritten_mime", "TEXT");
+  await ensureColumn(db, "questions", "handwritten_at", "TEXT");
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
   );
@@ -584,7 +606,7 @@ export async function createQuestion(input: {
 export async function getQuestion(id: number): Promise<Question | undefined> {
   const db = await getDb();
   const rs = await db.execute({
-    sql: "SELECT * FROM questions WHERE id = ?",
+    sql: `SELECT ${QUESTION_COLUMNS} FROM questions q WHERE q.id = ?`,
     args: [id],
   });
   return rs.rows[0] ? asQuestion(rs.rows[0]) : undefined;
@@ -654,7 +676,9 @@ export async function listQuestions(opts: {
     params.push(opts.asked_by_phone);
   }
   if (opts.unanswered) {
-    clauses.push("(q.answer IS NULL OR trim(q.answer) = '')");
+    clauses.push(
+      "((q.answer IS NULL OR trim(q.answer) = '') AND q.handwritten_mime IS NULL)",
+    );
   }
   if (opts.from) {
     clauses.push("q.asked_on >= ?");
@@ -667,7 +691,7 @@ export async function listQuestions(opts: {
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   const db = await getDb();
   const rs = await db.execute({
-    sql: `SELECT q.*, p.name AS place_name
+    sql: `SELECT ${QUESTION_COLUMNS}, p.name AS place_name
        FROM questions q
        LEFT JOIN places p ON p.id = q.place_id
        ${where}
@@ -1149,4 +1173,55 @@ export async function deletePhoto(id: number): Promise<boolean> {
   const db = await getDb();
   const result = await db.execute({ sql: "DELETE FROM photos WHERE id = ?", args: [id] });
   return (result.rowsAffected ?? 0) > 0;
+}
+
+export async function setQuestionHandwritten(
+  id: number,
+  input: { image: Uint8Array; thumb: Uint8Array | null; mime: string },
+): Promise<Question | undefined> {
+  if (!(await getQuestion(id))) return undefined;
+  const now = nowIso();
+  const db = await getDb();
+  await db.execute({
+    sql: `UPDATE questions
+       SET handwritten_blob = ?, handwritten_thumb_blob = ?, handwritten_mime = ?,
+           handwritten_at = ?, answered_by = COALESCE(answered_by, 'madhusudandas'),
+           updated_at = ?
+       WHERE id = ?`,
+    args: [input.image, input.thumb, input.mime, now, now, id],
+  });
+  return getQuestion(id);
+}
+
+export async function clearQuestionHandwritten(id: number): Promise<Question | undefined> {
+  if (!(await getQuestion(id))) return undefined;
+  const db = await getDb();
+  await db.execute({
+    sql: `UPDATE questions
+       SET handwritten_blob = NULL, handwritten_thumb_blob = NULL, handwritten_mime = NULL,
+           handwritten_at = NULL, updated_at = ?
+       WHERE id = ?`,
+    args: [nowIso(), id],
+  });
+  return getQuestion(id);
+}
+
+export async function getQuestionHandwritten(
+  id: number,
+  size: "full" | "thumb",
+): Promise<{ bytes: Uint8Array; mime: string } | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT handwritten_blob, handwritten_thumb_blob, handwritten_mime FROM questions WHERE id = ?",
+    args: [id],
+  });
+  const row = rs.rows[0];
+  if (!row || row.handwritten_mime == null) return undefined;
+  const raw =
+    size === "thumb" && row.handwritten_thumb_blob != null
+      ? row.handwritten_thumb_blob
+      : row.handwritten_blob;
+  if (raw == null) return undefined;
+  const bytes = asBytes(raw);
+  return { bytes, mime: sniffImageMime(bytes) ?? str(row.handwritten_mime) };
 }
