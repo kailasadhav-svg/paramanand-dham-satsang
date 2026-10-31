@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceDateBar, type Place } from "@/components/FormBits";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { ThursdayTithiBar } from "@/components/ThursdayTithiBar";
 import { useProfile } from "@/components/PhoneGate";
 import { api } from "@/lib/api";
+import { resizeForThumb, resizeForUpload } from "@/lib/image-resize";
 import {
   ANSWERED_BY_LABEL,
   GUIDE_QUESTION_HELP,
+  HANDWRITTEN_LABEL,
   HANDWRITTEN_PHOTO_HELP,
   LITERATURE_ANSWER_LABEL,
   ONE_QUESTION_HELP,
@@ -24,8 +27,17 @@ type Question = {
   question: string;
   answer: string | null;
   answered_by: "atmaprabha" | "madhusudandas" | null;
+  handwritten_url: string | null;
+  handwritten_thumb_url: string | null;
+  handwritten_at: string | null;
   public_id?: string;
 };
+
+/** Same URL after a replace would show the cached image — version it by upload time. */
+function versioned(url: string, version: string | null): string {
+  if (!version) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
+}
 
 export default function QuestionsPage() {
   const profile = useProfile();
@@ -41,6 +53,7 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | "new" | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [openHandwritten, setOpenHandwritten] = useState<Question | null>(null);
 
   const week = useMemo(() => weekFromThursday(date), [date]);
 
@@ -168,19 +181,42 @@ export default function QuestionsPage() {
     }
   }
 
-  async function stubHandwritten(id: number) {
+  async function uploadHandwritten(q: Question, file: File) {
     if (!guide) return;
-    setSavingId(id);
+    setSavingId(q.id);
     setError(null);
     setOkMsg(null);
     try {
-      const res = await api<{ todo?: boolean; message?: string }>(
-        `/api/questions/${id}/handwritten`,
-        { method: "POST", body: JSON.stringify({ filename: "stub.jpg" }) },
-      );
-      setOkMsg(res.message || HANDWRITTEN_PHOTO_HELP);
+      const [full, thumb] = await Promise.all([resizeForUpload(file), resizeForThumb(file)]);
+      const fd = new FormData();
+      fd.append("image", full.blob, "handwritten.jpg");
+      fd.append("thumb", thumb.blob, "thumb.jpg");
+      const res = await fetch(`/api/questions/${q.id}/handwritten`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || `त्रुटी ${res.status}`);
+      setOkMsg(`${HANDWRITTEN_LABEL} जतन झाले — प्रश्नकर्त्याला उत्तरात दिसेल.`);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "हस्तलिखित अयशस्वी");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function removeHandwritten(q: Question) {
+    if (!guide) return;
+    if (!confirm(`${HANDWRITTEN_LABEL} काढायचे?`)) return;
+    setSavingId(q.id);
+    setError(null);
+    try {
+      await api(`/api/questions/${q.id}/handwritten`, { method: "DELETE" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "हस्तलिखित काढता आले नाही");
     } finally {
       setSavingId(null);
     }
@@ -308,16 +344,15 @@ export default function QuestionsPage() {
                     काढा
                   </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={savingId === q.id}
-                  onClick={() => void stubHandwritten(q.id)}
-                  className="w-full rounded-xl bg-white px-3 py-2 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 disabled:opacity-50"
-                >
-                  हस्तलिखित उत्तर (stub)
-                </button>
+                <HandwrittenControl
+                  question={q}
+                  busy={savingId === q.id}
+                  onUpload={(file) => void uploadHandwritten(q, file)}
+                  onRemove={() => void removeHandwritten(q)}
+                  onOpen={() => setOpenHandwritten(q)}
+                />
               </>
-            ) : q.answer ? (
+            ) : q.answer || q.handwritten_url ? (
               <div className="rounded-xl bg-saffron-50/70 p-2 text-sm">
                 <p className="text-xs font-semibold text-saffron-900">
                   उत्तर
@@ -325,9 +360,22 @@ export default function QuestionsPage() {
                     ? ` · ${ANSWERED_BY_LABEL[q.answered_by]}`
                     : ""}
                 </p>
-                <p className="mt-1 break-words whitespace-pre-wrap">
-                  {q.answer}
-                </p>
+                {q.answer ? (
+                  <p className="mt-1 break-words whitespace-pre-wrap">
+                    {q.answer}
+                  </p>
+                ) : null}
+                {q.handwritten_thumb_url ? (
+                  <>
+                    <p className="mt-2 text-xs font-semibold text-saffron-900">
+                      {HANDWRITTEN_LABEL}
+                      {q.answered_by === "madhusudandas"
+                        ? ""
+                        : ` · ${ANSWERED_BY_LABEL.madhusudandas}`}
+                    </p>
+                    <HandwrittenThumb question={q} onOpen={() => setOpenHandwritten(q)} />
+                  </>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-2">
@@ -354,6 +402,107 @@ export default function QuestionsPage() {
             : "या आठवड्यात प्रश्न नाहीत — वर लिहून «प्रश्न जोडा»"}
         </p>
       ) : null}
+      {openHandwritten?.handwritten_url ? (
+        <PhotoLightbox
+          photos={[
+            {
+              id: openHandwritten.id,
+              image_url: versioned(openHandwritten.handwritten_url, openHandwritten.handwritten_at),
+              thumb_url: versioned(
+                openHandwritten.handwritten_thumb_url ?? openHandwritten.handwritten_url,
+                openHandwritten.handwritten_at,
+              ),
+              caption: `${HANDWRITTEN_LABEL} · ${openHandwritten.question}`,
+              taken_on: null,
+              event_title: null,
+            },
+          ]}
+          index={0}
+          onClose={() => setOpenHandwritten(null)}
+          onIndex={() => undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function HandwrittenThumb({
+  question,
+  onOpen,
+}: {
+  question: Question;
+  onOpen: () => void;
+}) {
+  if (!question.handwritten_thumb_url) return null;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`${HANDWRITTEN_LABEL} मोठे पाहा`}
+      className="mt-2 block overflow-hidden rounded-xl bg-white ring-1 ring-saffron-200"
+    >
+      <img
+        src={versioned(question.handwritten_thumb_url, question.handwritten_at)}
+        alt={HANDWRITTEN_LABEL}
+        className="h-28 w-28 object-cover"
+      />
+    </button>
+  );
+}
+
+function HandwrittenControl({
+  question,
+  busy,
+  onUpload,
+  onRemove,
+  onOpen,
+}: {
+  question: Question;
+  busy: boolean;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+  onOpen: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const has = Boolean(question.handwritten_thumb_url);
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-saffron-50/70 p-2">
+      {has ? <HandwrittenThumb question={question} onOpen={onOpen} /> : null}
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-xs font-semibold text-saffron-900">{HANDWRITTEN_LABEL}</p>
+        <div className="flex flex-wrap gap-2">
+          <label
+            className={`cursor-pointer rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-saffron-900 ring-1 ring-saffron-200 ${
+              busy ? "opacity-50" : ""
+            }`}
+          >
+            {busy ? "अपलोड…" : has ? "फोटो बदला" : "फोटो अपलोड"}
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              disabled={busy}
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUpload(file);
+                if (inputRef.current) inputRef.current.value = "";
+              }}
+            />
+          </label>
+          {has ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onRemove}
+              aria-label={`${HANDWRITTEN_LABEL} काढा`}
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-red-800 ring-1 ring-red-200 disabled:opacity-50"
+            >
+              काढा
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

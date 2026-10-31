@@ -72,7 +72,9 @@ describe("panchang tithi stub", () => {
       "utf8",
     );
     assert.match(route, /requireGuideActor/);
-    assert.match(route, /TODO/);
+    assert.match(route, /formData/);
+    assert.match(route, /validateUploadBytes/);
+    assert.equal(/TODO/.test(route), false, "handwritten upload is no longer a stub");
     const qRoute = readFileSync(new URL("../app/api/questions/route.ts", import.meta.url), "utf8");
     assert.match(qRoute, /assignPublicQuestionIds/);
   });

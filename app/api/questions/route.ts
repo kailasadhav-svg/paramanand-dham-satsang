@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     });
     const numbered = assignPublicQuestionIds(raw);
     const questions = unanswered
-      ? numbered.filter((q) => !q.answer || !q.answer.trim())
+      ? numbered.filter((q) => (!q.answer || !q.answer.trim()) && !q.handwritten_url)
       : numbered;
     const around = from || ymdInIndia();
     const asked_this_week = staff

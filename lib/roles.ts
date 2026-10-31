@@ -64,7 +64,7 @@ export const SEEKER_DEMO_PHONES = (
  *   (literature-grounded retrieval); escalate to
  *   मार्गदर्शक if unsatisfied (अजपा OTP flow).
  * - Question id = village+year-week+seq FIFO (`lib/question-id.ts`; not persisted).
- * - मार्गदर्शक handwritten-answer photo: POST /api/questions/[id]/handwritten stub.
+ * - मार्गदर्शक handwritten-answer photo: POST /api/questions/[id]/handwritten (stored as blob).
  * - Week 1 = first Thursday 2026-01-01; later Thursdays +1 within the year.
  * - Thursday screens: Marathi panchang tithi top bar (stub).
  * - Thursday 17:00 previous-week immutable चिंतन + प्रश्न-उत्तर archive

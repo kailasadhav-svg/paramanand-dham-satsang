@@ -47,9 +47,10 @@ export const QUESTION_AI_FIRST_HELP =
 export const QUESTION_ID_HELP =
   "प्रश्न क्रमांक: गाव + आठवडा + क्रम (FIFO). आठवडा १ = जानेवारी २०२६ चा पहिला गुरुवार (२०२६-०१-०१).";
 
-/** मार्गदर्शक: photo of handwritten answer — storage TODO. */
+/** मार्गदर्शक: photo of handwritten answer, shown to the asker under उत्तर. */
 export const HANDWRITTEN_PHOTO_HELP =
-  "मार्गदर्शक प्रत्येक प्रश्नाचे हस्तलिखित उत्तर छायाचित्र अपलोड करू शकतात — लवकरच.";
+  "मार्गदर्शक प्रत्येक प्रश्नाचे हस्तलिखित उत्तर छायाचित्र अपलोड करू शकतात; ते प्रश्न विचारणाऱ्याला उत्तरात दिसते.";
+export const HANDWRITTEN_LABEL = "हस्तलिखित उत्तर";
 
 /** Thursday screens: Marathi panchang tithi in the top area. */
 export const PANCHANG_TITHI_HELP =
