@@ -183,9 +183,20 @@ WHATSAPP_APP_SECRET=…
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
 
+#### Deploy (live साइट update)
+
+The VPS does **not** auto-deploy from GitHub. After merging to `main`, on the VPS inside the app folder:
+
+```bash
+bash scripts/deploy.sh             # git pull main → npm ci → next build → pm2 restart → health
+bash scripts/deploy.sh <branch>    # try another branch
+```
+
+For systemd: `SATSANG_SERVICE=satsang bash scripts/deploy.sh`. Uncommitted server edits are stashed, never lost. New DB columns are added automatically on the first request after restart.
+
 #### प्रवेश पिन विसरलात? (forgot the PIN)
 
-The PIN is only in the server's `.env.local` — never in git. On the VPS, inside the app folder:
+The PIN screen is off by default (see `LOGIN_PIN_REQUIRED`). When it is on, the PIN is only in the server's `.env.local` — never in git. On the VPS, inside the app folder:
 
 ```bash
 bash scripts/admin-pin.sh          # show the current ADMIN_PIN
