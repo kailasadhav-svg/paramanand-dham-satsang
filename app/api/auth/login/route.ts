@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   SESSION_COOKIE,
   expectedSessionToken,
+  pinRequired,
   productionAuthBlockedReason,
   sessionCookieOptions,
   verifyPin,
@@ -11,10 +12,21 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Lets the login screen know whether to show the PIN pad at all. */
+export async function GET() {
+  return NextResponse.json({ pin_required: pinRequired() });
+}
+
 export async function POST(request: Request) {
   const blocked = productionAuthBlockedReason();
   if (blocked) {
     return NextResponse.json({ error: blocked }, { status: 503 });
+  }
+
+  if (!pinRequired()) {
+    const res = NextResponse.json({ ok: true, pin_required: false });
+    res.cookies.set(SESSION_COOKIE, expectedSessionToken(), sessionCookieOptions());
+    return res;
   }
 
   const ip = clientIp(request);

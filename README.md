@@ -32,7 +32,7 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 2. If still empty: सत्संग चरणसेवक on **that week’s Friday 06:00–12:00 noon IST**.
 3. After Friday noon, if still empty: last Thursday’s वाहक continues automatically.
 
-App login is a simple **प्रवेश पिन** (`ADMIN_PIN`, default `1960`). Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
+App login is the **mobile-number screen**: संगणक / मार्गदर्शक numbers get a WhatsApp OTP, everyone else binds directly. The shared **प्रवेश पिन** screen is **off by default**; set `LOGIN_PIN_REQUIRED=1` (with a unique `ADMIN_PIN`) to put it back in front. Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
 
 Isolation (role-scoped screens/data do not leak):
 - **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak or सत्संग चरणसेवक appoint.
@@ -146,7 +146,7 @@ npm start
 - Local and preferred VPS production: SQLite file `data/satsang.db` via `@libsql/client` (created on first request; gitignored). On the single-server host (`satsang.dhyeyapurti.in`) set `ALLOW_FILE_STORE=1` so app and DB stay on the same disk.
 - Turso (libSQL over HTTP) is only for multi-instance or Vercel. A SQLite file on Vercel serverless is ephemeral and must not be used for attendance / Q&A.
 - Cookie session after PIN (`satsang_session`); member session is a separate cookie (`satsang_member`)
-- Change PIN with env `ADMIN_PIN`
+- PIN screen: `LOGIN_PIN_REQUIRED=1` turns it on; the PIN itself is env `ADMIN_PIN` (ignored while the screen is off)
 - Optional `SESSION_SECRET` for cookie HMAC
 - On Vercel, login cookies are marked `Secure` automatically. Locally, keep `COOKIE_SECURE=false` unless you use HTTPS.
 
@@ -174,8 +174,9 @@ On a single VPS with a persistent disk (nginx → Node, `satsang.dhyeyapurti.in`
 ```
 ALLOW_FILE_STORE=1
 COOKIE_SECURE=true
-ADMIN_PIN=…          # unique, not 1960
 SESSION_SECRET=…     # long random
+# LOGIN_PIN_REQUIRED=1  # optional: bring back the प्रवेश पिन screen…
+# ADMIN_PIN=…           # …then this must be set and not 1960
 WHATSAPP_VERIFY_TOKEN=…
 WHATSAPP_APP_SECRET=…
 ```

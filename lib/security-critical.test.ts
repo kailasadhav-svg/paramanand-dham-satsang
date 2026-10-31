@@ -5,6 +5,7 @@ import {
   DEFAULT_ADMIN_PIN,
   DEFAULT_SESSION_SECRET,
   hasWeakAuthSecrets,
+  pinRequired,
   productionAuthBlockedReason,
   sessionCookieOptions,
 } from "./auth-policy.ts";
@@ -109,22 +110,48 @@ describe("production runtime gates (not Vercel-only)", () => {
     );
   });
 
+  it("PIN screen is off by default and only on with LOGIN_PIN_REQUIRED", () => {
+    assert.equal(pinRequired({}), false);
+    assert.equal(pinRequired({ ADMIN_PIN: "2468" }), false, "a set PIN alone does not turn the screen on");
+    assert.equal(pinRequired({ LOGIN_PIN_REQUIRED: "1" }), true);
+    assert.equal(pinRequired({ LOGIN_PIN_REQUIRED: "true" }), true);
+    assert.equal(pinRequired({ LOGIN_PIN_REQUIRED: "0" }), false);
+  });
+
   it("blocks default PIN / session secret on VPS production", () => {
     assert.equal(
-      productionAuthBlockedReason({ NODE_ENV: "production" }),
+      productionAuthBlockedReason({ NODE_ENV: "production", LOGIN_PIN_REQUIRED: "1" }),
       "Production secrets missing: set a unique ADMIN_PIN (not 1960) and a long SESSION_SECRET, then restart.",
+    );
+    assert.equal(
+      productionAuthBlockedReason({ NODE_ENV: "production" }),
+      "Production secrets missing: set a long SESSION_SECRET, then restart.",
+      "without the PIN screen only the session secret is checked",
     );
     assert.equal(
       productionAuthBlockedReason({
         NODE_ENV: "production",
+        SESSION_SECRET: "a-long-unique-session-secret",
+      }),
+      null,
+      "PIN off: a weak/default ADMIN_PIN no longer blocks login",
+    );
+    assert.equal(
+      productionAuthBlockedReason({
+        NODE_ENV: "production",
+        LOGIN_PIN_REQUIRED: "1",
         ADMIN_PIN: "not-1960-strong",
         SESSION_SECRET: "a-long-unique-session-secret",
       }),
       null,
     );
     assert.equal(productionAuthBlockedReason({ NODE_ENV: "development" }), null);
-    assert.equal(hasWeakAuthSecrets({}).weakPin, true);
-    assert.equal(hasWeakAuthSecrets({ ADMIN_PIN: DEFAULT_ADMIN_PIN }).weakPin, true);
+    assert.equal(hasWeakAuthSecrets({}).weakPin, false, "no PIN screen → PIN strength irrelevant");
+    assert.equal(hasWeakAuthSecrets({ LOGIN_PIN_REQUIRED: "1" }).weakPin, true);
+    assert.equal(
+      hasWeakAuthSecrets({ LOGIN_PIN_REQUIRED: "1", ADMIN_PIN: DEFAULT_ADMIN_PIN }).weakPin,
+      true,
+    );
     assert.equal(
       hasWeakAuthSecrets({ SESSION_SECRET: DEFAULT_SESSION_SECRET }).weakSessionSecret,
       true,
