@@ -182,6 +182,17 @@ WHATSAPP_APP_SECRET=…
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
 
+#### प्रवेश पिन विसरलात? (forgot the PIN)
+
+The PIN is only in the server's `.env.local` — never in git. On the VPS, inside the app folder:
+
+```bash
+bash scripts/admin-pin.sh          # show the current ADMIN_PIN
+bash scripts/admin-pin.sh 2468     # set a new 4–8 digit PIN (not 1960) and restart via pm2
+```
+
+For systemd: `SATSANG_SERVICE=satsang bash scripts/admin-pin.sh 2468`. The script keeps a `.env.local.bak.<timestamp>` copy (gitignored).
+
 `GET /api/health` returns `{ ok, db: { store: "file" | "turso" }, production_ready }` when the store is reachable.
 
 ### Vercel / multi-instance production
