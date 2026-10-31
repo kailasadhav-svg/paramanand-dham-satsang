@@ -5,6 +5,7 @@ data/*.db-wal
 .DS_Store
 .env
 .env.local
+.env*.bak.*
 *.log
 .next
 node_modules
