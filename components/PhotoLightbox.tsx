@@ -7,6 +7,7 @@ import { formatMarathiDate } from "@/lib/dates";
 export type LightboxPhoto = {
   id: number;
   image_url: string;
+  thumb_url: string;
   caption: string | null;
   taken_on: string | null;
   event_title: string | null;

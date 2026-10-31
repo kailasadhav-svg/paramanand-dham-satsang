@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PhotoLightbox, type LightboxPhoto } from "@/components/PhotoLightbox";
 import { api } from "@/lib/api";
 import { formatMarathiShort } from "@/lib/dates";
+import { resizeForThumb, resizeForUpload } from "@/lib/image-resize";
 import { PHOTOS_LABEL } from "@/lib/labels";
 
 type EventOption = { id: number; title: string; event_date: string };
@@ -21,8 +22,12 @@ export default function PhotosPage() {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showLink, setShowLink] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ photos: LightboxPhoto[]; can_manage: boolean }>("/api/photos");
@@ -39,18 +44,57 @@ export default function PhotosPage() {
     void load().catch((e) => setError(e instanceof Error ? e.message : "लोड अयशस्वी"));
   }, [load]);
 
+  async function uploadOne(file: File) {
+    const [full, thumb] = await Promise.all([resizeForUpload(file), resizeForThumb(file)]);
+    const fd = new FormData();
+    fd.append("image", full.blob, "photo.jpg");
+    fd.append("thumb", thumb.blob, "thumb.jpg");
+    fd.append("width", String(full.width));
+    fd.append("height", String(full.height));
+    fd.append("caption", form.caption);
+    fd.append("taken_on", form.taken_on);
+    fd.append("event_id", form.event_id);
+    const res = await fetch("/api/photos/upload", {
+      method: "POST",
+      body: fd,
+      credentials: "include",
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) throw new Error(data.error || `त्रुटी ${res.status}`);
+  }
+
+  function resetForm() {
+    setForm(EMPTY_FORM);
+    setFiles([]);
+    setShowLink(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
   async function save() {
+    if (files.length === 0 && !form.image_url.trim()) {
+      setError("फोनवरून फोटो निवडा किंवा लिंक द्या");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await api("/api/photos", { method: "POST", body: JSON.stringify(form) });
-      setForm(EMPTY_FORM);
+      if (files.length) {
+        for (let i = 0; i < files.length; i++) {
+          setProgress({ done: i, total: files.length });
+          await uploadOne(files[i]);
+        }
+      } else {
+        await api("/api/photos", { method: "POST", body: JSON.stringify(form) });
+      }
+      resetForm();
       setShowForm(false);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "जतन अयशस्वी");
+      await load().catch(() => undefined);
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   }
 
@@ -65,6 +109,14 @@ export default function PhotosPage() {
       setError(e instanceof Error ? e.message : "काढता आले नाही");
     }
   }
+
+  const submitLabel = saving
+    ? progress
+      ? `${progress.done + 1} / ${progress.total} अपलोड होत आहे…`
+      : "जतन होत आहे…"
+    : files.length > 1
+      ? `${files.length} फोटो अपलोड करा`
+      : "फोटो जोडा";
 
   return (
     <div className="space-y-4">
@@ -95,17 +147,47 @@ export default function PhotosPage() {
           }}
         >
           <label className="block text-xs font-semibold text-temple-muted">
-            छायाचित्राची लिंक (http/https)
+            फोनवरून फोटो (एक किंवा अनेक)
+            <span className="mt-1 flex items-center gap-3">
+              <span className="shrink-0 rounded-full bg-saffron-100 px-4 py-2 text-xs font-semibold text-saffron-800">
+                फोटो निवडा
+              </span>
+              <span className="min-w-0 text-xs font-normal leading-snug text-temple-ink">
+                {files.length
+                  ? `${files.length} फोटो निवडले · अपलोडपूर्वी आपोआप लहान केले जातील`
+                  : "कॅमेरा किंवा गॅलरीतून"}
+              </span>
+            </span>
             <input
-              required
-              type="url"
-              inputMode="url"
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              className={inputClass}
-              placeholder="https://…/photo.jpg"
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={saving}
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              className="sr-only"
             />
           </label>
+          <button
+            type="button"
+            onClick={() => setShowLink((s) => !s)}
+            className="text-xs font-semibold text-saffron-800 underline"
+          >
+            {showLink ? "लिंक लपवा" : "किंवा लिंक चिकटवा"}
+          </button>
+          {showLink ? (
+            <label className="block text-xs font-semibold text-temple-muted">
+              छायाचित्राची लिंक (http/https)
+              <input
+                type="url"
+                inputMode="url"
+                value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                className={inputClass}
+                placeholder="https://…/photo.jpg"
+              />
+            </label>
+          ) : null}
           <label className="block text-xs font-semibold text-temple-muted">
             वर्णन
             <input
@@ -146,7 +228,7 @@ export default function PhotosPage() {
             disabled={saving}
             className="w-full rounded-2xl bg-saffron-700 py-3 font-semibold text-white disabled:opacity-60"
           >
-            {saving ? "जतन होत आहे…" : "छायाचित्र जोडा"}
+            {submitLabel}
           </button>
         </form>
       ) : null}
@@ -170,7 +252,7 @@ export default function PhotosPage() {
                 className="block w-full overflow-hidden rounded-xl bg-saffron-50 shadow-card ring-1 ring-saffron-200/70"
               >
                 <img
-                  src={p.image_url}
+                  src={p.thumb_url}
                   alt={p.caption || ""}
                   loading="lazy"
                   referrerPolicy="no-referrer"
