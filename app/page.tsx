@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import {
   MEMBER_COOKIE,
   SESSION_COOKIE,
-  isSessionToken,
+  hasAppSession,
   parseActorSessionToken,
   parseMemberSessionToken,
   ACTOR_COOKIE,
@@ -12,7 +12,7 @@ import { defaultHomePath, detectStaffRole } from "@/lib/roles";
 
 export default async function HomePage() {
   const jar = await cookies();
-  if (isSessionToken(jar.get(SESSION_COOKIE)?.value)) {
+  if (hasAppSession(jar.get(SESSION_COOKIE)?.value)) {
     const actor = parseActorSessionToken(jar.get(ACTOR_COOKIE)?.value);
     if (actor) {
       redirect(defaultHomePath(detectStaffRole(actor)));

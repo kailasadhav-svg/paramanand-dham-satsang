@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import {
   adminPin,
+  pinRequired,
   sessionSecret,
 } from "./auth-policy.ts";
 
@@ -12,6 +13,7 @@ export {
   clearCookieOptions,
   hasWeakAuthSecrets,
   isVercelRuntime,
+  pinRequired,
   productionAuthBlockedReason,
   sessionCookieOptions,
   sessionSecret,
@@ -41,6 +43,12 @@ export function verifyPin(pin: string): boolean {
 export function isSessionToken(token: string | undefined | null): boolean {
   if (!token) return false;
   return safeEqualString(token, expectedSessionToken());
+}
+
+/** App access: the PIN cookie when the PIN screen is on, otherwise always open. */
+export function hasAppSession(token: string | undefined | null): boolean {
+  if (!pinRequired()) return true;
+  return isSessionToken(token);
 }
 
 export function memberSessionToken(memberId: number): string {
@@ -81,7 +89,7 @@ export function parseActorSessionToken(token: string | undefined | null): string
 
 export async function getSession(): Promise<boolean> {
   const jar = await cookies();
-  return isSessionToken(jar.get(SESSION_COOKIE)?.value);
+  return hasAppSession(jar.get(SESSION_COOKIE)?.value);
 }
 
 export async function getMemberId(): Promise<number | null> {

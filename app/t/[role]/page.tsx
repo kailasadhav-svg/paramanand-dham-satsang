@@ -37,7 +37,7 @@ export default function TestRolePage() {
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center gap-3 px-6 text-center">
       <p className="text-sm font-semibold text-saffron-700">टेस्ट लिंक</p>
       <p className="font-display text-2xl text-saffron-900">{msg}</p>
-      <p className="text-xs text-temple-muted">PIN 1960 · नंतर थेट अ‍ॅप</p>
+      <p className="text-xs text-temple-muted">मोबाइल खात्रीनंतर थेट अ‍ॅप</p>
     </div>
   );
 }
