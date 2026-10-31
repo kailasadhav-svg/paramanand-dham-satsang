@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { loadProfile } from "@/lib/offline/profile";
 import { defaultHomePath } from "@/lib/roles";
@@ -17,21 +17,47 @@ function LoginForm() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // "checking" until the server says whether the PIN pad is needed at all.
+  const [pinMode, setPinMode] = useState<"checking" | "pin" | "auto">("checking");
 
-  async function submit(nextPin: string) {
-    if (nextPin.length < PIN_MIN_LENGTH) return;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/login", { credentials: "include" });
+        const data = (await res.json().catch(() => ({}))) as { pin_required?: boolean };
+        if (cancelled) return;
+        if (data.pin_required === false) {
+          setPinMode("auto");
+          void submit("", true);
+          return;
+        }
+      } catch {
+        // fall through to the PIN pad
+      }
+      if (!cancelled) setPinMode("pin");
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function submit(nextPin: string, auto = false) {
+    if (!auto && nextPin.length < PIN_MIN_LENGTH) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: nextPin }),
+        body: JSON.stringify(auto ? {} : { pin: nextPin }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         setError(data.error || "प्रवेश अयशस्वी");
         setPin("");
+        if (auto) setPinMode("pin");
         return;
       }
       const nextRaw = search.get("next");
@@ -89,6 +115,16 @@ function LoginForm() {
         </p>
       </div>
 
+      {pinMode !== "pin" ? (
+        <div className="mt-10 card px-5 py-8 text-center">
+          <p className="text-sm font-semibold text-saffron-900">
+            {error ? error : "प्रवेश होत आहे…"}
+          </p>
+          <p className="mt-2 text-xs text-temple-muted">
+            पिन लागत नाही — पुढे तुमचा मोबाइल नंबर टाका.
+          </p>
+        </div>
+      ) : (
       <div className="mt-10 card px-5 py-6">
         <p className="text-center text-sm font-semibold">प्रवेश पिन</p>
         <div className="pin-dots mt-4 flex flex-nowrap justify-center gap-2">
@@ -136,6 +172,7 @@ function LoginForm() {
           </button>
         </div>
       </div>
+      )}
 
       <div className="mt-6 flex justify-center gap-4 text-sm font-semibold">
         <Link href="/register" className="text-saffron-800">
