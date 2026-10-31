@@ -6,14 +6,21 @@ export type EventInput = {
   description: string | null;
 };
 
-export type PhotoInput = {
-  image_url: string;
+export type PhotoMeta = {
   caption: string | null;
   taken_on: string | null;
   event_id: number | null;
 };
 
+export type PhotoInput = PhotoMeta & { image_url: string };
+
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/** Client re-encodes to ≤1600px JPEG before upload; these caps guard the server. */
+export const MAX_UPLOAD_BYTES = 1_500_000;
+export const MAX_THUMB_BYTES = 250_000;
+
+export type ImageMime = "image/jpeg" | "image/png" | "image/webp";
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -67,10 +74,9 @@ export function parseImageUrl(raw: unknown): string | null {
   }
 }
 
-export function parsePhotoInput(body: unknown): Parsed<PhotoInput> {
+/** Caption / date / event shared by link photos and uploads (form fields arrive as strings). */
+export function parsePhotoMeta(body: unknown): Parsed<PhotoMeta> {
   const b = (body ?? {}) as Record<string, unknown>;
-  const image_url = parseImageUrl(b.image_url);
-  if (!image_url) return { ok: false, error: "छायाचित्राची http(s) लिंक आवश्यक" };
   const caption = optionalText(b.caption, 200, "वर्णन");
   if (!caption.ok) return caption;
   const taken_on = text(b.taken_on);
@@ -81,10 +87,58 @@ export function parsePhotoInput(body: unknown): Parsed<PhotoInput> {
     if (!Number.isInteger(n) || n <= 0) return { ok: false, error: "अवैध कार्यक्रम" };
     event_id = n;
   }
-  return {
-    ok: true,
-    value: { image_url, caption: caption.value, taken_on: taken_on || null, event_id },
-  };
+  return { ok: true, value: { caption: caption.value, taken_on: taken_on || null, event_id } };
+}
+
+export function parsePhotoInput(body: unknown): Parsed<PhotoInput> {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const image_url = parseImageUrl(b.image_url);
+  if (!image_url) return { ok: false, error: "छायाचित्राची http(s) लिंक आवश्यक" };
+  const meta = parsePhotoMeta(b);
+  if (!meta.ok) return meta;
+  return { ok: true, value: { image_url, ...meta.value } };
+}
+
+function ascii(bytes: Uint8Array, start: number, end: number): string {
+  let out = "";
+  for (let i = start; i < end && i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+  return out;
+}
+
+/** Magic-byte sniff — the client's declared Content-Type is never trusted. */
+export function sniffImageMime(bytes: Uint8Array): ImageMime | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    ascii(bytes, 1, 4) === "PNG" &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (bytes.length >= 12 && ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  return null;
+}
+
+export function validateUploadBytes(
+  bytes: Uint8Array,
+  max: number,
+  label: string,
+): Parsed<ImageMime> {
+  if (bytes.length === 0) return { ok: false, error: `${label} रिकामे आहे` };
+  if (bytes.length > max) {
+    return { ok: false, error: `${label} ${Math.round(max / 1000)} KB पेक्षा मोठे आहे` };
+  }
+  const mime = sniffImageMime(bytes);
+  if (!mime) return { ok: false, error: `${label} JPEG / PNG / WebP असावे` };
+  return { ok: true, value: mime };
 }
 
 type Dated = { event_date: string; event_time: string | null };

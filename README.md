@@ -94,7 +94,7 @@ Short aliases: `/a` `/t` `/q` `/j` `/r` `/e` `/p`.
 | चरणसेवक | `/members` | Staff only — registered members + login codes |
 | चिंतन | `/weekly` | Hidden for संगणक |
 | कार्यक्रम | `/events` | आगामी / झालेले satsang events (title, date, time, place, note). Everyone sees; संगणक / मार्गदर्शक add + remove |
-| फोटो | `/photos` | Photo gallery — grid, tap for full view. Stores image **links** (`photos.image_url`), not uploads; संगणक / मार्गदर्शक add + remove, optional link to an event |
+| फोटो | `/photos` | Photo gallery — grid, tap for full view. संगणक / मार्गदर्शक upload from the phone (several at once; browser downsizes to ≤1600px JPEG + 400px thumb, stored as blobs in `photos.image_blob` / `thumb_blob`, served by `GET /api/photos/[id]/image?size=thumb`) or paste an image link; optional link to an event. Blobs live in the same SQLite/Turso DB, so no extra storage is needed on VPS or Vercel |
 
 ## अजपा संवाद (PWA)
 

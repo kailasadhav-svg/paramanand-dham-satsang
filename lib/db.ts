@@ -14,7 +14,7 @@ import {
   productionFileStoreBlockedReason,
   remoteDatabaseUrl,
 } from "./runtime";
-import type { EventInput, PhotoInput } from "./events";
+import { sniffImageMime, type EventInput, type PhotoInput, type PhotoMeta } from "./events";
 
 const DB_PATH = path.join(process.cwd(), "data", "satsang.db");
 
@@ -349,6 +349,11 @@ async function migrate(db: Client) {
   await ensureColumn(db, "meetings", "checkin_at", "TEXT");
   await ensureColumn(db, "satsangi_members", "home_place_id", "INTEGER");
   await ensureColumn(db, "questions", "asked_by_phone", "TEXT");
+  await ensureColumn(db, "photos", "image_blob", "BLOB");
+  await ensureColumn(db, "photos", "thumb_blob", "BLOB");
+  await ensureColumn(db, "photos", "mime", "TEXT");
+  await ensureColumn(db, "photos", "width", "INTEGER");
+  await ensureColumn(db, "photos", "height", "INTEGER");
   await db.execute(
     "CREATE INDEX IF NOT EXISTS idx_satsangi_home_place ON satsangi_members(home_place_id)",
   );
@@ -935,6 +940,11 @@ export type SatsangEvent = {
 export type Photo = {
   id: number;
   image_url: string;
+  thumb_url: string;
+  /** True when bytes live in `image_blob` (served by /api/photos/[id]/image). */
+  uploaded: boolean;
+  width: number | null;
+  height: number | null;
   caption: string | null;
   taken_on: string | null;
   event_id: number | null;
@@ -943,6 +953,13 @@ export type Photo = {
 };
 
 export type PhotoWithEvent = Photo & { event_title: string | null };
+
+/** Never `ph.*` — blobs must not ride along with list queries. */
+const PHOTO_SELECT = `SELECT ph.id, ph.image_url, ph.caption, ph.taken_on, ph.event_id,
+       ph.created_by_phone, ph.created_at, ph.mime, ph.width, ph.height,
+       (ph.thumb_blob IS NOT NULL) AS has_thumb, e.title AS event_title
+       FROM photos ph
+       LEFT JOIN events e ON e.id = ph.event_id`;
 
 function asEvent(row: Row): SatsangEvent {
   return {
@@ -958,9 +975,15 @@ function asEvent(row: Row): SatsangEvent {
 }
 
 function asPhotoWithEvent(row: Row): PhotoWithEvent {
+  const uploaded = row.mime != null;
+  const image_url = str(row.image_url);
   return {
     id: num(row.id),
-    image_url: str(row.image_url),
+    image_url,
+    thumb_url: uploaded && num(row.has_thumb) === 1 ? `${image_url}?size=thumb` : image_url,
+    uploaded,
+    width: row.width == null ? null : num(row.width),
+    height: row.height == null ? null : num(row.height),
     caption: strOrNull(row.caption),
     taken_on: strOrNull(row.taken_on),
     event_id: row.event_id == null ? null : num(row.event_id),
@@ -1018,9 +1041,7 @@ export async function deleteEvent(id: number): Promise<boolean> {
 export async function listPhotos(): Promise<PhotoWithEvent[]> {
   const db = await getDb();
   const rs = await db.execute(
-    `SELECT ph.*, e.title AS event_title
-       FROM photos ph
-       LEFT JOIN events e ON e.id = ph.event_id
+    `${PHOTO_SELECT}
        ORDER BY COALESCE(ph.taken_on, substr(ph.created_at, 1, 10)) DESC, ph.id DESC`,
   );
   return rs.rows.map(asPhotoWithEvent);
@@ -1029,10 +1050,7 @@ export async function listPhotos(): Promise<PhotoWithEvent[]> {
 export async function getPhoto(id: number): Promise<PhotoWithEvent | undefined> {
   const db = await getDb();
   const rs = await db.execute({
-    sql: `SELECT ph.*, e.title AS event_title
-       FROM photos ph
-       LEFT JOIN events e ON e.id = ph.event_id
-       WHERE ph.id = ?`,
+    sql: `${PHOTO_SELECT} WHERE ph.id = ?`,
     args: [id],
   });
   return rs.rows[0] ? asPhotoWithEvent(rs.rows[0]) : undefined;
@@ -1060,6 +1078,71 @@ export async function createPhoto(
   const saved = await getPhoto(Number(result.lastInsertRowid));
   if (!saved) throw new Error("Failed to save photo");
   return saved;
+}
+
+export async function createUploadedPhoto(
+  input: PhotoMeta & {
+    image: Uint8Array;
+    thumb: Uint8Array | null;
+    mime: string;
+    width: number | null;
+    height: number | null;
+    created_by_phone?: string | null;
+  },
+): Promise<PhotoWithEvent> {
+  if (input.event_id != null && !(await getEvent(input.event_id))) {
+    throw new Error("कार्यक्रम सापडला नाही");
+  }
+  const db = await getDb();
+  const result = await db.execute({
+    sql: `INSERT INTO photos (
+        image_url, caption, taken_on, event_id, created_by_phone, created_at,
+        image_blob, thumb_blob, mime, width, height
+      ) VALUES ('', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      input.caption,
+      input.taken_on,
+      input.event_id,
+      input.created_by_phone ?? null,
+      nowIso(),
+      input.image,
+      input.thumb,
+      input.mime,
+      input.width,
+      input.height,
+    ],
+  });
+  const id = Number(result.lastInsertRowid);
+  await db.execute({
+    sql: "UPDATE photos SET image_url = ? WHERE id = ?",
+    args: [`/api/photos/${id}/image`, id],
+  });
+  const saved = await getPhoto(id);
+  if (!saved) throw new Error("Failed to save photo");
+  return saved;
+}
+
+function asBytes(value: unknown): Uint8Array {
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  return new Uint8Array(Buffer.from(String(value), "base64"));
+}
+
+export async function getPhotoImage(
+  id: number,
+  size: "full" | "thumb",
+): Promise<{ bytes: Uint8Array; mime: string } | undefined> {
+  const db = await getDb();
+  const rs = await db.execute({
+    sql: "SELECT image_blob, thumb_blob, mime FROM photos WHERE id = ?",
+    args: [id],
+  });
+  const row = rs.rows[0];
+  if (!row || row.mime == null) return undefined;
+  const raw = size === "thumb" && row.thumb_blob != null ? row.thumb_blob : row.image_blob;
+  if (raw == null) return undefined;
+  const bytes = asBytes(raw);
+  return { bytes, mime: sniffImageMime(bytes) ?? str(row.mime) };
 }
 
 export async function deletePhoto(id: number): Promise<boolean> {
