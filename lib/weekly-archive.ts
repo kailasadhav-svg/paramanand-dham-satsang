@@ -141,6 +141,18 @@ export function buildVillageArchives(opts: {
   });
 }
 
+/** True when मार्गदर्शक finished सारांश via any one of: typed text, photo/file, or voice. */
+export function isArchiveSummaryComplete(
+  summary: ArchiveSummary | null | undefined,
+): boolean {
+  if (!summary) return false;
+  if (summary.kind === "text") return Boolean(summary.text?.trim());
+  if (summary.kind === "photo" || summary.kind === "voice") {
+    return Boolean(summary.filename?.trim());
+  }
+  return false;
+}
+
 export function applyArchiveSummary(
   archive: VillageWeekArchive,
   summary: ArchiveSummary,
