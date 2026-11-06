@@ -1,0 +1,50 @@
+{
+  "packageId": "in.dhyeyapurti.satsang",
+  "host": "satsang.dhyeyapurti.in",
+  "name": "अजपा संवाद",
+  "launcherName": "अजपा संवाद",
+  "display": "standalone",
+  "themeColor": "#C74407",
+  "themeColorDark": "#8A2E05",
+  "navigationColor": "#C74407",
+  "navigationColorDark": "#8A2E05",
+  "navigationDividerColor": "#C74407",
+  "navigationDividerColorDark": "#8A2E05",
+  "backgroundColor": "#FFF8F1",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://satsang.dhyeyapurti.in/icons/samvadak/icon-512.png",
+  "maskableIconUrl": "https://satsang.dhyeyapurti.in/icons/samvadak/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./upload-keystore.jks",
+    "alias": "upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://satsang.dhyeyapurti.in/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://satsang.dhyeyapurti.in/",
+  "minSdkVersion": 26,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "appVersion": "1.0.0"
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.dhyeyapurti.satsang",
+      "sha256_cert_fingerprints": [
+        "ee64ae0600832d5f6cee45a50be8b7e189a2811996b2f1bab4500bfafcdd8df8"
+      ]
+    }
+  }
+]
