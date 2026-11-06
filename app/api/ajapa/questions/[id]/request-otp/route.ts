@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { allowDebugOtp, createEscalateOtp } from "@/lib/ajapa/otp";
 import { displayPhone, normalizePhone, phonesEqual } from "@/lib/ajapa/phone";
-import { getAjapaQuestion, hasMadhusudanAskThisWeek } from "@/lib/ajapa/store";
-import { sendText, whatsappConfigured } from "@/lib/ajapa/whatsapp";
+import { getAjapaQuestion, getWaSession, hasMadhusudanAskThisWeek } from "@/lib/ajapa/store";
+import { sendOtpMessage, whatsappConfigured } from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession, requireActorPhone } from "@/lib/api-guard";
 import { defaultThursdayYmd, weekFromThursday } from "@/lib/dates";
 
@@ -57,30 +57,23 @@ export async function POST(request: Request, ctx: Ctx) {
     phone: q.seeker_phone,
   });
 
-  const body = `परमानंद धाम · अजपा संवाद
-
-मधुसुदनदास विजयानंद यांचे उत्तर मागण्यासाठी Meta WhatsApp OTP:
-
-*${code}*
-
-अ‍ॅप → संवाद मध्ये हा OTP टाका (१० मिनिटे वैध).
-हमी: या आठवड्यात फक्त एकच प्रश्न मधुसुदनदास यांना.
-प्रश्न: ${q.question.slice(0, 120)}`;
-
   let wa: { ok: boolean; error?: string; skipped?: boolean } = {
     ok: false,
     error: "not sent",
   };
   if (whatsappConfigured()) {
-    wa = await sendText(q.seeker_phone, body);
+    const session = await getWaSession(normalizePhone(q.seeker_phone));
+    wa = await sendOtpMessage({
+      to: q.seeker_phone,
+      code,
+      lastInboundAt: session?.last_inbound_at ?? null,
+      purpose: "escalate",
+    });
   } else {
     wa = { ok: false, error: "WhatsApp not configured", skipped: true };
   }
 
-  const dry =
-    process.env.WHATSAPP_DRY_RUN === "1" ||
-    process.env.WHATSAPP_DRY_RUN === "true" ||
-    wa.skipped;
+  const dry = allowDebugOtp() || Boolean(wa.skipped);
 
   return NextResponse.json({
     ok: true,
@@ -95,6 +88,8 @@ export async function POST(request: Request, ctx: Ctx) {
       ? `Meta WhatsApp OTP · ${displayPhone(q.seeker_phone)} वर पाठवला — अ‍ॅपमध्ये टाका`
       : dry
         ? `WhatsApp dry-run · ${allowDebugOtp() ? `टेस्ट OTP: ${code}` : "OTP पाठवता आला नाही"}`
-        : "Meta WhatsApp OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
+        : wa.error
+          ? `OTP पाठवता आला नाही: ${wa.error.slice(0, 160)}`
+          : "Meta WhatsApp OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
   });
 }
