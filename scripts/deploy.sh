@@ -4,7 +4,8 @@
 #   bash scripts/deploy.sh            # main branch
 #   bash scripts/deploy.sh <branch>   # दुसरी branch तपासण्यासाठी
 #
-# Restart: pm2 असेल तर आपोआप; systemd साठी SATSANG_SERVICE=<unit> द्या.
+# Restart: pm2 असेल तर आपोआप; systemd वर 'satsang' unit आपोआप सापडते,
+# दुसरे नाव असल्यास SATSANG_SERVICE=<unit> द्या.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -34,12 +35,19 @@ echo "== next build"
 npm run build
 
 echo "== restart"
+SERVICE="${SATSANG_SERVICE:-}"
+if [ -z "$SERVICE" ] && command -v systemctl >/dev/null 2>&1 \
+   && systemctl is-active --quiet satsang 2>/dev/null; then
+  SERVICE=satsang
+fi
+SUDO=""
+[ "$(id -u)" != 0 ] && SUDO=sudo
 if command -v pm2 >/dev/null 2>&1 && pm2 list 2>/dev/null | grep -q online; then
   pm2 restart all --update-env >/dev/null
   echo "pm2 restart झाले."
-elif [ -n "${SATSANG_SERVICE:-}" ] && command -v systemctl >/dev/null 2>&1; then
-  sudo systemctl restart "$SATSANG_SERVICE"
-  echo "systemd ($SATSANG_SERVICE) restart झाले."
+elif [ -n "$SERVICE" ] && command -v systemctl >/dev/null 2>&1; then
+  $SUDO systemctl restart "$SERVICE"
+  echo "systemd ($SERVICE) restart झाले."
 else
   echo "app restart करा: pm2 restart all  किंवा  sudo systemctl restart <service>"
 fi
