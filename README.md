@@ -179,20 +179,31 @@ SESSION_SECRET=…     # long random
 # ADMIN_PIN=…           # …then this must be set and not 1960
 WHATSAPP_VERIFY_TOKEN=…
 WHATSAPP_APP_SECRET=…
+# Outbound OTP (संगणक 9225118811 / मार्गदर्शक 9850120960):
+WHATSAPP_PROVIDER=meta          # or turiya
+WHATSAPP_TOKEN=…                # Meta Graph (meta provider)
+WHATSAPP_PHONE_NUMBER_ID=…
+# TURIYA_API_KEY=…              # only if WHATSAPP_PROVIDER=turiya
+WHATSAPP_DRY_RUN=0              # must be off on VPS — production ignores dry-run anyway
+WHATSAPP_OTP_TEMPLATE=home_login_otp   # APPROVED AUTHENTICATION (Turiya)
+WHATSAPP_OTP_AUTH=1             # body + copy-code button (Meta OTP format)
+WHATSAPP_OTP_LANG=en_US
 ```
 
 SQLite lives at `data/satsang.db` next to the app. Do not use Turso unless you run multiple instances.
+
+Live OTP uses Meta AUTHENTICATION template **`home_login_otp`** (`en_US`, copy-code) already approved on Team Dhyeyapurti WABA. See `docs/AJAPA_WABA_TEMPLATES.md`.
 
 #### Deploy (live साइट update)
 
 The VPS does **not** auto-deploy from GitHub. After merging to `main`, on the VPS inside the app folder:
 
 ```bash
-bash scripts/deploy.sh             # git pull main → npm ci → next build → pm2 restart → health
+bash scripts/deploy.sh             # git pull main → npm ci → next build → restart → health
 bash scripts/deploy.sh <branch>    # try another branch
 ```
 
-For systemd: `SATSANG_SERVICE=satsang bash scripts/deploy.sh`. Uncommitted server edits are stashed, never lost. New DB columns are added automatically on the first request after restart.
+Restart is automatic via pm2 or the `satsang` systemd unit; a differently named unit needs `SATSANG_SERVICE=<unit>`. Uncommitted server edits are stashed, never lost. New DB columns are added automatically on the first request after restart.
 
 #### प्रवेश पिन विसरलात? (forgot the PIN)
 
@@ -205,7 +216,7 @@ bash scripts/admin-pin.sh 2468     # set a new 4–8 digit PIN (not 1960) and re
 
 For systemd: `SATSANG_SERVICE=satsang bash scripts/admin-pin.sh 2468`. The script keeps a `.env.local.bak.<timestamp>` copy (gitignored).
 
-`GET /api/health` returns `{ ok, db: { store: "file" | "turso" }, production_ready }` when the store is reachable.
+`GET /api/health` returns `{ ok, db, secrets, whatsapp: { outbound_ok, provider, dry_run }, production_ready }` when the store is reachable.
 
 ### Vercel / multi-instance production
 
