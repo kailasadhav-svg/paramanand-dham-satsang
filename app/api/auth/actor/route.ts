@@ -7,18 +7,7 @@ import {
   productionAuthBlockedReason,
   sessionCookieOptions,
 } from "@/lib/auth";
-import {
-  allowDebugOtp,
-  createActorBindOtp,
-  verifyActorBindOtp,
-} from "@/lib/ajapa/otp";
 import { normalizePhone } from "@/lib/ajapa/phone";
-import { getWaSession } from "@/lib/ajapa/store";
-import {
-  sendOtpMessage,
-  whatsappConfigured,
-  whatsappOutboundReady,
-} from "@/lib/ajapa/whatsapp";
 import { jsonError, requireApiSession } from "@/lib/api-guard";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
@@ -26,11 +15,18 @@ import {
   isGuruPhone,
   isSoftwarePhone,
 } from "@/lib/roles";
+import {
+  checkNewStaffPin,
+  digitsOnly,
+  firstTimeCode,
+  safeEqualDigits,
+} from "@/lib/staff-pin";
+import { getStaffPinHash, setStaffPin, verifyStaffPin } from "@/lib/staff-pin-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function needsOtp(phone: string): boolean {
+function needsPin(phone: string): boolean {
   return isSoftwarePhone(phone) || isGuruPhone(phone);
 }
 
@@ -46,6 +42,12 @@ export async function GET() {
   });
 }
 
+/**
+ * Staff (संगणक / मार्गदर्शक) bind:
+ *   no PIN yet  → last 4 digits of the mobile, then choose a PIN
+ *   PIN set     → that PIN
+ * Everyone else binds directly.
+ */
 export async function POST(request: Request) {
   const blocked = productionAuthBlockedReason();
   if (blocked) return jsonError(blocked, 503);
@@ -55,7 +57,8 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     phone?: string;
-    otp?: string;
+    code?: string;
+    new_pin?: string;
   };
   const phone = normalizePhone(body.phone || "");
   if (phone.replace(/\D/g, "").length < 12) {
@@ -71,65 +74,63 @@ export async function POST(request: Request) {
     return jsonError("खूप प्रयत्न — थोड्या वेळाने पुन्हा करा", 429);
   }
 
-  const privileged = needsOtp(phone);
+  const role = detectStaffRole(phone);
 
-  if (privileged && !body.otp) {
-    const otpLimit = rateLimit(`actor-otp:${phone}`, {
-      limit: 5,
-      windowMs: 60 * 60 * 1000,
-    });
-    if (!otpLimit.ok) {
-      return jsonError("OTP मर्यादा — १ तासानंतर पुन्हा प्रयत्न करा", 429);
-    }
-    const { code, expires_at } = await createActorBindOtp({ phone });
-    let waOk = false;
-    let waError: string | null = null;
-    if (whatsappConfigured()) {
-      const session = await getWaSession(phone);
-      const wa = await sendOtpMessage({
-        to: phone,
-        code,
-        lastInboundAt: session?.last_inbound_at ?? null,
-        purpose: "actor_bind",
+  if (needsPin(phone)) {
+    const code = digitsOnly(body.code);
+    const newPin = digitsOnly(body.new_pin);
+    const stored = await getStaffPinHash(phone);
+    const firstTime = !stored;
+
+    if (!code) {
+      return NextResponse.json({
+        ok: true,
+        needs_code: true,
+        first_time: firstTime,
+        phone,
+        role,
+        message: firstTime
+          ? "पहिल्यांदा: मोबाइलचे शेवटचे ४ अंक टाका"
+          : "तुमचा पिन टाका",
       });
-      waOk = Boolean(wa.ok);
-      waError = wa.ok ? null : "error" in wa ? wa.error : "send failed";
-    } else {
-      const outbound = whatsappOutboundReady();
-      waError = outbound.reason || "WhatsApp not configured";
-      if (outbound.dry_run_ignored) {
-        waError = `${waError} (WHATSAPP_DRY_RUN production मध्ये बंद — खरे credentials हवे)`;
-      }
     }
-    return NextResponse.json({
-      ok: true,
-      needs_otp: true,
-      phone,
-      role: detectStaffRole(phone),
-      expires_at,
-      whatsapp_ok: waOk,
-      whatsapp_error: waError,
-      debug_otp: allowDebugOtp() ? code : undefined,
-      message: waOk
-        ? "WhatsApp OTP पाठवला — कोड टाका"
-        : allowDebugOtp()
-          ? `टेस्ट OTP: ${code}`
-          : waError
-            ? `OTP पाठवता आला नाही: ${waError.slice(0, 160)}`
-            : "OTP पाठवता आला नाही — नंतर पुन्हा प्रयत्न करा",
-    });
-  }
 
-  if (privileged) {
-    const verified = await verifyActorBindOtp({ phone, code: body.otp || "" });
-    if (!verified.ok) return jsonError(verified.error, 400);
+    const pinLimit = rateLimit(`actor-pin:${phone}`, {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!pinLimit.ok) {
+      return jsonError("खूप चुकीचे प्रयत्न — १५ मिनिटांनी पुन्हा करा", 429);
+    }
+
+    if (firstTime) {
+      if (!safeEqualDigits(code, firstTimeCode(phone))) {
+        return jsonError("शेवटचे ४ अंक चुकीचे", 400);
+      }
+      if (!newPin) {
+        return NextResponse.json({
+          ok: true,
+          needs_code: true,
+          first_time: true,
+          needs_pin_setup: true,
+          phone,
+          role,
+          message: "नवा पिन तयार करा (४ ते ६ अंक)",
+        });
+      }
+      const check = checkNewStaffPin(newPin, phone);
+      if (!check.ok) return jsonError(check.error, 400);
+      await setStaffPin(phone, newPin);
+    } else if (!(await verifyStaffPin(phone, code))) {
+      return jsonError("पिन चुकीचा", 400);
+    }
   }
 
   const res = NextResponse.json({
     ok: true,
-    needs_otp: false,
+    needs_code: false,
     phone,
-    role: detectStaffRole(phone),
+    role,
     message: "मोबाइल जोडला",
   });
   res.cookies.set(ACTOR_COOKIE, actorSessionToken(phone), sessionCookieOptions());

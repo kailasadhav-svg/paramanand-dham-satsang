@@ -32,7 +32,7 @@ Default satsang time: **Thursday 8:00 PM (IST)**.
 2. If still empty: सत्संग चरणसेवक on **that week’s Friday 06:00–12:00 noon IST**.
 3. After Friday noon, if still empty: last Thursday’s वाहक continues automatically.
 
-App login is the **mobile-number screen**: संगणक / मार्गदर्शक numbers get a WhatsApp OTP, everyone else binds directly. The shared **प्रवेश पिन** screen is **off by default**; set `LOGIN_PIN_REQUIRED=1` (with a unique `ADMIN_PIN`) to put it back in front. Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
+App login is the **mobile-number screen**: संगणक / मार्गदर्शक numbers enter the **last 4 digits of their mobile** the first time, then choose a **4–6 digit PIN** that is used from then on (hashed in the `staff_pins` table); everyone else binds directly. Forgot the PIN? On the VPS: `sqlite3 data/satsang.db "DELETE FROM staff_pins WHERE phone='919225118811'"` — the next login asks for the last 4 digits again. The shared **प्रवेश पिन** screen is **off by default**; set `LOGIN_PIN_REQUIRED=1` (with a unique `ADMIN_PIN`) to put it back in front. Web members start with **अजपा / ajpa** at `/register` (not नोंदणी). WhatsApp still uses locked `अजपा Q` / `अजपा A` (see below) — those command shapes are not merged yet.
 
 Isolation (role-scoped screens/data do not leak):
 - **संगणक** — GPS, अहवाल, attendance tools, login-code collisions. No all-seeker अजपा, no चिंतन roster/bodies, no weekly topic edit, no Vahak or सत्संग चरणसेवक appoint.
@@ -179,7 +179,7 @@ SESSION_SECRET=…     # long random
 # ADMIN_PIN=…           # …then this must be set and not 1960
 WHATSAPP_VERIFY_TOKEN=…
 WHATSAPP_APP_SECRET=…
-# Outbound OTP (संगणक 9225118811 / मार्गदर्शक 9850120960):
+# Outbound WhatsApp (अजपा escalate OTP + notifications; staff login uses the PIN, not WhatsApp):
 WHATSAPP_PROVIDER=meta          # or turiya
 WHATSAPP_TOKEN=…                # Meta Graph (meta provider)
 WHATSAPP_PHONE_NUMBER_ID=…
