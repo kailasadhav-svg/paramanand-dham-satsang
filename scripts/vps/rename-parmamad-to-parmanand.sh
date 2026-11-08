@@ -59,18 +59,35 @@ else
     "$CONF"
 fi
 
-# single-file bind mount: sed -i ने नवा inode बनवला तर container ला जुनीच फाइल दिसते → in-place लिहा
-if ! container_has_new; then
-  echo "container ला नवे conf दिसत नाही — $DEST मध्ये in-place लिहितो"
-  docker exec -i "$CTR" sh -c "cat > '$DEST'" < "$CONF"
-fi
-if ! docker exec "$CTR" nginx -t; then
-  echo "nginx -t अयशस्वी — backup परत ठेवतो" >&2
+# नवे conf आधी वेगळ्या throwaway container मध्ये तपासा (same image + same mounts, सर्व read-only)
+IMAGE="$(docker inspect "$CTR" --format '{{.Config.Image}}')"
+mapfile -t TEST_MOUNTS < <(docker inspect "$CTR" --format '{{range .Mounts}}{{.Source}}:{{.Destination}}:ro{{"\n"}}{{end}}' | sed '/^$/d')
+VOL_ARGS=()
+for m in "${TEST_MOUNTS[@]}"; do VOL_ARGS+=(-v "$m"); done
+[ -n "$IN_CONTAINER" ] && VOL_ARGS+=(-v "$CONF:$DEST:ro")
+if ! docker run --rm "${VOL_ARGS[@]}" "$IMAGE" nginx -t; then
+  echo "नवे nginx conf अवैध — backup परत ठेवतो, काहीही बदलले नाही" >&2
   cp -a "$BAK" "$CONF"
-  docker exec -i "$CTR" sh -c "cat > '$DEST'" < "$CONF"
   exit 1
 fi
-docker exec "$CTR" nginx -s reload
+
+# single-file bind mount: sed -i ने नवा inode बनवला तर container ला जुनीच फाइल दिसते.
+# mount बहुधा read-only असतो, म्हणून in-place जमले नाही तर container restart (काही सेकंद).
+if ! container_has_new; then
+  if docker exec -i "$CTR" sh -c "cat > '$DEST'" < "$CONF" 2>/dev/null; then
+    echo "conf container मध्ये in-place लिहिले"
+    docker exec "$CTR" nginx -s reload
+  else
+    echo "mount read-only — $CTR restart करतो (काही सेकंद outage)"
+    docker restart "$CTR" >/dev/null
+    for _ in $(seq 1 30); do
+      docker exec "$CTR" nginx -t >/dev/null 2>&1 && break
+      sleep 1
+    done
+  fi
+else
+  docker exec "$CTR" nginx -s reload
+fi
 sleep 1
 container_has_new && echo "nginx: /$NEW/ route सक्रिय" || { echo "nginx अजूनही /$NEW/ दाखवत नाही" >&2; exit 1; }
 
