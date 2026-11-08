@@ -17,6 +17,7 @@ import {
 } from "@/lib/offline/profile";
 import { displayPhone } from "@/lib/offline/phone";
 import { defaultHomePath, roleLabelMarathi } from "@/lib/roles";
+import { AartiLink } from "@/components/AartiLink";
 
 type CtxValue = { profile: LocalProfile; clear: () => void };
 
@@ -321,6 +322,9 @@ export function PhoneGate({ children }: { children: ReactNode }) {
             </button>
           ) : null}
         </form>
+        <p className="text-center text-sm">
+          <AartiLink className="font-semibold text-saffron-800 underline-offset-2 hover:underline" />
+        </p>
       </div>
     );
   }

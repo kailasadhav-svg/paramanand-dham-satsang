@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AartiLink } from "@/components/AartiLink";
 import { useState } from "react";
 import { AJPA_LABEL, AJPA_MR, applyRegisterReply, type RegisterChatStep, type RegisterDraft } from "@/lib/ajpa";
 import { api } from "@/lib/api";
@@ -182,6 +183,9 @@ export default function RegisterPage() {
         <Link href="/login" className="text-temple-muted">
           प्रवेश पिन
         </Link>
+      </p>
+      <p className="mt-4 text-center text-sm">
+        <AartiLink className="font-semibold text-saffron-800 underline-offset-2 hover:underline" />
       </p>
     </div>
   );

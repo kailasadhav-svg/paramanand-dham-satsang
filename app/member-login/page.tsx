@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AartiLink } from "@/components/AartiLink";
 import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { api } from "@/lib/api";
 
@@ -82,6 +83,9 @@ function MemberLoginForm() {
         <Link href="/login" className="text-temple-muted">
           प्रवेश पिन
         </Link>
+      </p>
+      <p className="mt-4 text-center text-sm">
+        <AartiLink className="font-semibold text-saffron-800 underline-offset-2 hover:underline" />
       </p>
       <AuthCoupletFooter />
     </div>

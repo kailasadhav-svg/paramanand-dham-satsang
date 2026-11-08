@@ -84,6 +84,11 @@ export const EVENTS_LABEL = "कार्यक्रम";
 export const PHOTOS_LABEL = "छायाचित्रे";
 export const PHOTOS_LABEL_SHORT = "फोटो";
 
+/** आरती व पदसंग्रह — separate app behind nginx, not a Next route. */
+export const AARTI_LIBRARY_PATH = "/parmanand/";
+export const AARTI_LIBRARY_TITLE = "भगवान परमानंद — आरती व पदसंग्रह";
+export const AARTI_LIBRARY_LABEL_SHORT = "आरती";
+
 export const GUIDE_LABEL = "मार्गदर्शक चरणसेवक";
 export const GUIDE_LABEL_SHORT = "मार्गदर्शक";
 export const SOFTWARE_LABEL = "संगणक चरणसेवक";
