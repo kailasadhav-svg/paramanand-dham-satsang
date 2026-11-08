@@ -205,6 +205,8 @@ bash scripts/deploy.sh <branch>    # try another branch
 
 Restart is automatic via pm2 or the `satsang` systemd unit; a differently named unit needs `SATSANG_SERVICE=<unit>`. Uncommitted server edits are stashed, never lost. New DB columns are added automatically on the first request after restart.
 
+**Auto-deploy (no SSH after setup):** once, on the VPS, `bash scripts/install-auto-deploy.sh` installs a systemd timer (`satsang-deploy.timer`) that runs `scripts/auto-deploy.sh` every 5 minutes; when `origin/main` has new commits it runs `deploy.sh`. Logs: `journalctl -u satsang-deploy -n 50`; run it now: `systemctl start satsang-deploy.service`; stop it: `systemctl disable --now satsang-deploy.timer`.
+
 #### प्रवेश पिन विसरलात? (forgot the PIN)
 
 The PIN screen is off by default (see `LOGIN_PIN_REQUIRED`). When it is on, the PIN is only in the server's `.env.local` — never in git. On the VPS, inside the app folder:
