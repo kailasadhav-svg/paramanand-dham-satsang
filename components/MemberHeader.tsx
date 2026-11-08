@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { AartiLink } from "@/components/AartiLink";
 
 export function MemberHeader() {
   const router = useRouter();
@@ -24,13 +25,16 @@ export function MemberHeader() {
             परमानंद चरणसेवक
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="rounded-full border border-saffron-200 px-3 py-1.5 text-xs font-semibold text-saffron-800"
-        >
-          बाहेर पडा
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="rounded-full border border-saffron-200 px-3 py-1.5 text-xs font-semibold text-saffron-800"
+          >
+            बाहेर पडा
+          </button>
+          <AartiLink compact className="text-[11px] font-semibold text-saffron-800" />
+        </div>
       </div>
     </header>
   );

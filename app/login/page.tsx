@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { AartiLink } from "@/components/AartiLink";
 import { AuthCoupletFooter } from "@/components/AuthCoupletFooter";
 import { loadProfile } from "@/lib/offline/profile";
 import { defaultHomePath } from "@/lib/roles";
@@ -182,6 +183,9 @@ function LoginForm() {
           परमानंद चरणसेवक प्रवेश
         </Link>
       </div>
+      <p className="mt-4 text-center text-sm">
+        <AartiLink className="font-semibold text-saffron-800 underline-offset-2 hover:underline" />
+      </p>
 
       <AuthCoupletFooter />
     </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AartiLink } from "@/components/AartiLink";
 import { ProfileChip, useClearProfile, useProfileOptional } from "@/components/PhoneGate";
 import { EVENTS_LABEL, PHOTOS_LABEL_SHORT } from "@/lib/labels";
 import { profileAppName } from "@/lib/offline/profile";
@@ -55,6 +56,7 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
               ) : null}
               <Link href="/events">{EVENTS_LABEL}</Link>
               <Link href="/photos">{PHOTOS_LABEL_SHORT}</Link>
+              <AartiLink compact />
             </nav>
           ) : null}
           {profile ? (
